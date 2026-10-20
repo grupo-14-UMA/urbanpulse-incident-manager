@@ -1,6 +1,6 @@
 # Requisitos
 
-Requisitos iniciales de UrbanPulse tomados del enunciado del proyecto ("UrbanPulse: Plataforma cloud para la gestión inteligente de incidencias urbanas", Universidad de Málaga).
+Requisitos iniciales de UrbanPulse tomados del [enunciado del proyecto](enunciado.pdf) ("UrbanPulse: Plataforma cloud para la gestión inteligente de incidencias urbanas", Universidad de Málaga).
 
 ## Pautas de diseño
 
