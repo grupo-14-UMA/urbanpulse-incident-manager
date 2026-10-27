@@ -9,7 +9,9 @@ const MALAGA_REGION = {
   longitudeDelta: 0.08,
 };
 
-const OSM_TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+// Served by the German OSM community (FOSSGIS): tile.openstreetmap.org blocks the
+// generic User-Agent react-native-maps sends, and Expo Go cannot change it.
+const TILE_URL = 'https://tile.openstreetmap.de/{z}/{x}/{y}.png';
 
 export default function MapScreen() {
   const insets = useSafeAreaInsets();
@@ -22,7 +24,7 @@ export default function MapScreen() {
         mapType={Platform.OS === 'android' ? 'none' : 'standard'}
         toolbarEnabled={false}
       >
-        <UrlTile urlTemplate={OSM_TILE_URL} maximumZ={19} shouldReplaceMapContent />
+        <UrlTile urlTemplate={TILE_URL} maximumZ={19} shouldReplaceMapContent />
       </MapView>
       <View style={[styles.attribution, { bottom: insets.bottom }]} pointerEvents="none">
         <Text style={styles.attributionText}>© OpenStreetMap contributors</Text>
