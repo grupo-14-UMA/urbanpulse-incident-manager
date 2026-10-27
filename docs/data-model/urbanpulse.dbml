@@ -1,0 +1,170 @@
+Table User {
+  id integer [primary key]
+  nif varchar
+  name varchar
+  email varchar
+  phone integer
+  role_id integer
+}
+
+Table Role {
+  id integer [primary key]
+  name varchar
+}
+
+Table UrbanAsset {
+  id integer [primary key]
+  name varchar
+  asset_type_id integer 
+  coordinates_id integer
+  geojson JSONB
+}
+
+Table AssetType {
+  id integer [primary key]
+  name varchar
+}
+
+/*
+Hay que hacer una bd NoSQL aparte para estas cosas
+entonces aquí habría que dejar la entidad solo con
+un campo en formato json que luego se relacionará
+con la otra bd
+*/
+Table UrbanContext {
+  id integer [primary key]
+  type_context_id integer
+  source varchar
+  json JSONB
+  observed_at timestamp
+}
+
+Table ContextType {
+  id integer [primary key]
+  name varchar
+}
+
+Table Incident {
+  id integer [primary key]
+  description varchar
+  category varchar
+  location varchar
+  priority varchar
+  status_id integer
+  user_id integer 
+  urban_asset_id integer 
+  urban_context_id integer 
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table Status {
+  id integer [primary key]
+  name varchar
+}
+
+/*
+Se va a conectar a otra bd externa (S3)
+*/
+Table Attachment {
+  id integer [primary key]
+  incident_id integer 
+  file_url varchar 
+  file_type varchar
+  created_at timestamp
+}
+
+Table FileType {
+  id integer [primary key]
+  extension varchar
+}
+
+Table Assignment {
+  id integer [primary key]
+  incident_id integer 
+  assigned_user_id integer 
+  department_id varchar
+  team_id varchar
+  assigned_at timestamp
+}
+
+Table Team {
+  id integer [primary key]
+  name varchar
+  department_id integer
+  member_user_id integer
+}
+
+Table Department {
+  id integer [primary key]
+  name varchar
+  team_id integer
+}
+
+Table StatusChange {
+  id integer [primary key]
+  incident_id integer 
+  change_user_id integer 
+  previous_status varchar
+  new_status varchar
+  updates varchar
+  changed_at timestamp
+}
+
+Table ExternalObservation {
+  id integer [primary key]
+  incident_id integer
+  observed_at timestamp
+  ingested_at timestamp
+  unit varchar
+  quality varchar
+}
+
+Table Notification {
+  id integer [primary key]
+  user_id integer 
+  incident_id integer
+  description varchar
+  sent_at timestamp
+}
+
+Table KnowledgeDocument {
+  id integer [primary key]
+  title varchar
+  content text 
+  version varchar
+  created_at timestamp
+}
+
+// Relaciones entre entidades
+Ref: Incident.user_id > User.id
+Ref: Incident.urban_asset_id > UrbanAsset.id
+Ref: Incident.urban_context_id > UrbanContext.id
+Ref: Incident.status_id > Status.id
+
+Ref: Attachment.incident_id > Incident.id
+Ref: Attachment.file_type > FileType.id
+
+Ref: Assignment.incident_id > Incident.id
+Ref: Assignment.assigned_user_id > User.id
+Ref: Assignment.team_id > Team.id
+Ref: Assignment.department_id > Department.id
+
+Ref: Team.member_user_id > User.id
+Ref: Team.department_id > Department.id
+
+Ref: Department.team_id > Team.id
+
+Ref: StatusChange.incident_id > Incident.id
+Ref: StatusChange.change_user_id > User.id
+
+Ref: ExternalObservation.incident_id > Incident.id
+
+Ref: Notification.user_id > User.id
+Ref: Notification.incident_id > Incident.id
+
+Ref: User.role_id > Role.id
+
+Ref: UrbanAsset.asset_type_id > AssetType.id
+
+Ref: UrbanContext.type_context_id > ContextType.id
