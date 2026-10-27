@@ -17,8 +17,6 @@ export default function MapScreen() {
         style={StyleSheet.absoluteFill}
         initialRegion={MALAGA_REGION}
         mapType={Platform.OS === 'android' ? 'none' : 'standard'}
-        rotateEnabled={false}
-        pitchEnabled={false}
         toolbarEnabled={false}
       >
         <UrlTile urlTemplate={OSM_TILE_URL} maximumZ={19} shouldReplaceMapContent />
