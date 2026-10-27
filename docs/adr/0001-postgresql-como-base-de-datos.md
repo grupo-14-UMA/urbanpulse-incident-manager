@@ -16,11 +16,11 @@ El sistema requiere una base de datos capaz de gestionar las incidencias y su ci
 
 ## Decisión
 
-Utilizar PostgreSQL, levantado mediante Docker Compose en desarrollo local (ver [ADR-0012](0012-docker-compose-para-desarrollo-local.md)).
+Utilizar PostgreSQL, levantado mediante Docker Compose en desarrollo local.
 
 ## Consecuencias
 
-- \+ Cálculo sencillo de distancias y proximidad mediante PostGIS (ver [ADR-0007](0007-postgis-para-datos-geoespaciales.md)).
+- \+ Cálculo sencillo de distancias y proximidad mediante PostGIS.
 - \+ Compatibilidad directa con servicios cloud gestionados en AWS.
 - − Pérdida de flexibilidad a la hora de almacenar datos.
 - − Mayor consumo de recursos que otras opciones más ligeras.
