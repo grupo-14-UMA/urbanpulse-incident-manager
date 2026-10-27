@@ -63,7 +63,13 @@ cp .env.example .env    # y edita la IP, ver más abajo
 npx expo start
 ```
 
-Escanea el código QR con Expo Go (en iPhone, con la cámara). El móvil y el portátil deben estar en la misma red. La app abre un mapa de OpenStreetMap centrado en Málaga.
+Escanea el código QR con Expo Go (en iPhone, con la cámara). El móvil y el portátil deben estar en la misma red. La app abre un mapa de OpenStreetMap (teselas de `tile.openstreetmap.de`) centrado en Málaga.
+
+En redes que aíslan a los dispositivos entre sí, como eduroam, el móvil no llega al portátil y Expo Go muestra «Something went wrong». En ese caso arranca con túnel (la primera vez pide instalar `@expo/ngrok`) o conecta el portátil al punto de acceso del móvil:
+
+```bash
+npx expo start --tunnel
+```
 
 ### URL del backend
 
