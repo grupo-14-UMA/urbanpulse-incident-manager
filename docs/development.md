@@ -24,9 +24,14 @@ Variables de `.env`:
 
 | Variable | Descripción | Valor por defecto |
 | --- | --- | --- |
-| <!-- TODO --> | <!-- TODO --> | <!-- TODO --> |
+| `DB_HOST` | Host de la base de datos para el backend | `localhost` |
+| `DB_PORT` | Puerto de la base de datos para el backend | `5432` |
+| `POSTGRES_DB` | Nombre de la base de datos (compartida con la imagen de Postgres) | `urbanpulse` |
+| `POSTGRES_USER` | Usuario de la base de datos (compartido con la imagen de Postgres) | `urbanpulse` |
+| `POSTGRES_PASSWORD` | Contraseña de la base de datos (compartida con la imagen de Postgres) | `urbanpulse` |
+| `SERVER_PORT` | Puerto HTTP del backend | `8080` |
 
-El fichero `.env` no se versiona.
+El fichero `.env` no se versiona. `./mvnw spring-boot:run` no lo lee: fuera de Docker, el backend usa estos valores por defecto o las variables de entorno de la shell.
 
 ## Base de datos y backend
 
@@ -47,8 +52,8 @@ cd src/backend
 ./mvnw spring-boot:run
 ```
 
-- API: `http://localhost:<!-- TODO: puerto -->/api`
-- Swagger UI: `http://localhost:<!-- TODO: puerto -->/swagger-ui.html`
+- API: `http://localhost:8080/api`
+- Swagger UI: `http://localhost:8080/swagger-ui.html`
 
 El esquema se crea automáticamente con Flyway al arrancar el backend. Las migraciones están en `src/backend/src/main/resources/db/migration/`.
 
@@ -104,7 +109,9 @@ cd src/backend
 ./mvnw verify    # compilación, pruebas y comprobaciones configuradas
 ```
 
-<!-- TODO: explicar las pruebas de integración con Testcontainers (necesitan Docker en marcha) y cómo se prueba la app manualmente. -->
+Las pruebas arrancan la aplicación contra un contenedor `postgis/postgis` con Testcontainers, así que solo necesitan Docker en marcha, no una base de datos local.
+
+<!-- TODO: explicar cómo se prueba la app manualmente. -->
 
 ## Problemas frecuentes
 
