@@ -43,10 +43,9 @@ La guía completa está en [docs/development.md](docs/development.md).
 ## Estructura del repositorio
 
 ```text
-src/backend/    Backend Spring Boot
+src/backend/    Backend Spring Boot (sus pruebas están en src/backend/src/test/)
 src/frontend/   Aplicación React Native (Expo)
 docs/           Documentación: arquitectura, desarrollo, despliegue, ADRs, requisitos
-tests/          Pruebas
 ```
 <!-- TODO: actualizar si cambia la estructura. -->
 
