@@ -30,15 +30,13 @@ Plataforma cloud para comunicar, gestionar y analizar incidencias urbanas en Má
 
 ## Puesta en marcha rápida
 
+<!-- TODO: comprobar estos comandos cuando existan docker-compose.yml y la app. -->
+
 ```bash
 cp .env.example .env
 docker compose up -d          # base de datos + backend
 cd src/frontend && npx expo start
 ```
-
-La API queda disponible en `http://localhost:8080/api` y Swagger UI en
-`http://localhost:8080/swagger-ui.html`. Para detener los servicios sin borrar
-los datos de PostgreSQL, ejecuta `docker compose down`.
 
 La guía completa está en [docs/development.md](docs/development.md).
 
@@ -70,4 +68,4 @@ docs/           Documentación: arquitectura, desarrollo, despliegue, ADRs, requ
 | María ([@mmartinmaria](https://github.com/mmartinmaria)) | Tester |
 | Daniel ([@daniiroblees](https://github.com/daniiroblees)) | Maintainer |
 
-
+Proyecto de la asignatura <!-- TODO: nombre de la asignatura -->, Universidad de Málaga.
