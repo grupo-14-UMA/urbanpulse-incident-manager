@@ -25,6 +25,6 @@ Cada ADR recoge una decisión relevante: su contexto, las opciones consideradas,
 | [0010](0010-gemini-y-chatgpt-como-ia-principal.md) | Gemini y ChatGPT como IA principal | proposed |
 | [0011](0011-mapa-especifico-por-categoria.md) | Mapa específico por categoría | proposed |
 | [0012](0012-docker-compose-para-desarrollo-local.md) | Docker Compose para el desarrollo local | proposed |
-| [0013](0013-spring-boot-4-para-backend.md) | Spring Boot 4 para el backend | proposed |
+| [0013](0013-spring-boot-4-para-backend.md) | Spring Boot 4 para el backend | accepted |
 
 <!-- TODO: mantener la columna de estado al día. -->
