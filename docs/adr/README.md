@@ -19,7 +19,7 @@ Cada ADR recoge una decisión relevante: su contexto, las opciones consideradas,
 | [0004](0004-openstreetmap-como-fuente-de-mapas.md) | OpenStreetMap como fuente de mapas | proposed |
 | [0005](0005-react-native-maps-como-renderizador.md) | react-native-maps como renderizador | proposed |
 | [0006](0006-arquitectura-monolitica-inicial.md) | Arquitectura monolítica inicial | proposed |
-| [0007](0007-postgis-para-datos-geoespaciales.md) | PostGIS para datos geoespaciales | proposed |
+| [0007](0007-postgis-para-datos-geoespaciales.md) | PostGIS para datos geoespaciales | accepted |
 | [0008](0008-datos-abiertos-del-ayuntamiento-de-malaga.md) | Datos abiertos del Ayuntamiento de Málaga | proposed |
 | [0009](0009-openweathermap-para-meteorologia.md) | OpenWeatherMap para meteorología | proposed |
 | [0010](0010-gemini-y-chatgpt-como-ia-principal.md) | Gemini y ChatGPT como IA principal | proposed |
