@@ -32,8 +32,8 @@ Sistemas externos:
 | Contenedor | Tecnología | Responsabilidad |
 | --- | --- | --- |
 | Aplicación móvil | React Native + Expo, react-native-maps | <!-- TODO --> |
-| Backend (API REST) | Java 21, Spring Boot 3 | <!-- TODO --> |
-| Base de datos | PostgreSQL (+ PostGIS más adelante) | <!-- TODO --> |
+| Backend (API REST) | Java 21, Spring Boot 4 | <!-- TODO --> |
+| Base de datos | PostgreSQL + PostGIS | <!-- TODO --> |
 
 <!-- TODO: cómo se comunican (HTTP/JSON, puerto, CORS) y por qué la app usa EXPO_PUBLIC_API_URL. -->
 

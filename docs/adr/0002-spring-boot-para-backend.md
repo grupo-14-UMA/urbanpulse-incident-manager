@@ -1,8 +1,10 @@
 ---
-status: accepted
+status: superseded
 ---
 
 # ADR-0002: Usar Spring Boot como tecnología para backend
+
+Sustituido por [ADR-0013](0013-spring-boot-4-para-backend.md).
 
 ## Contexto
 

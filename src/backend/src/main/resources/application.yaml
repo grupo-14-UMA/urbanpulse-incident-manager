@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: urbanpulse-backend
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${POSTGRES_DB:urbanpulse}
+    username: ${POSTGRES_USER:urbanpulse}
+    password: ${POSTGRES_PASSWORD:urbanpulse}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+server:
+  port: ${SERVER_PORT:8080}
