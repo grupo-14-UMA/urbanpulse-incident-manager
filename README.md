@@ -18,13 +18,15 @@ Plataforma cloud para comunicar, gestionar y analizar incidencias urbanas en Má
 
 | Tecnología | Uso | Decisión |
 | --- | --- | --- |
-| Java 21 + Spring Boot 3 | Backend y API REST | [ADR-0002](docs/adr/0002-spring-boot-para-backend.md) |
+| Java 21 + Spring Boot 4 | Backend y API REST | [ADR-0013](docs/adr/0013-spring-boot-4-para-backend.md) |
 | PostgreSQL | Base de datos | [ADR-0001](docs/adr/0001-postgresql-como-base-de-datos.md) |
-| Flyway | Migraciones del esquema de base de datos | [ADR-0002](docs/adr/0002-spring-boot-para-backend.md) |
+| Flyway | Migraciones del esquema de base de datos | [ADR-0013](docs/adr/0013-spring-boot-4-para-backend.md) |
+| springdoc-openapi | Documentación de la API y Swagger UI | [#9](https://github.com/grupo-14-UMA/urbanpulse-incident-manager/issues/9) |
+| Testcontainers | Pruebas del backend contra PostgreSQL con PostGIS | [#9](https://github.com/grupo-14-UMA/urbanpulse-incident-manager/issues/9) |
 | React Native + Expo | Aplicación móvil | [ADR-0003](docs/adr/0003-react-native-con-expo-para-frontend.md) |
 | react-native-maps + OpenStreetMap | Mapa de incidencias | [ADR-0004](docs/adr/0004-openstreetmap-como-fuente-de-mapas.md), [ADR-0005](docs/adr/0005-react-native-maps-como-renderizador.md) |
 | Docker Compose | Entorno local | [ADR-0012](docs/adr/0012-docker-compose-para-desarrollo-local.md) |
-<!-- TODO: añadir o quitar filas según lo que se use realmente (springdoc, Testcontainers, GitHub Actions, AWS...). -->
+<!-- TODO: añadir o quitar filas según lo que se use realmente (GitHub Actions, AWS...). -->
 
 ## Puesta en marcha rápida
 

@@ -35,7 +35,7 @@ El fichero `.env` no se versiona. `./mvnw spring-boot:run` no lo lee: fuera de D
 
 ## Base de datos y backend
 
-<!-- TODO: comprobar cuando existan docker-compose.yml (#11) y el backend (#9). -->
+<!-- TODO: comprobar cuando exista docker-compose.yml (#11). -->
 
 ```bash
 docker compose up -d      # arranca la base de datos y el backend

@@ -14,7 +14,7 @@ Cada ADR recoge una decisión relevante: su contexto, las opciones consideradas,
 | ADR | Decisión | Estado |
 | --- | --- | --- |
 | [0001](0001-postgresql-como-base-de-datos.md) | PostgreSQL como base de datos | accepted |
-| [0002](0002-spring-boot-para-backend.md) | Spring Boot para el backend | proposed |
+| [0002](0002-spring-boot-para-backend.md) | Spring Boot para el backend | superseded por [0013](0013-spring-boot-4-para-backend.md) |
 | [0003](0003-react-native-con-expo-para-frontend.md) | React Native con Expo para el frontend | proposed |
 | [0004](0004-openstreetmap-como-fuente-de-mapas.md) | OpenStreetMap como fuente de mapas | proposed |
 | [0005](0005-react-native-maps-como-renderizador.md) | react-native-maps como renderizador | proposed |
@@ -25,5 +25,6 @@ Cada ADR recoge una decisión relevante: su contexto, las opciones consideradas,
 | [0010](0010-gemini-y-chatgpt-como-ia-principal.md) | Gemini y ChatGPT como IA principal | proposed |
 | [0011](0011-mapa-especifico-por-categoria.md) | Mapa específico por categoría | proposed |
 | [0012](0012-docker-compose-para-desarrollo-local.md) | Docker Compose para el desarrollo local | proposed |
+| [0013](0013-spring-boot-4-para-backend.md) | Spring Boot 4 para el backend | proposed |
 
 <!-- TODO: mantener la columna de estado al día. -->
