@@ -2,7 +2,7 @@
 
 Cómo construir y desplegar UrbanPulse. El entorno de desarrollo está en [development.md](development.md).
 
-Por ahora UrbanPulse solo se despliega en local con Docker Compose. Esta guía se ampliará cuando se implementen el despliegue en la nube, la distribución de la aplicación móvil y la integración continua.
+Por ahora UrbanPulse solo se despliega en local con Docker Compose. Esta guía se ampliará cuando se implementen el despliegue en la nube y la distribución de la aplicación móvil.
 
 ## Requisitos
 
@@ -67,3 +67,7 @@ El fichero `.env` no se versiona. Los valores por defecto solo sirven para el en
 - [ ] `docker compose ps` muestra `db` como `healthy` y `backend` en marcha.
 - [ ] Swagger UI carga en `http://localhost:8080/swagger-ui.html`.
 - [ ] No hay errores en `docker compose logs backend`.
+
+## Integración continua
+
+El workflow de GitHub Actions `.github/workflows/backend-ci.yml` se ejecuta en cada pull request contra `main`. Prepara Java 21 y lanza `./mvnw verify` en `src/backend`, que compila el backend y ejecuta sus pruebas contra PostgreSQL con PostGIS mediante Testcontainers. El despliegue no está automatizado.
