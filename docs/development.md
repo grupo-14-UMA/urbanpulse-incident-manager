@@ -35,8 +35,6 @@ El fichero `.env` no se versiona. `./mvnw spring-boot:run` no lo lee: fuera de D
 
 ## Base de datos y backend
 
-<!-- TODO: comprobar cuando exista docker-compose.yml (#11). -->
-
 ```bash
 docker compose up -d      # arranca la base de datos y el backend
 docker compose ps         # estado de los servicios
@@ -52,10 +50,10 @@ cd src/backend
 ./mvnw spring-boot:run
 ```
 
-- API: `http://localhost:8080/api`
 - Swagger UI: `http://localhost:8080/swagger-ui.html`
+- Documento OpenAPI: `http://localhost:8080/v3/api-docs`
 
-El esquema se crea automáticamente con Flyway al arrancar el backend. Las migraciones están en `src/backend/src/main/resources/db/migration/`.
+Flyway aplica al arrancar el backend las migraciones de `src/backend/src/main/resources/db/migration/`.
 
 ## Aplicación móvil
 
@@ -110,9 +108,3 @@ cd src/backend
 ```
 
 Las pruebas arrancan la aplicación contra un contenedor `postgis/postgis` con Testcontainers, así que solo necesitan Docker en marcha, no una base de datos local.
-
-<!-- TODO: explicar cómo se prueba la app manualmente. -->
-
-## Problemas frecuentes
-
-<!-- TODO: ir añadiendo los problemas que surjan (puerto ocupado, la app no conecta con el backend, etc.). -->
