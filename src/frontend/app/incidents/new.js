@@ -14,12 +14,17 @@ import MapView, { Marker } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { createIncident, getCategories } from '../../src/api';
-import { MALAGA_REGION, OSM_MAP_PROPS, OsmAttribution, OsmTiles } from '../../src/map';
+import {
+  MALAGA_REGION,
+  OSM_MAP_PROPS,
+  OsmAttribution,
+  OsmTiles,
+  STREET_DELTA,
+} from '../../src/map';
 import { isValid, validateIncident } from '../../src/validateIncident';
 
 // Some phones never return a fix indoors; stop waiting and let the citizen tap.
 const POSITION_TIMEOUT_MS = 10000;
-const POSITION_DELTA = 0.005;
 
 async function getCurrentCoordinate() {
   const { status } = await Location.requestForegroundPermissionsAsync();
@@ -86,7 +91,7 @@ export default function NewIncidentScreen() {
           return;
         }
         setLocation(coordinate);
-        const region = { ...coordinate, latitudeDelta: POSITION_DELTA, longitudeDelta: POSITION_DELTA };
+        const region = { ...coordinate, latitudeDelta: STREET_DELTA, longitudeDelta: STREET_DELTA };
         // Before the map is ready animateToRegion is ignored, so leave it for onMapReady.
         if (mapReadyRef.current) {
           mapRef.current?.animateToRegion(region);
