@@ -33,3 +33,21 @@ _Evitar_: gestor, moderador
 **Técnico** (`Technician`):
 Personal que ejecuta la actuación sobre una incidencia asignada y documenta su resolución.
 _Evitar_: operario, trabajador
+
+**Administrador** (`Administrator`):
+Personal municipal que gestiona usuarios, roles, categorías, departamentos y fuentes externas.
+_Evitar_: admin, superusuario
+
+**Analista** (`Analyst`):
+Personal municipal que estudia indicadores y patrones de las incidencias en la ciudad.
+_Evitar_: analizador
+
+### Clientes
+
+**Aplicación móvil** (`mobile`):
+Cliente que usan el ciudadano y el técnico, pensado para usarse en la calle.
+_Evitar_: frontend, app (sin más)
+
+**Panel de gestión** (`web`):
+Cliente web que usan el operador, el administrador y el analista.
+_Evitar_: dashboard, backoffice, portal, frontend
