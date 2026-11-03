@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 ---
 
 # ADR-0014: Separar la aplicación móvil del panel de gestión web

@@ -26,5 +26,5 @@ Cada ADR recoge una decisión relevante: su contexto, las opciones consideradas,
 | [0011](0011-mapa-especifico-por-categoria.md) | Mapa específico por categoría | accepted |
 | [0012](0012-docker-compose-para-desarrollo-local.md) | Docker Compose para el desarrollo local | accepted |
 | [0013](0013-spring-boot-4-para-backend.md) | Spring Boot 4 para el backend | accepted |
-| [0014](0014-aplicacion-movil-y-panel-de-gestion-web.md) | Aplicación móvil y panel de gestión web | proposed |
-| [0015](0015-react-vite-y-leaflet-para-panel-de-gestion.md) | React con Vite y Leaflet para el panel de gestión | proposed |
+| [0014](0014-aplicacion-movil-y-panel-de-gestion-web.md) | Aplicación móvil y panel de gestión web | accepted |
+| [0015](0015-react-vite-y-leaflet-para-panel-de-gestion.md) | React con Vite y Leaflet para el panel de gestión | accepted |

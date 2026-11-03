@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 ---
 
 # ADR-0015: Usar React con Vite y Leaflet para el panel de gestión
