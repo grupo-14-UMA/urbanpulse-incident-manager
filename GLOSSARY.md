@@ -12,6 +12,10 @@ En el código se usa el término en inglés que aparece entre paréntesis.
 Aviso de un problema en la vía o el espacio público, con descripción, localización y estado. Es la entidad central del dominio.
 _Evitar_: reporte, aviso, ticket
 
+**Localización** (`Location`):
+Punto del mapa donde está el problema de una incidencia, expresado en coordenadas. Es distinta de la posición del ciudadano, que como mucho sirve para proponerla.
+_Evitar_: posición, ubicación, punto
+
 **Categoría** (`Category`):
 Tipo de problema al que pertenece una incidencia. Es opcional cuando el ciudadano la registra.
 _Evitar_: tipo, clase
