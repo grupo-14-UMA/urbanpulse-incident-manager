@@ -76,7 +76,7 @@ flowchart LR
 
 | Contenedor | Tecnología | Responsabilidad y estado |
 | --- | --- | --- |
-| Aplicación móvil | React Native, Expo, `expo-router`, `react-native-maps` | Implementa una pantalla de mapa centrada en Málaga y carga teselas mediante `UrlTile`. La configuración `EXPO_PUBLIC_API_URL` está preparada, pero todavía no hay llamadas a la API. |
+| Aplicación móvil | React Native, Expo, `expo-router`, `react-native-maps`, `expo-location` | Implementa una pantalla de mapa centrada en Málaga, con teselas cargadas mediante `UrlTile`, y una pantalla de nueva incidencia con un mapa en el que el ciudadano marca la localización, que el GPS propone. Todas las llamadas al backend pasan por `src/api.js`, que por ahora simula la API en memoria; `EXPO_PUBLIC_API_URL` está preparada para cuando se conecte al backend. |
 | Backend | Java 21, Spring Boot 4, Maven | Será una API REST organizada como monolito modular. Actualmente solo contiene la clase de arranque de Spring Boot y su configuración de conexión. |
 | Base de datos | PostgreSQL con PostGIS | Persistirá incidencias y datos relacionados. Docker Compose utiliza la imagen `postgis/postgis`; todavía no hay migraciones de esquema. |
 
