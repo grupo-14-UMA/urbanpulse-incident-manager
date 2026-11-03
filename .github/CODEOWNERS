@@ -1,0 +1,10 @@
+# Reviews are requested automatically when a pull request is opened.
+# For each file only the last matching line applies, so the Reviewer is repeated on every line.
+
+*                        @apr2004
+/.github/                @apr2004 @daniiroblees
+/docker-compose.yml      @apr2004 @daniiroblees
+**/Dockerfile            @apr2004 @daniiroblees
+/src/backend/src/test/   @apr2004 @mmartinmaria
+/docs/adr/               @apr2004 @alraro
+/docs/requirements.md    @apr2004 @alraro
