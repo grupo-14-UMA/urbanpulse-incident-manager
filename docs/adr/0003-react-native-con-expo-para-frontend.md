@@ -2,11 +2,11 @@
 status: accepted
 ---
 
-# ADR-0003: Usar como framework React Native como principal tecnología frontend con Expo
+# ADR-0003: Usar React Native con Expo para la aplicación móvil
 
 ## Contexto
 
-El ciudadano necesita registrar incidencias con su posición, adjuntar fotografías y consultar su estado. Son tareas que se realizan desde la calle, por lo que se requiere acceso a GPS, cámara y galería. El equipo es reducido y quiere cubrir Android e iOS con una única base de código, sin configurar entornos nativos complejos.
+La aplicación móvil la usan el ciudadano y el técnico (ver [ADR-0014](0014-aplicacion-movil-y-panel-de-gestion-web.md)). El ciudadano necesita registrar incidencias con su posición, adjuntar fotografías y consultar su estado; el técnico necesita ver sus trabajos asignados y documentar la resolución con fotografías. Son tareas que se realizan desde la calle, por lo que se requiere acceso a GPS, cámara y galería. El equipo es reducido y quiere cubrir Android e iOS con una única base de código, sin configurar entornos nativos complejos.
 
 ## Opciones consideradas
 
