@@ -1,65 +1,177 @@
 # Arquitectura
 
-Este documento describe la arquitectura de UrbanPulse siguiendo el [modelo C4](https://c4model.com/). Cada cambio relevante actualiza este documento y, si corresponde, un [ADR](adr/).
+Este documento describe la arquitectura de UrbanPulse siguiendo el modelo C4. Distingue los componentes implementados de los previstos según los requisitos y las decisiones de arquitectura registradas en [docs/adr/](adr/).
 
 ## Visión general
 
-<!-- TODO: resumen en un párrafo: monolito Spring Boot (ADR-0006) + app móvil Expo + PostgreSQL, ejecutado en local con Docker Compose y pensado para desplegarse en AWS. -->
+UrbanPulse es una plataforma para registrar, gestionar y analizar incidencias urbanas en Málaga. La arquitectura prevista combina una aplicación móvil React Native con Expo, un backend monolítico modular con Java 21 y Spring Boot 4, y PostgreSQL con PostGIS. Docker Compose proporciona el entorno local para el backend y la base de datos. Actualmente, la aplicación móvil muestra un mapa y el backend contiene el esqueleto de Spring Boot; el registro de incidencias, las consultas API y el modelo persistente todavía no están implementados.
 
 ## Nivel 1: Contexto del sistema
 
-<!-- TODO: diagrama de contexto (imagen en docs/diagrams/ o bloque Mermaid). -->
+El sistema conecta a la ciudadanía y, en fases posteriores, al personal municipal con una plataforma central. La aplicación móvil muestra cartografía de OpenStreetMap. Las fuentes externas de contexto enriquecerán las incidencias cuando se integren, pero no deberán impedir su registro si no están disponibles.
 
-Actores:
+```mermaid
+flowchart LR
+    citizen[Ciudadano]
+    staff[Personal municipal<br/>Operador · Técnico · Administrador · Analista]
+    urbanpulse[UrbanPulse<br/>Registro y gestión de incidencias]
 
-- **Ciudadano**: registra incidencias y consulta su estado.
-- **Operador**, **Técnico**, **Administrador**, **Analista**: <!-- TODO: incluir cuando entren en el alcance. -->
+    osm[OpenStreetMap<br/>Teselas cartográficas]
+    openData[Datos abiertos del Ayuntamiento<br/>Contexto urbano]
+    weather[OpenWeatherMap<br/>Meteorología]
+    ai[Gemini / ChatGPT<br/>Asistencia inteligente]
 
-Sistemas externos:
+    citizen -->|Registra y consulta incidencias<br/>funcionalidad prevista| urbanpulse
+    staff -->|Valida, asigna y analiza<br/>funcionalidad prevista| urbanpulse
+    urbanpulse -->|Solicita teselas| osm
+    urbanpulse -.->|Enriquecimiento futuro| openData
+    urbanpulse -.->|Enriquecimiento futuro| weather
+    urbanpulse -.->|Asistencia futura| ai
+```
 
-| Sistema | Uso | Decisión |
+### Actores
+
+- **Ciudadano**: registra incidencias, proporciona su ubicación y consulta su estado.
+- **Operador municipal**: valida, rechaza, prioriza y asigna incidencias.
+- **Técnico**: actualiza el progreso y documenta la resolución de los trabajos asignados.
+- **Administrador**: gestiona usuarios, permisos, categorías, departamentos y fuentes externas.
+- **Analista**: consulta indicadores, patrones territoriales y resultados de análisis.
+
+La aplicación móvil implementada muestra un mapa centrado en Málaga. Los flujos de registro, seguimiento y gestión para estos actores forman parte del alcance funcional previsto.
+
+### Sistemas externos
+
+| Sistema | Uso | Estado |
 | --- | --- | --- |
-| OpenStreetMap | Teselas del mapa | [ADR-0004](adr/0004-openstreetmap-como-fuente-de-mapas.md) |
-| Datos abiertos del Ayuntamiento de Málaga | Contexto urbano | [ADR-0008](adr/0008-datos-abiertos-del-ayuntamiento-de-malaga.md) |
-| OpenWeatherMap | Meteorología | [ADR-0009](adr/0009-openweathermap-para-meteorologia.md) |
-| Gemini / ChatGPT | Asistencia inteligente | [ADR-0010](adr/0010-gemini-y-chatgpt-como-ia-principal.md) |
-<!-- TODO: indicar en qué entrega se integra cada uno. -->
+| OpenStreetMap, mediante teselas de `tile.openstreetmap.de` | Cartografía de la aplicación móvil, con atribución a OpenStreetMap | Usado por la pantalla de mapa |
+| Datos abiertos del Ayuntamiento de Málaga | Barrios, distritos, activos urbanos y otros datos de contexto | Previsto para versiones posteriores ([ADR-0008](adr/0008-datos-abiertos-del-ayuntamiento-de-malaga.md)) |
+| OpenWeatherMap | Información meteorológica asociada a una incidencia | Aceptado ([ADR-0009](adr/0009-openweathermap-para-meteorologia.md)) |
+| Gemini / ChatGPT | Asistencia inteligente y análisis | Aceptado ([ADR-0010](adr/0010-gemini-y-chatgpt-como-ia-principal.md)) |
+
+La aplicación muestra la atribución cartográfica correspondiente. Las coordenadas de una incidencia deberán poder obtenerse del GPS o de la selección en el mapa sin depender de que el proveedor de teselas esté disponible ([ADR-0004](adr/0004-openstreetmap-como-fuente-de-mapas.md)).
 
 ## Nivel 2: Contenedores
 
-<!-- TODO: diagrama de contenedores. -->
+```mermaid
+flowchart LR
+    citizen[Ciudadano]
+    staff[Personal municipal]
 
-| Contenedor | Tecnología | Responsabilidad |
+    subgraph system[UrbanPulse]
+        mobile[Aplicación móvil<br/>React Native · Expo]
+        api[Backend API<br/>Java 21 · Spring Boot 4]
+        db[(Base de datos<br/>PostgreSQL · PostGIS)]
+    end
+
+    osm[Teselas OpenStreetMap]
+    data[Fuentes de contexto<br/>Ayuntamiento · Meteorología · IA]
+
+    citizen --> mobile
+    staff -.-> mobile
+    mobile -->|HTTP / JSON<br/>EXPO_PUBLIC_API_URL<br/>previsto| api
+    api -->|JDBC| db
+    mobile -->|Teselas raster| osm
+    api -.->|Integraciones futuras| data
+```
+
+| Contenedor | Tecnología | Responsabilidad y estado |
 | --- | --- | --- |
-| Aplicación móvil | React Native + Expo, react-native-maps | <!-- TODO --> |
-| Backend (API REST) | Java 21, Spring Boot 4 | <!-- TODO --> |
-| Base de datos | PostgreSQL + PostGIS | <!-- TODO --> |
+| Aplicación móvil | React Native, Expo, `expo-router`, `react-native-maps` | Implementa una pantalla de mapa centrada en Málaga y carga teselas mediante `UrlTile`. La configuración `EXPO_PUBLIC_API_URL` está preparada, pero todavía no hay llamadas a la API. |
+| Backend | Java 21, Spring Boot 4, Maven | Será una API REST organizada como monolito modular. Actualmente solo contiene la clase de arranque de Spring Boot y su configuración de conexión. |
+| Base de datos | PostgreSQL con PostGIS | Persistirá incidencias y datos relacionados. Docker Compose utiliza la imagen `postgis/postgis`; todavía no hay migraciones de esquema. |
 
-<!-- TODO: cómo se comunican (HTTP/JSON, puerto, CORS) y por qué la app usa EXPO_PUBLIC_API_URL. -->
+En el entorno local, Docker Compose publica el backend en el puerto `8080` y PostgreSQL en el puerto `5432` por defecto. El backend se conecta a la base de datos mediante el nombre de servicio `db` dentro de la red de Compose. El frontend se inicia aparte con Expo. Para que un teléfono pueda acceder al backend, `EXPO_PUBLIC_API_URL` debe apuntar a la dirección de red del equipo que ejecuta Docker, no a `localhost`.
+
+La comunicación prevista entre la aplicación y el backend es HTTP con JSON. La URL se configura con `EXPO_PUBLIC_API_URL` para poder cambiar de entorno sin modificar el código móvil ([ADR-0003](adr/0003-react-native-con-expo-para-frontend.md)). No hay todavía configuración CORS ni endpoints implementados; deberán añadirse cuando el backend empiece a atender solicitudes desde la aplicación.
 
 ## Nivel 3: Componentes del backend
 
-<!-- TODO: paquetes/capas del backend (controladores, servicios, repositorios, entidades) cuando exista el código. -->
+El backend se mantendrá inicialmente como un monolito modular. La estructura prevista separa responsabilidades en capas y agrupa el código por funcionalidad, evitando dependencias innecesarias entre módulos ([ADR-0006](adr/0006-arquitectura-monolitica-inicial.md), [ADR-0013](adr/0013-spring-boot-4-para-backend.md)).
+
+| Componente previsto | Responsabilidad |
+| --- | --- |
+| Controladores REST | Recibir solicitudes HTTP, validar la entrada y devolver respuestas de la API. |
+| Servicios de aplicación | Coordinar los casos de uso y las transacciones del dominio. |
+| Repositorios | Consultar y persistir entidades mediante Spring Data JPA. |
+| Entidades y modelo de dominio | Representar incidencias, categorías y las demás entidades del sistema. |
+| Migraciones Flyway | Crear y evolucionar el esquema de la base de datos. Flyway será la única autoridad para modificarlo. |
+| Integraciones externas | Consultar fuentes de datos urbanos u otros proveedores sin acoplar el dominio a sus formatos. |
+| Documentación API | Generar documentación OpenAPI con springdoc-openapi. |
+
+Estos componentes describen la organización prevista. En el código actual solo está implementada la clase de arranque; no existen aún controladores, servicios, repositorios, entidades ni migraciones.
 
 ## API
 
-<!-- TODO: comprobar contra la implementación y enlazar Swagger UI. -->
+Las siguientes rutas representan el contrato funcional previsto y no están implementadas en la versión actual.
 
-| Método | Ruta | Descripción |
+| Método | Ruta | Descripción prevista |
 | --- | --- | --- |
-| `POST` | `/api/incidents` | Crea una incidencia |
-| `GET` | `/api/incidents` | Lista las incidencias |
-| `GET` | `/api/incidents/{id}` | Detalle de una incidencia |
-| `GET` | `/api/categories` | Lista las categorías |
+| `POST` | `/api/incidents` | Crear una incidencia. |
+| `GET` | `/api/incidents` | Listar incidencias. |
+| `GET` | `/api/incidents/{id}` | Consultar el detalle de una incidencia. |
+| `GET` | `/api/categories` | Listar categorías disponibles. |
+
+El proyecto incluye la dependencia de springdoc-openapi. La documentación interactiva se expondrá mediante Swagger UI cuando se implementen los controladores y sus operaciones.
 
 ## Modelo de datos
 
-<!-- TODO: enlazar el modelo completo de dbdiagram (issue #8) y explicar qué subconjunto se aplica en cada entrega. -->
+El modelo de datos previsto se centra en `Incident`, la entidad que representa una incidencia urbana. La especificación completa del modelo se mantiene en el [issue #8](https://github.com/grupo-14-UMA/urbanpulse-incident-manager/issues/8). La siguiente descripción es conceptual y no implica que las entidades o tablas ya existan en la base de datos.
+
+| Entidad | Atributos principales previstos | Uso |
+| --- | --- | --- |
+| `Incident` | Identificador, título, descripción, ubicación, dirección normalizada, precisión de localización, estado, prioridad, motivo de prioridad, fechas de creación y actualización | Incidencia registrada por un ciudadano. Puede tener una categoría, evidencias, asignaciones e historial de cambios. |
+| `Category` | Identificador, nombre, descripción y estado de actividad | Clasificación opcional de una incidencia. |
+| `User` | Identificador, datos de identidad y estado de cuenta | Representa a ciudadanos y personal municipal. |
+| `Role` | Identificador y nombre | Define permisos para los distintos tipos de usuario. |
+| `IncidentStatusHistory` | Incidencia, estado anterior, estado nuevo, fecha, actor y motivo | Mantiene la trazabilidad del ciclo de vida de una incidencia. |
+| `Evidence` | Incidencia, referencia al fichero, tipo, tamaño y fecha de registro | Conserva referencias a fotografías u otros ficheros asociados. |
+| `Department` | Identificador y nombre | Representa a las unidades municipales responsables de atender incidencias. |
+| `Assignment` | Incidencia, departamento o técnico asignado, fecha y estado | Registra quién debe atender una incidencia validada. |
+| `UrbanAsset` | Identificador, tipo, ubicación y datos descriptivos | Representa activos urbanos que podrían asociarse a incidencias próximas. |
+
+La relación entre entidades también es conceptual:
+
+```mermaid
+erDiagram
+    USER ||--o{ INCIDENT : reports
+    CATEGORY o|--o{ INCIDENT : classifies
+    INCIDENT ||--o{ INCIDENT_STATUS_HISTORY : records
+    USER ||--o{ INCIDENT_STATUS_HISTORY : changes
+    INCIDENT ||--o{ EVIDENCE : has
+    INCIDENT ||--o{ ASSIGNMENT : receives
+    DEPARTMENT ||--o{ ASSIGNMENT : handles
+    USER ||--o{ ASSIGNMENT : performs
+    URBAN_ASSET o|--o{ INCIDENT : relates_to
+```
+
+La ubicación se almacenará como `geometry(Point, 4326)` en PostGIS, usando WGS 84. La API expondrá las coordenadas como latitud y longitud y el backend se encargará de convertirlas al formato geoespacial de la base de datos ([ADR-0007](adr/0007-postgis-para-datos-geoespaciales.md)).
+
+La primera fase funcional necesita las entidades asociadas al registro y la consulta de incidencias y categorías. Usuarios, roles, asignaciones, evidencias, activos urbanos e integraciones de contexto se incorporarán cuando se implementen sus requisitos. En el estado actual no hay entidades JPA ni migraciones de Flyway y, por tanto, el esquema persistente aún no está creado.
 
 ## Atributos de calidad
 
-<!-- TODO: atributos que guían el diseño (disponibilidad, escalabilidad, seguridad, degradación controlada si una fuente externa falla...) y cómo se abordan. -->
+Los siguientes atributos orientan el diseño. Son objetivos arquitectónicos y no garantías de funcionalidades ya implementadas.
+
+| Atributo | Objetivo | Estrategia prevista |
+| --- | --- | --- |
+| Integridad y trazabilidad | Mantener coherente el ciclo de vida de una incidencia y poder explicar sus cambios. | Gestionar cambios de estado mediante transacciones y conservar actor, fecha y motivo en el historial. |
+| Disponibilidad y degradación controlada | Permitir registrar una incidencia aunque una fuente externa no esté disponible. | Tratar los servicios externos como enriquecimiento opcional y aislar sus errores del flujo de registro ([RF26](requirements.md)). |
+| Seguridad y privacidad | Proteger datos personales, evidencias y operaciones administrativas. | Incorporar autenticación y permisos por rol; validar tipo y tamaño de los ficheros recibidos. Estas capacidades todavía no están implementadas. |
+| Rendimiento geoespacial | Consultar incidencias próximas y relacionarlas con territorios y activos urbanos. | Utilizar PostGIS para operaciones espaciales e incorporar índices espaciales cuando las consultas lo requieran ([ADR-0007](adr/0007-postgis-para-datos-geoespaciales.md)). |
+| Modificabilidad | Añadir capacidades al dominio sin acoplar toda la aplicación. | Mantener un monolito organizado por funcionalidades, con capas y dependencias claras ([ADR-0006](adr/0006-arquitectura-monolitica-inicial.md)). |
+| Desplegabilidad | Reproducir el entorno local y separar la configuración del código. | Usar Docker Compose para backend y base de datos, y configurar puertos y credenciales mediante variables de entorno ([ADR-0012](adr/0012-docker-compose-para-desarrollo-local.md)). |
+| Escalabilidad operativa | Mantener baja la complejidad para el volumen inicial y permitir evolucionar si las métricas lo requieren. | Desplegar inicialmente el backend como una única unidad. La aplicación y sus módulos escalarán juntos; una separación en servicios requerirá una decisión arquitectónica posterior. |
+| Disponibilidad cartográfica | Evitar que la disponibilidad del proveedor de mapas determine la persistencia de una incidencia. | Guardar las coordenadas independientemente de la carga de teselas; la cartografía base es una ayuda visual y tiene atribución visible ([ADR-0004](adr/0004-openstreetmap-como-fuente-de-mapas.md)). |
 
 ## Decisiones de arquitectura
 
-Las decisiones están en [docs/adr/](adr/). Ver el [índice](adr/README.md).
+Las decisiones que fundamentan esta arquitectura se registran en [docs/adr/](adr/). El índice completo está en [docs/adr/README.md](adr/README.md). Las principales decisiones relacionadas con los componentes descritos son:
+
+- [ADR-0001: PostgreSQL como base de datos](adr/0001-postgresql-como-base-de-datos.md).
+- [ADR-0003: React Native con Expo para el frontend](adr/0003-react-native-con-expo-para-frontend.md).
+- [ADR-0004: OpenStreetMap como fuente de cartografía](adr/0004-openstreetmap-como-fuente-de-mapas.md).
+- [ADR-0005: react-native-maps como renderizador](adr/0005-react-native-maps-como-renderizador.md).
+- [ADR-0006: Arquitectura monolítica inicial](adr/0006-arquitectura-monolitica-inicial.md).
+- [ADR-0007: PostGIS para datos geoespaciales](adr/0007-postgis-para-datos-geoespaciales.md).
+- [ADR-0012: Docker Compose para desarrollo local](adr/0012-docker-compose-para-desarrollo-local.md).
+- [ADR-0013: Spring Boot 4 para el backend](adr/0013-spring-boot-4-para-backend.md).
