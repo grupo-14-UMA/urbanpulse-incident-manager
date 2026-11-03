@@ -21,7 +21,7 @@ Todos los miembros desarrollan. Además, cada uno tiene una responsabilidad:
 2. **Rama**: se crea desde `main` actualizado, con el nombre `<tipo>/<descripcion-corta>` (por ejemplo `feat/incident-map`, `fix/login-timeout`). Una rama por issue.
 3. **Commits**: siguen [Conventional Commits](https://www.conventionalcommits.org/) (ver abajo).
 4. **Pull request**: se abre contra `main` rellenando la plantilla y enlazando el issue con `Closes #<n>`.
-5. **Revisión**: hace falta 1 aprobación. Nunca se hace push directo a `main`.
+5. **Revisión**: hace falta 1 aprobación. GitHub pide la revisión automáticamente según [`.github/CODEOWNERS`](.github/CODEOWNERS): siempre al Reviewer y, si el PR toca su área, también al Maintainer, al Tester o al Product Owner. Nunca se hace push directo a `main`.
 6. **Merge**: lo hace el autor del PR una vez aprobado.
 7. **Verificación**: el Tester comprueba los criterios de aceptación del issue.
 
