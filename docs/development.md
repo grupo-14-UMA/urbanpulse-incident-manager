@@ -66,9 +66,9 @@ cp .env.example .env    # y edita la IP, ver más abajo
 npx expo start
 ```
 
-Escanea el código QR con Expo Go (en iPhone, con la cámara). El móvil y el portátil deben estar en la misma red. La app abre un mapa de OpenStreetMap (teselas de `tile.openstreetmap.de`) centrado en Málaga. El botón «Nueva incidencia» abre el formulario para registrar una; la primera vez pide permiso de ubicación.
+Escanea el código QR con Expo Go (en iPhone, con la cámara). El móvil y el portátil deben estar en la misma red. La app abre un mapa de OpenStreetMap (teselas de `tile.openstreetmap.de`) centrado en Málaga con un marcador por incidencia; al tocar uno aparece un resumen, y al tocar el resumen se abre el detalle. El botón «Nueva incidencia» abre el formulario para registrar una; la primera vez pide permiso de ubicación.
 
-Por ahora la app no llama al backend: `src/api.js` simula la API en memoria, así que no hace falta arrancarlo y las incidencias creadas se pierden al recargar la app.
+Por ahora la app no llama al backend: `src/api.js` simula la API en memoria, así que no hace falta arrancarlo. Arranca con unas incidencias de ejemplo, y las creadas se pierden al recargar la app.
 
 En redes que aíslan a los dispositivos entre sí, como eduroam, el móvil no llega al portátil y Expo Go muestra «Something went wrong». En ese caso arranca con túnel (la primera vez pide instalar `@expo/ngrok`) o conecta el portátil al punto de acceso del móvil:
 
