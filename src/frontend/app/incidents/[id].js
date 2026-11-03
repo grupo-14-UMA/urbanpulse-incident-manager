@@ -5,8 +5,9 @@ import MapView, { Marker } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getIncident } from '../../src/api';
+import { categoryLabel, statusLabel } from '../../src/labels';
 import { OSM_MAP_PROPS, OsmAttribution, OsmTiles, STREET_DELTA } from '../../src/map';
-import { statusLabel } from '../../src/status';
+import { COLORS } from '../../src/theme';
 
 export default function IncidentDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -40,7 +41,7 @@ export default function IncidentDetailScreen() {
   if (state === 'loading') {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={PRIMARY_COLOR} />
+        <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
   }
@@ -84,7 +85,7 @@ export default function IncidentDetailScreen() {
       <Text style={styles.value}>{incident.description}</Text>
 
       <Text style={styles.label}>Categoría</Text>
-      <Text style={styles.value}>{incident.categoryName ?? 'Sin categoría'}</Text>
+      <Text style={styles.value}>{categoryLabel(incident.categoryName)}</Text>
 
       <Text style={styles.label}>Estado</Text>
       <Text style={styles.value}>{statusLabel(incident.status)}</Text>
@@ -113,12 +114,11 @@ export default function IncidentDetailScreen() {
   );
 }
 
-const PRIMARY_COLOR = '#1565c0';
 
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.surface,
   },
   content: {
     padding: 16,
@@ -128,11 +128,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.surface,
   },
   message: {
     fontSize: 16,
-    color: '#222',
+    color: COLORS.text,
     textAlign: 'center',
   },
   retryButton: {
@@ -140,38 +140,38 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: PRIMARY_COLOR,
+    backgroundColor: COLORS.primary,
   },
   retryButtonPressed: {
-    backgroundColor: '#0d47a1',
+    backgroundColor: COLORS.primaryPressed,
   },
   retryButtonText: {
-    color: '#fff',
+    color: COLORS.onPrimary,
     fontSize: 16,
     fontWeight: '600',
   },
   title: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#222',
+    color: COLORS.text,
   },
   label: {
     marginTop: 16,
     marginBottom: 4,
     fontSize: 13,
     fontWeight: '600',
-    color: '#666',
+    color: COLORS.textMuted,
     textTransform: 'uppercase',
   },
   value: {
     fontSize: 16,
-    color: '#222',
+    color: COLORS.text,
   },
   mapContainer: {
     height: 200,
     borderRadius: 8,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#bbb',
+    borderColor: COLORS.border,
   },
 });
