@@ -1,30 +1,26 @@
 # Guía de despliegue
 
-Cómo construir, publicar y desplegar UrbanPulse. El entorno de desarrollo está en [development.md](development.md).
+Cómo construir y desplegar UrbanPulse. El entorno de desarrollo está en [development.md](development.md).
 
-## Entornos
-
-| Entorno | Dónde | Estado |
-| --- | --- | --- |
-| Local | Docker Compose en el portátil | Entrega 1 |
-| Producción | AWS <!-- TODO: servicio (EC2, ECS, RDS...) --> | Pendiente |
-<!-- TODO: añadir staging/pruebas si se usa. -->
-
-La misma imagen se usa en todos los entornos; solo cambia la configuración externa (variables de entorno).
+Por ahora UrbanPulse solo se despliega en local con Docker Compose. Esta guía se ampliará cuando se implementen el despliegue en la nube, la distribución de la aplicación móvil y la integración continua.
 
 ## Requisitos
 
 - Docker y Docker Compose
-- Acceso al registro de imágenes <!-- TODO: Docker Hub, GitHub Container Registry, Amazon ECR... -->
-- Acceso al entorno de despliegue <!-- TODO: credenciales de AWS, kubectl, etc. -->
 
 ## Versionado
 
-Cada entrega se publica con una etiqueta y una release de GitHub siguiendo [SemVer](https://semver.org/lang/es/): `v0.1.0` para la Entrega 1, `v0.2.0` para la siguiente, etc. La imagen Docker usa la misma versión.
+Cada entrega se publica con una etiqueta y una release de GitHub siguiendo [SemVer](https://semver.org/lang/es/): `v0.1.0` para la Entrega 1, `v0.2.0` para la siguiente, etc.
 
-<!-- TODO: quién crea la release (Maintainer) y cómo. -->
+La release la crea el Maintainer cuando todos los PR de la entrega están fusionados en `main`:
 
-## Construir la aplicación
+```bash
+gh release create v0.1.0 --target main --title "v0.1.0 - Entrega 1" --generate-notes
+```
+
+El comando crea la etiqueta sobre `main` y genera las notas a partir de los PR fusionados.
+
+## Construir el backend
 
 ```bash
 git switch main
@@ -33,54 +29,41 @@ cd src/backend
 ./mvnw verify
 ```
 
-## Imagen Docker del backend
-
-<!-- TODO: nombre real de la imagen y del registro. -->
-
-```bash
-docker build -t <registro>/urbanpulse-backend:0.1.0 src/backend
-docker run --rm -p 8080:8080 --env-file .env <registro>/urbanpulse-backend:0.1.0
-docker push <registro>/urbanpulse-backend:0.1.0
-```
-
-Se usan versiones explícitas, no solo `latest`.
-
-## Configuración y secretos
-
-| Variable | Descripción |
-| --- | --- |
-| <!-- TODO --> | <!-- TODO --> |
-
-Las credenciales no se guardan en Git ni en la imagen. <!-- TODO: dónde se guardan en producción (GitHub Secrets, AWS Secrets Manager...). -->
-
 ## Despliegue local con Docker Compose
 
 ```bash
-docker compose pull
-docker compose up -d
+cp .env.example .env
+docker compose up -d --build
 docker compose ps
 ```
 
-## Despliegue en la nube
+Compose construye la imagen del backend a partir de `src/backend/Dockerfile` y arranca PostgreSQL con PostGIS (`postgis/postgis`). El backend espera a que la base de datos esté lista antes de arrancar.
 
-<!-- TODO: pasos reales en AWS cuando se decida la plataforma (registrar un ADR). Si se usa Kubernetes: Deployment, rolling update (kubectl set image / rollout status) y rollback (kubectl rollout undo). -->
+Para detenerlo:
 
-## Aplicación móvil
+```bash
+docker compose down       # los datos se conservan en el volumen
+docker compose down -v    # borra también los datos
+```
 
-<!-- TODO: cómo se distribuye la app (Expo Go con la URL del backend desplegado, EAS Build...). -->
+## Configuración
+
+Compose lee las variables del fichero `.env` de la raíz:
+
+| Variable | Descripción | Valor por defecto |
+| --- | --- | --- |
+| `POSTGRES_DB` | Nombre de la base de datos | `urbanpulse` |
+| `POSTGRES_USER` | Usuario de la base de datos | `urbanpulse` |
+| `POSTGRES_PASSWORD` | Contraseña de la base de datos | `urbanpulse` |
+| `DB_PORT` | Puerto del equipo en el que se publica PostgreSQL | `5432` |
+| `SERVER_PORT` | Puerto del equipo en el que se publica el backend | `8080` |
+
+Dentro de Compose el backend siempre se conecta a `db:5432` y escucha en el puerto `8080`; `DB_HOST` solo se usa al ejecutar el backend fuera de Docker.
+
+El fichero `.env` no se versiona. Los valores por defecto solo sirven para el entorno local.
 
 ## Comprobaciones tras el despliegue
 
-- [ ] El backend responde y Swagger UI carga.
-- [ ] El backend conecta con la base de datos.
-- [ ] Los endpoints principales responden (`GET /api/incidents`, `GET /api/categories`).
-- [ ] No hay errores críticos en los logs.
-- [ ] <!-- TODO: health check (por ejemplo `/actuator/health`) si se añade Spring Boot Actuator. -->
-
-## Rollback
-
-<!-- TODO: cómo volver a la versión anterior (redesplegar la imagen de la versión previa). -->
-
-## CI/CD
-
-<!-- TODO: describir el workflow de GitHub Actions (#19) y, si se automatiza, el despliegue. -->
+- [ ] `docker compose ps` muestra `db` como `healthy` y `backend` en marcha.
+- [ ] Swagger UI carga en `http://localhost:8080/swagger-ui.html`.
+- [ ] No hay errores en `docker compose logs backend`.
