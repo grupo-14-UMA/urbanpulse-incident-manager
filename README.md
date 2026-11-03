@@ -2,17 +2,12 @@
 
 Plataforma cloud para comunicar, gestionar y analizar incidencias urbanas en Málaga, enriquecidas con datos de contexto de la ciudad.
 
-<!-- TODO: 2-3 frases más: qué problema resuelve, para quién (ciudadanía, operadores, técnicos...) y qué aporta frente a un simple formulario de avisos. -->
-
 ## Características principales
-
-<!-- TODO: marcar con [x] lo que funcione en cada entrega. -->
 
 - [ ] Mapa de Málaga con las incidencias registradas.
 - [ ] Detalle de una incidencia: título, descripción, categoría, estado y fecha.
 - [ ] Registro de incidencias con ubicación (GPS o seleccionada en el mapa) y categoría opcional.
 - [ ] Documentación interactiva de la API (Swagger UI).
-<!-- TODO: añadir características de próximas entregas (autenticación, validación por operadores, datos abiertos, IA...). -->
 
 ## Tecnologías
 
@@ -26,11 +21,8 @@ Plataforma cloud para comunicar, gestionar y analizar incidencias urbanas en Má
 | React Native + Expo | Aplicación móvil | [ADR-0003](docs/adr/0003-react-native-con-expo-para-frontend.md) |
 | react-native-maps + OpenStreetMap | Mapa de incidencias | [ADR-0004](docs/adr/0004-openstreetmap-como-fuente-de-mapas.md), [ADR-0005](docs/adr/0005-react-native-maps-como-renderizador.md) |
 | Docker Compose | Entorno local | [ADR-0012](docs/adr/0012-docker-compose-para-desarrollo-local.md) |
-<!-- TODO: añadir o quitar filas según lo que se use realmente (GitHub Actions, AWS...). -->
 
 ## Puesta en marcha rápida
-
-<!-- TODO: comprobar estos comandos cuando existan docker-compose.yml y la app. -->
 
 ```bash
 cp .env.example .env
@@ -47,7 +39,6 @@ src/backend/    Backend Spring Boot (sus pruebas están en src/backend/src/test/
 src/frontend/   Aplicación React Native (Expo)
 docs/           Documentación: arquitectura, desarrollo, despliegue, ADRs, requisitos
 ```
-<!-- TODO: actualizar si cambia la estructura. -->
 
 ## Documentación
 
@@ -68,4 +59,4 @@ docs/           Documentación: arquitectura, desarrollo, despliegue, ADRs, requ
 | María ([@mmartinmaria](https://github.com/mmartinmaria)) | Tester |
 | Daniel ([@daniiroblees](https://github.com/daniiroblees)) | Maintainer |
 
-Proyecto de la asignatura <!-- TODO: nombre de la asignatura -->, Universidad de Málaga.
+Proyecto de la asignatura: Desarrollo Software en Plataforma en la Nube, Universidad de Málaga.
