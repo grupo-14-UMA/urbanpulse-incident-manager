@@ -1,5 +1,5 @@
 import * as Location from 'expo-location';
-import { useRouter } from 'expo-router';
+import { useNavigation, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -26,11 +26,14 @@ async function getCurrentCoordinate() {
   if (status !== 'granted') {
     return null;
   }
-  const timeout = new Promise((resolve) => setTimeout(() => resolve(null), POSITION_TIMEOUT_MS));
+  let timer;
+  const timeout = new Promise((resolve) => {
+    timer = setTimeout(() => resolve(null), POSITION_TIMEOUT_MS);
+  });
   const position = await Promise.race([
     Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
     timeout,
-  ]);
+  ]).finally(() => clearTimeout(timer));
   if (!position) {
     return null;
   }
@@ -39,9 +42,14 @@ async function getCurrentCoordinate() {
 
 export default function NewIncidentScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const mapRef = useRef(null);
   const sendingRef = useRef(false);
+  const mapReadyRef = useRef(false);
+  const pendingRegionRef = useRef(null);
+  // Set once the citizen taps or drags, so a late GPS fix never overrides them.
+  const placedByHandRef = useRef(false);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -51,7 +59,7 @@ export default function NewIncidentScreen() {
   const [categories, setCategories] = useState([]);
   const [locating, setLocating] = useState(true);
   const [scrollEnabled, setScrollEnabled] = useState(true);
-  const [submitted, setSubmitted] = useState(false);
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
   const [sending, setSending] = useState(false);
   const [submitError, setSubmitError] = useState(null);
 
@@ -74,30 +82,58 @@ export default function NewIncidentScreen() {
           return;
         }
         setLocating(false);
-        if (!coordinate) {
+        if (!coordinate || placedByHandRef.current) {
           return;
         }
-        // Keep a point the citizen already placed while the GPS was searching.
-        setLocation((current) => current ?? coordinate);
-        mapRef.current?.animateToRegion({
-          ...coordinate,
-          latitudeDelta: POSITION_DELTA,
-          longitudeDelta: POSITION_DELTA,
-        });
+        setLocation(coordinate);
+        const region = { ...coordinate, latitudeDelta: POSITION_DELTA, longitudeDelta: POSITION_DELTA };
+        // Before the map is ready animateToRegion is ignored, so leave it for onMapReady.
+        if (mapReadyRef.current) {
+          mapRef.current?.animateToRegion(region);
+        } else {
+          pendingRegionRef.current = region;
+        }
       });
     return () => {
       active = false;
     };
   }, []);
 
+  // Leaving while the incident is being sent would lose the result; wait for it.
+  useEffect(
+    () =>
+      navigation.addListener('beforeRemove', (event) => {
+        if (sendingRef.current) {
+          event.preventDefault();
+        }
+      }),
+    [navigation],
+  );
+
+  function handleMapReady() {
+    mapReadyRef.current = true;
+    if (pendingRegionRef.current) {
+      mapRef.current?.animateToRegion(pendingRegionRef.current);
+      pendingRegionRef.current = null;
+    }
+  }
+
+  function placeByHand(coordinate) {
+    if (sending) {
+      return;
+    }
+    placedByHandRef.current = true;
+    setLocation(coordinate);
+  }
+
   const form = { title, description, location };
-  const errors = submitted ? validateIncident(form) : {};
+  const errors = attemptedSubmit ? validateIncident(form) : {};
 
   async function handleSubmit() {
     if (sendingRef.current) {
       return;
     }
-    setSubmitted(true);
+    setAttemptedSubmit(true);
     if (!isValid(validateIncident(form))) {
       return;
     }
@@ -113,6 +149,7 @@ export default function NewIncidentScreen() {
         longitude: location.longitude,
         categoryId,
       });
+      sendingRef.current = false;
       router.back();
     } catch {
       setSubmitError('No se pudo enviar la incidencia. Inténtalo de nuevo.');
@@ -189,7 +226,8 @@ export default function NewIncidentScreen() {
           ref={mapRef}
           style={StyleSheet.absoluteFill}
           initialRegion={MALAGA_REGION}
-          onPress={(event) => !sending && setLocation(event.nativeEvent.coordinate)}
+          onMapReady={handleMapReady}
+          onPress={(event) => placeByHand(event.nativeEvent.coordinate)}
           {...OSM_MAP_PROPS}
         >
           <OsmTiles />
@@ -197,7 +235,7 @@ export default function NewIncidentScreen() {
             <Marker
               coordinate={location}
               draggable={!sending}
-              onDragEnd={(event) => setLocation(event.nativeEvent.coordinate)}
+              onDragEnd={(event) => placeByHand(event.nativeEvent.coordinate)}
             />
           )}
         </MapView>
