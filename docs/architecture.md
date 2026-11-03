@@ -157,11 +157,23 @@ Los siguientes atributos orientan el diseño. Son objetivos arquitectónicos y n
 | Integridad y trazabilidad | Mantener coherente el ciclo de vida de una incidencia y poder explicar sus cambios. | Gestionar cambios de estado mediante transacciones y conservar actor, fecha y motivo en el historial. |
 | Disponibilidad y degradación controlada | Permitir registrar una incidencia aunque una fuente externa no esté disponible. | Tratar los servicios externos como enriquecimiento opcional y aislar sus errores del flujo de registro ([RF26](requirements.md)). |
 | Seguridad y privacidad | Proteger datos personales, evidencias y operaciones administrativas. | Incorporar autenticación y permisos por rol; validar tipo y tamaño de los ficheros recibidos. Estas capacidades todavía no están implementadas. |
-| Rendimiento geoespacial | Consultar incidencias próximas y relacionarlas con territorios y activos urbanos. | Utilizar PostGIS para operaciones espaciales e incorporar índices espaciales cuando las consultas lo requieran ([ADR-0007](adr/0007-postgis-para-datos-geoespaciales.md)). |
+| Rendimiento | Responder de forma fluida, incluidas las consultas de incidencias próximas y su relación con territorios y activos urbanos, y medirlo frente a una línea base. | Utilizar PostGIS para operaciones espaciales e incorporar índices, también espaciales, cuando las consultas lo requieran ([ADR-0007](adr/0007-postgis-para-datos-geoespaciales.md)). |
 | Modificabilidad | Añadir capacidades al dominio sin acoplar toda la aplicación. | Mantener un monolito organizado por funcionalidades, con capas y dependencias claras ([ADR-0006](adr/0006-arquitectura-monolitica-inicial.md)). |
 | Desplegabilidad | Reproducir el entorno local y separar la configuración del código. | Usar Docker Compose para backend y base de datos, y configurar puertos y credenciales mediante variables de entorno ([ADR-0012](adr/0012-docker-compose-para-desarrollo-local.md)). |
-| Escalabilidad operativa | Mantener baja la complejidad para el volumen inicial y permitir evolucionar si las métricas lo requieren. | Desplegar inicialmente el backend como una única unidad. La aplicación y sus módulos escalarán juntos; una separación en servicios requerirá una decisión arquitectónica posterior. |
+| Escalabilidad | Seguir siendo fluida con millones de incidencias. | Acotar las consultas (paginación, zona visible) y respaldarlas con índices. El backend se despliega como una única unidad; escalarlo o separar módulos en servicios solo se hará cuando una medición lo justifique, mediante una decisión arquitectónica posterior. |
 | Disponibilidad cartográfica | Evitar que la disponibilidad del proveedor de mapas determine la persistencia de una incidencia. | Guardar las coordenadas independientemente de la carga de teselas; la cartografía base es una ayuda visual y tiene atribución visible ([ADR-0004](adr/0004-openstreetmap-como-fuente-de-mapas.md)). |
+| Observabilidad | Medir el comportamiento del sistema y comparar los cambios frente a una línea base. | Incorporar métricas, logs centralizados y pruebas de carga (Grafana, Loki y k6). Estas capacidades todavía no están implementadas. |
+
+### Escenarios de calidad
+
+Cada escenario concreta un atributo en un caso medible (estímulo, entorno, respuesta y medida). Todos suponen una base de datos con un millón de incidencias sintéticas. Las medidas que aún no se conocen se fijarán al obtener la línea base con pruebas de carga.
+
+| ID | Atributo | Estímulo | Entorno | Respuesta | Medida |
+| --- | --- | --- | --- | --- | --- |
+| EC01 | Rendimiento | Un ciudadano abre el mapa. | Un millón de incidencias. | Ve las incidencias de la zona visible, no todas. | Menos de 5 s. |
+| EC02 | Rendimiento y escalabilidad | Un operador busca y filtra incidencias. | Un millón de incidencias. | Recibe resultados paginados y ordenados. | Se fijará con la línea base. |
+| EC03 | Escalabilidad | Muchos ciudadanos registran incidencias a la vez. | Carga sostenida. | Todas se guardan sin errores. | La concurrencia y el percentil 95 de latencia se fijarán con la línea base. |
+| EC04 | Disponibilidad | Un ciudadano registra una incidencia. | Una fuente externa no responde. | Se guarda sin el enriquecimiento ([RF26](requirements.md)). | Ninguna incidencia perdida. |
 
 ## Decisiones de arquitectura
 
