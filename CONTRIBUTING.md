@@ -13,8 +13,6 @@ Todos los miembros desarrollan. Además, cada uno tiene una responsabilidad:
 | Tester | María (@mmartinmaria) | Comprueba los criterios de aceptación antes de cerrar un issue. |
 | Maintainer | Daniel (@daniiroblees) | Configuración del repositorio, etiquetas, CI y releases. |
 
-<!-- TODO: detallar responsabilidades si cambian o se reparten de otra forma. -->
-
 ## Flujo de trabajo
 
 1. **Issue**: todo cambio empieza en un issue de GitHub con descripción y criterios de aceptación. Usa las plantillas de `.github/ISSUE_TEMPLATE/`.
@@ -25,7 +23,7 @@ Todos los miembros desarrollan. Además, cada uno tiene una responsabilidad:
 6. **Merge**: lo hace el autor del PR una vez aprobado.
 7. **Verificación**: el Tester comprueba los criterios de aceptación del issue.
 
-<!-- TODO: indicar el tipo de merge (squash, merge commit...) y si se borra la rama al terminar. -->
+Los PR se fusionan con *Squash and merge* y la rama se borra después del merge.
 
 ## Convención de commits
 
