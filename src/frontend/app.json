@@ -19,7 +19,13 @@
       }
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "UrbanPulse usa tu ubicación para proponer dónde está la incidencia que vas a reportar."
+        }
+      ]
     ]
   }
 }

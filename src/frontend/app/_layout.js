@@ -9,6 +9,7 @@ export default function RootLayout() {
     <>
       <Stack>
         <Stack.Screen name="index" options={{ title: 'Mapa de incidencias' }} />
+        <Stack.Screen name="incidents/new" options={{ title: 'Nueva incidencia' }} />
       </Stack>
       <StatusBar style="dark" />
     </>
