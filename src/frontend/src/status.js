@@ -1,4 +1,4 @@
-// Spanish labels for each Estado code (see GLOSSARY.md). An unknown code is shown as is.
+// Spanish labels for each incident Status code (see GLOSSARY.md). An unknown code is shown as is.
 const STATUS_LABELS = {
   REPORTED: 'Registrada',
 };

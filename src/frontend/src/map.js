@@ -11,7 +11,7 @@ export const MALAGA_REGION = {
   longitudeDelta: 0.08,
 };
 
-// Span used to show a single Localización at street level.
+// Span used to show a single incident Location at street level.
 export const STREET_DELTA = 0.005;
 
 // Served by the German OSM community (FOSSGIS): tile.openstreetmap.org blocks the
