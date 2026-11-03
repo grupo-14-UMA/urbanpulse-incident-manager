@@ -16,6 +16,10 @@ _Evitar_: reporte, aviso, ticket
 Punto del mapa donde está el problema de una incidencia, expresado en coordenadas. Es distinta de la posición del ciudadano, que como mucho sirve para proponerla.
 _Evitar_: posición, ubicación, punto
 
+**Estado** (`Status`):
+Fase del ciclo de vida en la que se encuentra una incidencia. Toda incidencia empieza en **Registrada** (`REPORTED`), el estado que tiene en cuanto el ciudadano la registra.
+_Evitar_: situación, fase
+
 **Categoría** (`Category`):
 Tipo de problema al que pertenece una incidencia. Es opcional cuando el ciudadano la registra.
 _Evitar_: tipo, clase
