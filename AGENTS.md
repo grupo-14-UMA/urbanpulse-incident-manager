@@ -6,7 +6,7 @@
 - Never commit or push directly to `main`. All changes reach `main` through a reviewed pull request.
 - Branch from an up-to-date `main` as `<type>/<short-kebab-description>` (e.g. `feat/incident-map`, `fix/login-timeout`). One branch per issue.
 - Commits follow [Conventional Commits](https://www.conventionalcommits.org/): `<type>: <description>`, imperative and lowercase, no trailing period. Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `ci`, `build`, `perf`. Keep commits small and focused.
-- PR titles follow the same convention. Fill in the PR template and link the issue with `Closes #<n>`.
+- Issue and PR titles follow the same convention. Fill in the PR template and link the issue with `Closes #<n>`.
 - Updating the docs is part of finishing an issue. Before opening the PR, find every doc that describes what the change touched (`README.md`, `docs/`, `GLOSSARY.md`, ADRs) and edit it in place so it describes the system as it is now: rewrite or delete what became stale, and add text only for something genuinely new. Docs state the current state, never the history of changes; git and PRs keep that.
 - No AI attribution anywhere: no `Co-Authored-By` trailers or "Generated with" lines in commits, PRs, issues or comments.
 

@@ -50,7 +50,7 @@ fix: reject coordinates out of range
 docs: update development guide
 ```
 
-Los títulos de los PR siguen la misma convención.
+Los títulos de los issues y de los PR siguen la misma convención.
 
 ## Etiquetas
 
