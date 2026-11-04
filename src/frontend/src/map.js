@@ -11,6 +11,9 @@ export const MALAGA_REGION = {
   longitudeDelta: 0.08,
 };
 
+// Span used to show a single incident Location at street level.
+export const STREET_DELTA = 0.005;
+
 // Served by the German OSM community (FOSSGIS): tile.openstreetmap.org blocks the
 // generic User-Agent react-native-maps sends, and Expo Go cannot change it.
 const TILE_URL = 'https://tile.openstreetmap.de/{z}/{x}/{y}.png';

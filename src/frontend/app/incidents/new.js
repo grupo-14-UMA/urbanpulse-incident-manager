@@ -14,12 +14,18 @@ import MapView, { Marker } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { createIncident, getCategories } from '../../src/api';
-import { MALAGA_REGION, OSM_MAP_PROPS, OsmAttribution, OsmTiles } from '../../src/map';
+import {
+  MALAGA_REGION,
+  OSM_MAP_PROPS,
+  OsmAttribution,
+  OsmTiles,
+  STREET_DELTA,
+} from '../../src/map';
+import { COLORS } from '../../src/theme';
 import { isValid, validateIncident } from '../../src/validateIncident';
 
 // Some phones never return a fix indoors; stop waiting and let the citizen tap.
 const POSITION_TIMEOUT_MS = 10000;
-const POSITION_DELTA = 0.005;
 
 async function getCurrentCoordinate() {
   const { status } = await Location.requestForegroundPermissionsAsync();
@@ -86,7 +92,7 @@ export default function NewIncidentScreen() {
           return;
         }
         setLocation(coordinate);
-        const region = { ...coordinate, latitudeDelta: POSITION_DELTA, longitudeDelta: POSITION_DELTA };
+        const region = { ...coordinate, latitudeDelta: STREET_DELTA, longitudeDelta: STREET_DELTA };
         // Before the map is ready animateToRegion is ignored, so leave it for onMapReady.
         if (mapReadyRef.current) {
           mapRef.current?.animateToRegion(region);
@@ -272,13 +278,11 @@ export default function NewIncidentScreen() {
   );
 }
 
-const ERROR_COLOR = '#c62828';
-const PRIMARY_COLOR = '#1565c0';
 
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.surface,
   },
   content: {
     padding: 16,
@@ -288,26 +292,26 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     fontSize: 15,
     fontWeight: '600',
-    color: '#222',
+    color: COLORS.text,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#bbb',
+    borderColor: COLORS.border,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 16,
-    color: '#222',
+    color: COLORS.text,
   },
   multiline: {
     minHeight: 100,
   },
   inputError: {
-    borderColor: ERROR_COLOR,
+    borderColor: COLORS.error,
   },
   errorText: {
     marginTop: 4,
-    color: ERROR_COLOR,
+    color: COLORS.error,
     fontSize: 13,
   },
   chips: {
@@ -320,29 +324,29 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#bbb',
-    backgroundColor: '#fff',
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
   },
   chipSelected: {
-    borderColor: PRIMARY_COLOR,
-    backgroundColor: PRIMARY_COLOR,
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primary,
   },
   chipText: {
     fontSize: 14,
-    color: '#222',
+    color: COLORS.text,
   },
   chipTextSelected: {
-    color: '#fff',
+    color: COLORS.onPrimary,
   },
   mapContainer: {
     height: 250,
     borderRadius: 8,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#bbb',
+    borderColor: COLORS.border,
   },
   mapContainerError: {
-    borderColor: ERROR_COLOR,
+    borderColor: COLORS.error,
   },
   mapHint: {
     position: 'absolute',
@@ -355,14 +359,14 @@ const styles = StyleSheet.create({
   },
   mapHintText: {
     fontSize: 13,
-    color: '#222',
+    color: COLORS.text,
   },
   submitError: {
     marginTop: 16,
     padding: 10,
     borderRadius: 8,
-    backgroundColor: '#fdecea',
-    color: ERROR_COLOR,
+    backgroundColor: COLORS.errorSoft,
+    color: COLORS.error,
   },
   submitButton: {
     marginTop: 24,
@@ -370,13 +374,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: PRIMARY_COLOR,
+    backgroundColor: COLORS.primary,
   },
   submitButtonPressed: {
-    backgroundColor: '#0d47a1',
+    backgroundColor: COLORS.primaryPressed,
   },
   submitButtonText: {
-    color: '#fff',
+    color: COLORS.onPrimary,
     fontSize: 16,
     fontWeight: '600',
   },
