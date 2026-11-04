@@ -10,6 +10,19 @@
 - Updating the docs is part of finishing an issue. Before opening the PR, find every doc that describes what the change touched (`README.md`, `docs/`, `GLOSSARY.md`, ADRs) and edit it in place so it describes the system as it is now: rewrite or delete what became stale, and add text only for something genuinely new. Docs state the current state, never the history of changes; git and PRs keep that.
 - No AI attribution anywhere: no `Co-Authored-By` trailers or "Generated with" lines in commits, PRs, issues or comments.
 
+## Quality attributes
+
+Quality attributes (performance, scalability, reliability, availability, observability) drive the design: every feature must stay fluid with millions of incidents, and every improvement is justified by a measurement against a baseline. See the design guidelines in `docs/requirements.md` and the quality attributes and scenarios in `docs/architecture.md`.
+
+When designing an issue, implementing it or reviewing a change, check for:
+
+- List endpoints or screens without a limit, pagination or bounding area.
+- Queries without an index that supports them.
+- Collections or tables that grow without limit.
+- New operations without metrics or logs.
+
+If a concern is deferred, propose a follow-up issue (title and body) and create it only after the user confirms.
+
 ## Agent skills
 
 ### Issue tracker

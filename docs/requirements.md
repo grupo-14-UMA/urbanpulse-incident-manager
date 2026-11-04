@@ -6,7 +6,8 @@ Requisitos iniciales de UrbanPulse tomados del [enunciado del proyecto](enunciad
 
 - La incidencia es la entidad central del dominio y conserva un ciclo de vida auditable.
 - Los datos externos enriquecen; nunca bloquean la creación del reporte si una fuente no está disponible.
-- Se adopta la solución más sencilla que satisfaga los atributos de calidad medidos.
+- Los atributos de calidad (rendimiento, escalabilidad, fiabilidad, disponibilidad y observabilidad) guían el diseño. Cada funcionalidad debe seguir siendo fluida y útil con millones de incidencias: muestra lo relevante para el contexto (zona, filtros, página) y no todo el conjunto.
+- Se adopta la solución más sencilla que cumpla esos atributos. Cada mejora (índices, caché, colas, eventos, separación en servicios) se justifica con una medición frente a una línea base, obtenida con datos sintéticos, pruebas de carga y observabilidad.
 - El ciudadano y el técnico usan la aplicación móvil; el operador, el administrador y el analista usan el panel de gestión web ([ADR-0014](adr/0014-aplicacion-movil-y-panel-de-gestion-web.md)). Esta separación es una indicación del profesor y no aparece en el enunciado.
 - Cada cambio relevante actualiza el modelo C4, un ADR y las pruebas asociadas.
 
