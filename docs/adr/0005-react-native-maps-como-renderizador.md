@@ -2,11 +2,11 @@
 status: accepted
 ---
 
-# ADR-0005: Usar React-Native-Maps como renderizador de mapas en la aplicación
+# ADR-0005: Usar React-Native-Maps como renderizador de mapas en la aplicación móvil
 
 ## Contexto
 
-La aplicación móvil debe mostrar un mapa en el que el ciudadano seleccione la posición de la incidencia y en el que el personal visualice incidencias como marcadores. La aplicación está desarrollada con React Native y Expo (ver [ADR-0003](0003-react-native-con-expo-para-frontend.md)) y los datos del mapa proceden de OpenStreetMap (ver [ADR-0004](0004-openstreetmap-como-fuente-de-mapas.md)), por lo que se necesita un componente que renderice el mapa y permita superponer teselas propias, marcadores y capas.
+La aplicación móvil debe mostrar un mapa en el que el ciudadano seleccione la posición de la incidencia y en el que el técnico visualice como marcadores las incidencias que tiene asignadas. El panel de gestión web usa su propia librería de mapas (ver [ADR-0015](0015-react-vite-y-leaflet-para-panel-de-gestion.md)). La aplicación está desarrollada con React Native y Expo (ver [ADR-0003](0003-react-native-con-expo-para-frontend.md)) y los datos del mapa proceden de OpenStreetMap (ver [ADR-0004](0004-openstreetmap-como-fuente-de-mapas.md)), por lo que se necesita un componente que renderice el mapa y permita superponer teselas propias, marcadores y capas.
 
 ## Opciones consideradas
 

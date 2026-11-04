@@ -8,8 +8,8 @@ workspace "UrbanPulse" "Modelo C4" {
         analista = person "Analista" "Consulta indicadores e informes"
 
         sistema = softwareSystem "Sistema" "UrbanPulse: gestión inteligente de incidencias urbanas" {
-            web = container "Web Ciudadanos" "Portal para reportar y seguir incidencias" "React / TypeScript"
-            app = container "App Trabajadores" "Aplicación para operadores, técnicos, analistas y administradores" "React / TypeScript"
+            mobile = container "Aplicación móvil" "Registro y seguimiento de incidencias y trabajos asignados, para ciudadanos y técnicos" "React Native / Expo"
+            web = container "Panel de gestión" "Validación, asignación, configuración y análisis, para operadores, administradores y analistas" "React / Vite / Leaflet"
             api = container "Backend API" "Lógica de negocio y acceso a datos" "Spring Boot"
             db = container "PostgreSQL" "Almacena incidencias, usuarios y auditoría" "PostgreSQL" "Database"
         }
@@ -17,17 +17,17 @@ workspace "UrbanPulse" "Modelo C4" {
         datosAbiertos = softwareSystem "Datos Abiertos Málaga" "datosabiertos.malaga.eu" "Externo"
         openWeather = softwareSystem "OpenWeatherMap" "API meteorológica" "Externo"
 
-        ciudadano -> sistema "Usa"
-        operador -> sistema "Usa"
-        tecnico -> sistema "Usa"
-        analista -> sistema "Usa"
-        administrador -> sistema "Administra"
+        ciudadano -> mobile "Registra y consulta incidencias"
+        tecnico -> mobile "Resuelve trabajos asignados"
+        operador -> web "Valida, prioriza y asigna incidencias"
+        administrador -> web "Administra"
+        analista -> web "Consulta indicadores e informes"
 
         sistema -> datosAbiertos "Consulta datos urbanos"
         sistema -> openWeather "Consulta datos meteorológicos"
 
+        mobile -> api "HTTPS / JSON"
         web -> api "HTTPS / JSON"
-        app -> api "HTTPS / JSON"
         api -> db "JDBC"
     }
 
@@ -38,7 +38,7 @@ workspace "UrbanPulse" "Modelo C4" {
         }
 
         container sistema "Contenedores" {
-            include web app api db
+            include *
             autolayout tb
         }
 
