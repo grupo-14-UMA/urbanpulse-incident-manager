@@ -4,7 +4,7 @@ Este documento describe la arquitectura de UrbanPulse siguiendo el modelo C4. Di
 
 ## Visión general
 
-UrbanPulse es una plataforma para registrar, gestionar y analizar incidencias urbanas en Málaga. La arquitectura prevista tiene dos clientes: una aplicación móvil React Native con Expo para el ciudadano y el técnico, y un panel de gestión web con React para el operador, el administrador y el analista. Ambos usan un backend monolítico modular con Java 21 y Spring Boot 4, y PostgreSQL con PostGIS. Docker Compose proporciona el entorno local para el backend y la base de datos. Actualmente, la aplicación móvil muestra las incidencias en un mapa, su detalle y un formulario para registrarlas contra una simulación de la API, el panel de gestión no está implementado y el backend contiene el esqueleto de Spring Boot; el registro de incidencias, las consultas API y el modelo persistente todavía no están implementados.
+UrbanPulse es una plataforma para registrar, gestionar y analizar incidencias urbanas en Málaga. Tiene dos clientes: una aplicación móvil React Native con Expo para el ciudadano y el técnico, y un panel de gestión web con React para el operador, el administrador y el analista. Ambos están diseñados para usar un backend monolítico modular con Java 21 y Spring Boot 4, y PostgreSQL con PostGIS. Docker Compose proporciona el entorno local para el backend y la base de datos. Actualmente, la aplicación móvil muestra las incidencias en un mapa, su detalle y un formulario contra una simulación de la API. El panel web ofrece una estructura inicial con navegación y un mapa base de Málaga; las pantallas de gestión y los endpoints de incidencias todavía no están implementados.
 
 ## Nivel 1: Contexto del sistema
 
@@ -24,7 +24,7 @@ flowchart LR
 
     citizen -->|Registra y consulta incidencias<br/>aplicación móvil| urbanpulse
     technician -->|Resuelve trabajos asignados<br/>aplicación móvil · prevista| urbanpulse
-    staff -->|Valida, asigna, configura y analiza<br/>panel de gestión · previsto| urbanpulse
+    staff -->|Panel web inicial disponible<br/>gestión funcional prevista| urbanpulse
     urbanpulse -->|Solicita teselas| osm
     urbanpulse -.->|Enriquecimiento futuro| openData
     urbanpulse -.->|Enriquecimiento futuro| weather
@@ -41,13 +41,13 @@ flowchart LR
 | Administrador | Gestiona usuarios, permisos, categorías, departamentos y fuentes externas. | Panel de gestión |
 | Analista | Consulta indicadores, patrones territoriales y resultados de análisis. | Panel de gestión |
 
-La aplicación móvil implementada permite al ciudadano ver las incidencias en un mapa de Málaga, consultar su detalle y registrar nuevas. Los flujos de seguimiento, del técnico y del panel de gestión forman parte del alcance funcional previsto.
+La aplicación móvil implementada permite al ciudadano ver las incidencias en un mapa de Málaga, consultar su detalle y registrar nuevas. El panel web implementado contiene su navegación inicial y el mapa base de Málaga; los flujos de gestión, seguimiento y trabajo del técnico forman parte del alcance funcional previsto.
 
 ### Sistemas externos
 
 | Sistema | Uso | Estado |
 | --- | --- | --- |
-| OpenStreetMap, mediante teselas de `tile.openstreetmap.de` | Cartografía de la aplicación móvil y del panel de gestión, con atribución a OpenStreetMap | Usado por la aplicación móvil |
+| OpenStreetMap, mediante teselas de `tile.openstreetmap.de` en móvil y el servicio estándar de teselas en web | Cartografía de la aplicación móvil y del panel de gestión, con atribución a OpenStreetMap | Usado por la aplicación móvil y el panel web |
 | Datos abiertos del Ayuntamiento de Málaga | Barrios, distritos, activos urbanos y otros datos de contexto | Previsto para versiones posteriores ([ADR-0008](adr/0008-datos-abiertos-del-ayuntamiento-de-malaga.md)) |
 | OpenWeatherMap | Información meteorológica asociada a una incidencia | Aceptado ([ADR-0009](adr/0009-openweathermap-para-meteorologia.md)) |
 | Gemini / ChatGPT | Asistencia inteligente y análisis | Aceptado ([ADR-0010](adr/0010-gemini-y-chatgpt-como-ia-principal.md)) |
@@ -64,7 +64,7 @@ flowchart LR
 
     subgraph system[UrbanPulse]
         mobile[Aplicación móvil<br/>React Native · Expo]
-        web[Panel de gestión<br/>React · Vite · Leaflet<br/>previsto]
+        web[Panel de gestión<br/>React · Vite · Leaflet]
         api[Backend API<br/>Java 21 · Spring Boot 4]
         db[(Base de datos<br/>PostgreSQL · PostGIS)]
     end
@@ -74,25 +74,25 @@ flowchart LR
 
     citizen --> mobile
     technician -.-> mobile
-    staff -.-> web
+    staff --> web
     mobile -->|HTTP / JSON<br/>EXPO_PUBLIC_API_URL<br/>previsto| api
-    web -.->|HTTP / JSON| api
+    web -->|HTTP / JSON · VITE_API_URL| api
     api -->|JDBC| db
     mobile -->|Teselas raster| osm
-    web -.->|Teselas raster| osm
+    web -->|Teselas raster| osm
     api -.->|Integraciones futuras| data
 ```
 
 | Contenedor | Tecnología | Responsabilidad y estado |
 | --- | --- | --- |
 | Aplicación móvil | React Native, Expo, `expo-router`, `react-native-maps`, `expo-location` | Implementa una pantalla de mapa centrada en Málaga, con teselas cargadas mediante `UrlTile`, que muestra un marcador por incidencia y recarga las incidencias cada vez que vuelve a primer plano; una pantalla de detalle de una incidencia con un mapa estático de su localización; y una pantalla de nueva incidencia con un mapa en el que el ciudadano marca la localización, que el GPS propone. Todas las llamadas al backend pasan por `src/api.js`, que por ahora simula la API en memoria con unas incidencias de ejemplo; `EXPO_PUBLIC_API_URL` está preparada para cuando se conecte al backend. |
-| Panel de gestión | React, Vite, `react-leaflet` | Cliente web del operador, el administrador y el analista ([ADR-0015](adr/0015-react-vite-y-leaflet-para-panel-de-gestion.md)). Mostrará las incidencias en un mapa con agrupación de marcadores y carga por área visible. Todavía no está implementado. |
+| Panel de gestión | React, Vite, React Router, `react-leaflet`, CSS propio | Cliente web del operador, el administrador y el analista ([ADR-0015](adr/0015-react-vite-y-leaflet-para-panel-de-gestion.md)). Implementa la estructura inicial, rutas para mapa/listado/detalle y un mapa centrado en Málaga con cuatro incidencias de muestra que reflejan los datos iniciales de demostración del móvil. No se sincronizan incidencias creadas en el móvil: eso requiere la API, cuyos endpoints todavía no existen. Las pantallas de gestión, la agrupación de marcadores y la carga por área visible quedan para siguientes issues. `VITE_API_URL` configura el backend y la capa HTTP compartida está preparada. |
 | Backend | Java 21, Spring Boot 4, Maven | Será una API REST organizada como monolito modular. Actualmente solo contiene la clase de arranque de Spring Boot y su configuración de conexión. |
 | Base de datos | PostgreSQL con PostGIS | Persistirá incidencias y datos relacionados. Docker Compose utiliza la imagen `postgis/postgis`; todavía no hay migraciones de esquema. |
 
 En el entorno local, Docker Compose publica el backend en el puerto `8080` y PostgreSQL en el puerto `5432` por defecto. El backend se conecta a la base de datos mediante el nombre de servicio `db` dentro de la red de Compose. La aplicación móvil se inicia aparte con Expo. Para que un teléfono pueda acceder al backend, `EXPO_PUBLIC_API_URL` debe apuntar a la dirección de red del equipo que ejecuta Docker, no a `localhost`.
 
-Los dos clientes se comunicarán con la misma API REST mediante HTTP con JSON; lo que cada uno puede hacer depende de los permisos del rol, no de endpoints distintos por cliente ([ADR-0014](adr/0014-aplicacion-movil-y-panel-de-gestion-web.md)). En la aplicación móvil, la URL se configura con `EXPO_PUBLIC_API_URL` para poder cambiar de entorno sin modificar el código ([ADR-0003](adr/0003-react-native-con-expo-para-frontend.md)). No hay todavía endpoints implementados ni configuración CORS; el backend necesitará CORS para el origen del panel de gestión, algo que la aplicación móvil no requiere.
+Los dos clientes usarán la misma API REST mediante HTTP con JSON; lo que cada uno puede hacer depende de los permisos del rol, no de endpoints distintos por cliente ([ADR-0014](adr/0014-aplicacion-movil-y-panel-de-gestion-web.md)). La aplicación móvil configura la URL con `EXPO_PUBLIC_API_URL` ([ADR-0003](adr/0003-react-native-con-expo-para-frontend.md)) y el panel con `VITE_API_URL`. El backend permite CORS en `/api/**` para el origen configurado en `MANAGEMENT_PANEL_ORIGIN`, cuyo valor local por defecto es `http://localhost:5173`. Los controladores y endpoints de incidencias aún no están implementados.
 
 ## Nivel 3: Componentes del backend
 
