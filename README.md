@@ -4,6 +4,7 @@ Plataforma cloud para comunicar, gestionar y analizar incidencias urbanas en Má
 
 ## Características principales
 
+- [x] Panel web inicial con navegación y mapa base de OpenStreetMap centrado en Málaga.
 - [ ] Mapa de Málaga con las incidencias registradas.
 - [ ] Detalle de una incidencia: título, descripción, categoría, estado y fecha.
 - [ ] Registro de incidencias con ubicación (GPS o seleccionada en el mapa) y categoría opcional.
@@ -19,7 +20,7 @@ Plataforma cloud para comunicar, gestionar y analizar incidencias urbanas en Má
 | springdoc-openapi | Documentación de la API y Swagger UI | [#9](https://github.com/grupo-14-UMA/urbanpulse-incident-manager/issues/9) |
 | Testcontainers | Pruebas del backend contra PostgreSQL con PostGIS | [#9](https://github.com/grupo-14-UMA/urbanpulse-incident-manager/issues/9) |
 | React Native + Expo | Aplicación móvil | [ADR-0003](docs/adr/0003-react-native-con-expo-para-frontend.md) |
-| React + Vite + Leaflet | Panel de gestión web (previsto) | [ADR-0014](docs/adr/0014-aplicacion-movil-y-panel-de-gestion-web.md), [ADR-0015](docs/adr/0015-react-vite-y-leaflet-para-panel-de-gestion.md) |
+| React + Vite + Leaflet | Panel de gestión web | [ADR-0014](docs/adr/0014-aplicacion-movil-y-panel-de-gestion-web.md), [ADR-0015](docs/adr/0015-react-vite-y-leaflet-para-panel-de-gestion.md) |
 | react-native-maps + OpenStreetMap | Mapa de incidencias en la aplicación móvil | [ADR-0004](docs/adr/0004-openstreetmap-como-fuente-de-mapas.md), [ADR-0005](docs/adr/0005-react-native-maps-como-renderizador.md) |
 | Docker Compose | Entorno local | [ADR-0012](docs/adr/0012-docker-compose-para-desarrollo-local.md) |
 
@@ -32,12 +33,14 @@ cd src/frontend && npx expo start
 ```
 
 La guía completa está en [docs/development.md](docs/development.md).
+El panel web se ejecuta aparte desde `src/management-panel` con `npm ci` y `npm run dev`.
 
 ## Estructura del repositorio
 
 ```text
 src/backend/    Backend Spring Boot (sus pruebas están en src/backend/src/test/)
 src/frontend/   Aplicación móvil React Native (Expo)
+src/management-panel/ Panel web React (Vite + Leaflet)
 docs/           Documentación: arquitectura, desarrollo, despliegue, ADRs, requisitos
 ```
 

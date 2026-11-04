@@ -12,3 +12,7 @@ spring:
 
 server:
   port: ${SERVER_PORT:8080}
+
+urbanpulse:
+  cors:
+    management-panel-origin: ${MANAGEMENT_PANEL_ORIGIN:http://localhost:5173}

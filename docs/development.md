@@ -7,7 +7,7 @@ Cómo preparar el entorno, ejecutar el proyecto y probarlo en local. El flujo de
 - Git
 - Docker y Docker Compose
 - Java 21 (solo para ejecutar el backend fuera de Docker; el proyecto incluye Maven Wrapper)
-- Node.js 20 LTS o posterior, y npm
+- Node.js 20.19+, 22.12+ o 24 LTS, y npm
 - La aplicación Expo Go en un móvil
 
 No hace falta instalar PostgreSQL: se ejecuta con Docker Compose.
@@ -30,6 +30,7 @@ Variables de `.env`:
 | `POSTGRES_USER` | Usuario de la base de datos (compartido con la imagen de Postgres) | `urbanpulse` |
 | `POSTGRES_PASSWORD` | Contraseña de la base de datos (compartida con la imagen de Postgres) | `urbanpulse` |
 | `SERVER_PORT` | Puerto HTTP del backend | `8080` |
+| `MANAGEMENT_PANEL_ORIGIN` | Origen web permitido por CORS para el panel | `http://localhost:5173` |
 
 El fichero `.env` no se versiona. `./mvnw spring-boot:run` no lo lee: fuera de Docker, el backend usa estos valores por defecto o las variables de entorno de la shell.
 
@@ -92,6 +93,29 @@ Para obtener la IP local del portátil (suele empezar por `192.168.` o `10.`):
 - **macOS**: `ipconfig getifaddr en0` (Wi-Fi; prueba `en1` si no devuelve nada).
 - **Windows**: `ipconfig` y busca «Dirección IPv4» (o «IPv4 Address») del adaptador Wi-Fi o Ethernet.
 
+## Panel de gestión web
+
+El panel es un proyecto independiente en `src/management-panel`, con React, Vite, React Router y Leaflet. Para abrirlo localmente:
+
+```bash
+cd src/management-panel
+npm ci
+cp .env.example .env
+npm run dev
+```
+
+En Windows PowerShell, usa `Copy-Item .env.example .env` en lugar de `cp`. Vite muestra la dirección local al arrancar (por defecto `http://localhost:5173`). La página inicial muestra el mapa base de OpenStreetMap centrado en Málaga; las rutas de listado y detalle son marcadores de posición para trabajo futuro.
+
+`VITE_API_URL` en `src/management-panel/.env` configura la URL base del backend y por defecto apunta a `http://localhost:8080`. La capa HTTP del panel está preparada para consumir la API, aunque los endpoints de incidencias todavía no están implementados.
+
+El backend permite peticiones del origen indicado por `MANAGEMENT_PANEL_ORIGIN` solo en `/api/**`. El valor por defecto, `http://localhost:5173`, coincide con el servidor de desarrollo de Vite. Si cambias el puerto del panel, actualiza la variable en el `.env` de la raíz y recrea el backend:
+
+```bash
+docker compose up -d --force-recreate backend
+```
+
+El panel no forma parte de Docker Compose; se ejecuta con Vite durante el desarrollo.
+
 ### Lint
 
 ```bash
@@ -99,7 +123,7 @@ cd src/frontend
 npx expo lint
 ```
 
-La versión web de Expo no funciona porque `react-native-maps` no la soporta.
+La versión web de la aplicación móvil Expo no funciona porque `react-native-maps` no la soporta; el panel web es un proyecto Vite independiente.
 
 ## Pruebas
 
