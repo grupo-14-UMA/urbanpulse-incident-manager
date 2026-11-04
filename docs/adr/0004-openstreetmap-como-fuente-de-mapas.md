@@ -6,7 +6,7 @@ status: accepted
 
 ## Contexto
 
-La localización es central en el sistema: el ciudadano marca la posición de la incidencia y el personal la visualiza en un mapa. Hace falta una fuente de cartografía base para la aplicación móvil con el menor coste posible, al tratarse de un proyecto académico. Además, los datos externos no deben bloquear la creación del reporte: si el mapa no carga, el ciudadano debe poder registrar la incidencia con las coordenadas del dispositivo.
+La localización es central en el sistema: el ciudadano marca la posición de la incidencia y el personal la visualiza en un mapa. Hace falta una fuente de cartografía base para la aplicación móvil y el panel de gestión con el menor coste posible, al tratarse de un proyecto académico. Además, los datos externos no deben bloquear la creación del reporte: si el mapa no carga, el ciudadano debe poder registrar la incidencia con las coordenadas del dispositivo.
 
 ## Opciones consideradas
 

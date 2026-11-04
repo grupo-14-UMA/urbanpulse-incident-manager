@@ -8,18 +8,21 @@ Requisitos iniciales de UrbanPulse tomados del [enunciado del proyecto](enunciad
 - Los datos externos enriquecen; nunca bloquean la creación del reporte si una fuente no está disponible.
 - Los atributos de calidad (rendimiento, escalabilidad, fiabilidad, disponibilidad y observabilidad) guían el diseño. Cada funcionalidad debe seguir siendo fluida y útil con millones de incidencias: muestra lo relevante para el contexto (zona, filtros, página) y no todo el conjunto.
 - Se adopta la solución más sencilla que cumpla esos atributos. Cada mejora (índices, caché, colas, eventos, separación en servicios) se justifica con una medición frente a una línea base, obtenida con datos sintéticos, pruebas de carga y observabilidad.
+- El ciudadano y el técnico usan la aplicación móvil; el operador, el administrador y el analista usan el panel de gestión web ([ADR-0014](adr/0014-aplicacion-movil-y-panel-de-gestion-web.md)). Esta separación es una indicación del profesor y no aparece en el enunciado.
 - Cada cambio relevante actualiza el modelo C4, un ADR y las pruebas asociadas.
 
 ## Actores
 
-| Actor | Responsabilidades | Necesidades |
-| --- | --- | --- |
-| Ciudadano | Registra incidencias, aporta ubicación y evidencias, consulta el estado. | Interfaz sencilla, confirmación, privacidad y seguimiento. |
-| Operador municipal | Valida, rechaza, clasifica, prioriza y asigna. | Contexto fiable, historial, búsqueda y trazabilidad. |
-| Técnico | Acepta trabajos, actualiza el progreso y documenta la resolución. | Cola de trabajo y seguimiento del progreso. |
-| Administrador | Gestiona usuarios, roles, categorías, departamentos y fuentes. | Configuración segura, auditoría y control de acceso. |
-| Analista | Explora indicadores, patrones espaciales y resultados de modelos. | Datos consistentes, exportación, métricas y explicabilidad. |
-| Sistema externo | Proporciona datos urbanos, meteorológicos, territoriales o documentales. | |
+| Actor | Responsabilidades | Necesidades | Cliente |
+| --- | --- | --- | --- |
+| Ciudadano | Registra incidencias, aporta ubicación y evidencias, consulta el estado. | Interfaz sencilla, confirmación, privacidad y seguimiento. | Aplicación móvil |
+| Operador municipal | Valida, rechaza, clasifica, prioriza y asigna. | Contexto fiable, historial, búsqueda y trazabilidad. | Panel de gestión |
+| Técnico | Acepta trabajos, actualiza el progreso y documenta la resolución. | Cola de trabajo y seguimiento del progreso. | Aplicación móvil |
+| Administrador | Gestiona usuarios, roles, categorías, departamentos y fuentes. | Configuración segura, auditoría y control de acceso. | Panel de gestión |
+| Analista (opcional) | Explora indicadores, patrones espaciales y resultados de modelos. | Datos consistentes, exportación, métricas y explicabilidad. | Panel de gestión |
+| Sistema externo | Proporciona datos urbanos, meteorológicos, territoriales o documentales. | | |
+
+El enunciado marca como opcionales el actor Analista, sus casos de uso de entrenamiento de modelos y de consulta mediante RAG, y la entidad `KnowledgeDocument`.
 
 ## Requisitos funcionales
 
@@ -95,6 +98,8 @@ El enunciado no trae historias de usuario redactadas. Estas se derivan de sus ca
 | HU18 | Como administrador, quiero consultar el registro de auditoría para revisar las acciones administrativas y las decisiones asistidas. | RF18 |
 
 ### Analista
+
+Opcional según el enunciado.
 
 | ID | Historia | RF |
 | --- | --- | --- |
