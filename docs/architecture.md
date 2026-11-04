@@ -4,7 +4,7 @@ Este documento describe la arquitectura de UrbanPulse siguiendo el modelo C4. Di
 
 ## Visión general
 
-UrbanPulse es una plataforma para registrar, gestionar y analizar incidencias urbanas en Málaga. La arquitectura prevista tiene dos clientes: una aplicación móvil React Native con Expo para el ciudadano y el técnico, y un panel de gestión web con React para el operador, el administrador y el analista. Ambos usan un backend monolítico modular con Java 21 y Spring Boot 4, y PostgreSQL con PostGIS. Docker Compose proporciona el entorno local para el backend y la base de datos. Actualmente, la aplicación móvil muestra un mapa, el panel de gestión no está implementado y el backend contiene el esqueleto de Spring Boot; el registro de incidencias, las consultas API y el modelo persistente todavía no están implementados.
+UrbanPulse es una plataforma para registrar, gestionar y analizar incidencias urbanas en Málaga. La arquitectura prevista tiene dos clientes: una aplicación móvil React Native con Expo para el ciudadano y el técnico, y un panel de gestión web con React para el operador, el administrador y el analista. Ambos usan un backend monolítico modular con Java 21 y Spring Boot 4, y PostgreSQL con PostGIS. Docker Compose proporciona el entorno local para el backend y la base de datos. Actualmente, la aplicación móvil muestra las incidencias en un mapa, su detalle y un formulario para registrarlas contra una simulación de la API, el panel de gestión no está implementado y el backend contiene el esqueleto de Spring Boot; el registro de incidencias, las consultas API y el modelo persistente todavía no están implementados.
 
 ## Nivel 1: Contexto del sistema
 
@@ -41,7 +41,7 @@ flowchart LR
 | Administrador | Gestiona usuarios, permisos, categorías, departamentos y fuentes externas. | Panel de gestión |
 | Analista | Consulta indicadores, patrones territoriales y resultados de análisis. | Panel de gestión |
 
-La aplicación móvil implementada muestra un mapa centrado en Málaga y permite al ciudadano preparar una incidencia. Los flujos de seguimiento, del técnico y del panel de gestión forman parte del alcance funcional previsto.
+La aplicación móvil implementada permite al ciudadano ver las incidencias en un mapa de Málaga, consultar su detalle y registrar nuevas. Los flujos de seguimiento, del técnico y del panel de gestión forman parte del alcance funcional previsto.
 
 ### Sistemas externos
 
@@ -85,7 +85,7 @@ flowchart LR
 
 | Contenedor | Tecnología | Responsabilidad y estado |
 | --- | --- | --- |
-| Aplicación móvil | React Native, Expo, `expo-router`, `react-native-maps`, `expo-location` | Implementa una pantalla de mapa centrada en Málaga, con teselas cargadas mediante `UrlTile`, y una pantalla de nueva incidencia con un mapa en el que el ciudadano marca la localización, que el GPS propone. Todas las llamadas al backend pasan por `src/api.js`, que por ahora simula la API en memoria; `EXPO_PUBLIC_API_URL` está preparada para cuando se conecte al backend. |
+| Aplicación móvil | React Native, Expo, `expo-router`, `react-native-maps`, `expo-location` | Implementa una pantalla de mapa centrada en Málaga, con teselas cargadas mediante `UrlTile`, que muestra un marcador por incidencia y recarga las incidencias cada vez que vuelve a primer plano; una pantalla de detalle de una incidencia con un mapa estático de su localización; y una pantalla de nueva incidencia con un mapa en el que el ciudadano marca la localización, que el GPS propone. Todas las llamadas al backend pasan por `src/api.js`, que por ahora simula la API en memoria con unas incidencias de ejemplo; `EXPO_PUBLIC_API_URL` está preparada para cuando se conecte al backend. |
 | Panel de gestión | React, Vite, `react-leaflet` | Cliente web del operador, el administrador y el analista ([ADR-0015](adr/0015-react-vite-y-leaflet-para-panel-de-gestion.md)). Mostrará las incidencias en un mapa con agrupación de marcadores y carga por área visible. Todavía no está implementado. |
 | Backend | Java 21, Spring Boot 4, Maven | Será una API REST organizada como monolito modular. Actualmente solo contiene la clase de arranque de Spring Boot y su configuración de conexión. |
 | Base de datos | PostgreSQL con PostGIS | Persistirá incidencias y datos relacionados. Docker Compose utiliza la imagen `postgis/postgis`; todavía no hay migraciones de esquema. |
