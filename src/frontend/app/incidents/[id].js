@@ -78,6 +78,7 @@ export default function IncidentDetailScreen() {
     <ScrollView
       style={styles.screen}
       contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
+      contentInsetAdjustmentBehavior="automatic"
     >
       <Text style={styles.title}>{incident.title}</Text>
 

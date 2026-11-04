@@ -7,7 +7,7 @@ import '../src/config';
 export default function RootLayout() {
   return (
     <>
-      <Stack>
+      <Stack screenOptions={{ headerTransparent: true }}>
         <Stack.Screen name="index" options={{ title: 'Mapa de incidencias' }} />
         <Stack.Screen name="incidents/new" options={{ title: 'Nueva incidencia' }} />
         <Stack.Screen name="incidents/[id]" options={{ title: 'Incidencia' }} />
