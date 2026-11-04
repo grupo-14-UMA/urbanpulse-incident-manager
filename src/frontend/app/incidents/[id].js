@@ -1,6 +1,6 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -78,6 +78,7 @@ export default function IncidentDetailScreen() {
     <ScrollView
       style={styles.screen}
       contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
+      contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'automatic' : undefined}
     >
       <Text style={styles.title}>{incident.title}</Text>
 

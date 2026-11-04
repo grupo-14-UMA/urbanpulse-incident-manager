@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -172,6 +173,7 @@ export default function NewIncidentScreen() {
     <ScrollView
       style={styles.screen}
       contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
+      contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'automatic' : undefined}
       scrollEnabled={scrollEnabled}
       keyboardShouldPersistTaps="handled"
       automaticallyAdjustKeyboardInsets
