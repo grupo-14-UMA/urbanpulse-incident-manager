@@ -4,16 +4,17 @@ Este documento describe la arquitectura de UrbanPulse siguiendo el modelo C4. Di
 
 ## Visión general
 
-UrbanPulse es una plataforma para registrar, gestionar y analizar incidencias urbanas en Málaga. La arquitectura prevista combina una aplicación móvil React Native con Expo, un backend monolítico modular con Java 21 y Spring Boot 4, y PostgreSQL con PostGIS. Docker Compose proporciona el entorno local para el backend y la base de datos. Actualmente, la aplicación móvil muestra las incidencias en un mapa, su detalle y un formulario para registrarlas contra una simulación de la API, y el backend contiene el esqueleto de Spring Boot; el registro de incidencias, las consultas API y el modelo persistente todavía no están implementados.
+UrbanPulse es una plataforma para registrar, gestionar y analizar incidencias urbanas en Málaga. La arquitectura prevista tiene dos clientes: una aplicación móvil React Native con Expo para el ciudadano y el técnico, y un panel de gestión web con React para el operador, el administrador y el analista. Ambos usan un backend monolítico modular con Java 21 y Spring Boot 4, y PostgreSQL con PostGIS. Docker Compose proporciona el entorno local para el backend y la base de datos. Actualmente, la aplicación móvil muestra un mapa, el panel de gestión no está implementado y el backend contiene el esqueleto de Spring Boot; el registro de incidencias, las consultas API y el modelo persistente todavía no están implementados.
 
 ## Nivel 1: Contexto del sistema
 
-El sistema conecta a la ciudadanía y, en fases posteriores, al personal municipal con una plataforma central. La aplicación móvil muestra cartografía de OpenStreetMap. Las fuentes externas de contexto enriquecerán las incidencias cuando se integren, pero no deberán impedir su registro si no están disponibles.
+El sistema conecta a la ciudadanía y, en fases posteriores, al personal municipal con una plataforma central. El ciudadano y el técnico trabajan en la calle con la aplicación móvil; el operador, el administrador y el analista trabajan desde el panel de gestión web ([ADR-0014](adr/0014-aplicacion-movil-y-panel-de-gestion-web.md)). Los dos clientes muestran cartografía de OpenStreetMap. Las fuentes externas de contexto enriquecerán las incidencias cuando se integren, pero no deberán impedir su registro si no están disponibles.
 
 ```mermaid
 flowchart LR
     citizen[Ciudadano]
-    staff[Personal municipal<br/>Operador · Técnico · Administrador · Analista]
+    technician[Técnico]
+    staff[Personal de gestión<br/>Operador · Administrador · Analista]
     urbanpulse[UrbanPulse<br/>Registro y gestión de incidencias]
 
     osm[OpenStreetMap<br/>Teselas cartográficas]
@@ -21,8 +22,9 @@ flowchart LR
     weather[OpenWeatherMap<br/>Meteorología]
     ai[Gemini / ChatGPT<br/>Asistencia inteligente]
 
-    citizen -->|Registra y consulta incidencias<br/>funcionalidad prevista| urbanpulse
-    staff -->|Valida, asigna y analiza<br/>funcionalidad prevista| urbanpulse
+    citizen -->|Registra y consulta incidencias<br/>aplicación móvil| urbanpulse
+    technician -->|Resuelve trabajos asignados<br/>aplicación móvil · prevista| urbanpulse
+    staff -->|Valida, asigna, configura y analiza<br/>panel de gestión · previsto| urbanpulse
     urbanpulse -->|Solicita teselas| osm
     urbanpulse -.->|Enriquecimiento futuro| openData
     urbanpulse -.->|Enriquecimiento futuro| weather
@@ -31,34 +33,38 @@ flowchart LR
 
 ### Actores
 
-- **Ciudadano**: registra incidencias, proporciona su ubicación y consulta su estado.
-- **Operador municipal**: valida, rechaza, prioriza y asigna incidencias.
-- **Técnico**: actualiza el progreso y documenta la resolución de los trabajos asignados.
-- **Administrador**: gestiona usuarios, permisos, categorías, departamentos y fuentes externas.
-- **Analista**: consulta indicadores, patrones territoriales y resultados de análisis.
+| Actor | Responsabilidades | Cliente |
+| --- | --- | --- |
+| Ciudadano | Registra incidencias, proporciona su ubicación y consulta su estado. | Aplicación móvil |
+| Técnico | Actualiza el progreso y documenta la resolución de los trabajos asignados. | Aplicación móvil |
+| Operador municipal | Valida, rechaza, prioriza y asigna incidencias. | Panel de gestión |
+| Administrador | Gestiona usuarios, permisos, categorías, departamentos y fuentes externas. | Panel de gestión |
+| Analista | Consulta indicadores, patrones territoriales y resultados de análisis. | Panel de gestión |
 
-La aplicación móvil implementada permite al ciudadano ver las incidencias en un mapa de Málaga, consultar su detalle y registrar nuevas. Los flujos de seguimiento y gestión para estos actores forman parte del alcance funcional previsto.
+La aplicación móvil implementada muestra un mapa centrado en Málaga y permite al ciudadano preparar una incidencia. Los flujos de seguimiento, del técnico y del panel de gestión forman parte del alcance funcional previsto.
 
 ### Sistemas externos
 
 | Sistema | Uso | Estado |
 | --- | --- | --- |
-| OpenStreetMap, mediante teselas de `tile.openstreetmap.de` | Cartografía de la aplicación móvil, con atribución a OpenStreetMap | Usado por la pantalla de mapa |
+| OpenStreetMap, mediante teselas de `tile.openstreetmap.de` | Cartografía de la aplicación móvil y del panel de gestión, con atribución a OpenStreetMap | Usado por la aplicación móvil |
 | Datos abiertos del Ayuntamiento de Málaga | Barrios, distritos, activos urbanos y otros datos de contexto | Previsto para versiones posteriores ([ADR-0008](adr/0008-datos-abiertos-del-ayuntamiento-de-malaga.md)) |
 | OpenWeatherMap | Información meteorológica asociada a una incidencia | Aceptado ([ADR-0009](adr/0009-openweathermap-para-meteorologia.md)) |
 | Gemini / ChatGPT | Asistencia inteligente y análisis | Aceptado ([ADR-0010](adr/0010-gemini-y-chatgpt-como-ia-principal.md)) |
 
-La aplicación muestra la atribución cartográfica correspondiente. Las coordenadas de una incidencia deberán poder obtenerse del GPS o de la selección en el mapa sin depender de que el proveedor de teselas esté disponible ([ADR-0004](adr/0004-openstreetmap-como-fuente-de-mapas.md)).
+Los dos clientes deben mostrar la atribución cartográfica correspondiente. Las coordenadas de una incidencia deberán poder obtenerse del GPS o de la selección en el mapa sin depender de que el proveedor de teselas esté disponible ([ADR-0004](adr/0004-openstreetmap-como-fuente-de-mapas.md)).
 
 ## Nivel 2: Contenedores
 
 ```mermaid
 flowchart LR
     citizen[Ciudadano]
-    staff[Personal municipal]
+    technician[Técnico]
+    staff[Operador · Administrador · Analista]
 
     subgraph system[UrbanPulse]
         mobile[Aplicación móvil<br/>React Native · Expo]
+        web[Panel de gestión<br/>React · Vite · Leaflet<br/>previsto]
         api[Backend API<br/>Java 21 · Spring Boot 4]
         db[(Base de datos<br/>PostgreSQL · PostGIS)]
     end
@@ -67,22 +73,26 @@ flowchart LR
     data[Fuentes de contexto<br/>Ayuntamiento · Meteorología · IA]
 
     citizen --> mobile
-    staff -.-> mobile
+    technician -.-> mobile
+    staff -.-> web
     mobile -->|HTTP / JSON<br/>EXPO_PUBLIC_API_URL<br/>previsto| api
+    web -.->|HTTP / JSON| api
     api -->|JDBC| db
     mobile -->|Teselas raster| osm
+    web -.->|Teselas raster| osm
     api -.->|Integraciones futuras| data
 ```
 
 | Contenedor | Tecnología | Responsabilidad y estado |
 | --- | --- | --- |
-| Aplicación móvil | React Native, Expo, `expo-router`, `react-native-maps`, `expo-location` | Implementa una pantalla de mapa centrada en Málaga, con teselas cargadas mediante `UrlTile`, que muestra un marcador por incidencia y recarga las incidencias cada vez que vuelve a primer plano; una pantalla de detalle de una incidencia con un mapa estático de su localización; y una pantalla de nueva incidencia con un mapa en el que el ciudadano marca la localización, que el GPS propone. Todas las llamadas al backend pasan por `src/api.js`, que por ahora simula la API en memoria con unas incidencias de ejemplo; `EXPO_PUBLIC_API_URL` está preparada para cuando se conecte al backend. |
+| Aplicación móvil | React Native, Expo, `expo-router`, `react-native-maps`, `expo-location` | Implementa una pantalla de mapa centrada en Málaga, con teselas cargadas mediante `UrlTile`, y una pantalla de nueva incidencia con un mapa en el que el ciudadano marca la localización, que el GPS propone. Todas las llamadas al backend pasan por `src/api.js`, que por ahora simula la API en memoria; `EXPO_PUBLIC_API_URL` está preparada para cuando se conecte al backend. |
+| Panel de gestión | React, Vite, `react-leaflet` | Cliente web del operador, el administrador y el analista ([ADR-0015](adr/0015-react-vite-y-leaflet-para-panel-de-gestion.md)). Mostrará las incidencias en un mapa con agrupación de marcadores y carga por área visible. Todavía no está implementado. |
 | Backend | Java 21, Spring Boot 4, Maven | Será una API REST organizada como monolito modular. Actualmente solo contiene la clase de arranque de Spring Boot y su configuración de conexión. |
 | Base de datos | PostgreSQL con PostGIS | Persistirá incidencias y datos relacionados. Docker Compose utiliza la imagen `postgis/postgis`; todavía no hay migraciones de esquema. |
 
-En el entorno local, Docker Compose publica el backend en el puerto `8080` y PostgreSQL en el puerto `5432` por defecto. El backend se conecta a la base de datos mediante el nombre de servicio `db` dentro de la red de Compose. El frontend se inicia aparte con Expo. Para que un teléfono pueda acceder al backend, `EXPO_PUBLIC_API_URL` debe apuntar a la dirección de red del equipo que ejecuta Docker, no a `localhost`.
+En el entorno local, Docker Compose publica el backend en el puerto `8080` y PostgreSQL en el puerto `5432` por defecto. El backend se conecta a la base de datos mediante el nombre de servicio `db` dentro de la red de Compose. La aplicación móvil se inicia aparte con Expo. Para que un teléfono pueda acceder al backend, `EXPO_PUBLIC_API_URL` debe apuntar a la dirección de red del equipo que ejecuta Docker, no a `localhost`.
 
-La comunicación prevista entre la aplicación y el backend es HTTP con JSON. La URL se configura con `EXPO_PUBLIC_API_URL` para poder cambiar de entorno sin modificar el código móvil ([ADR-0003](adr/0003-react-native-con-expo-para-frontend.md)). No hay todavía configuración CORS ni endpoints implementados; deberán añadirse cuando el backend empiece a atender solicitudes desde la aplicación.
+Los dos clientes se comunicarán con la misma API REST mediante HTTP con JSON; lo que cada uno puede hacer depende de los permisos del rol, no de endpoints distintos por cliente ([ADR-0014](adr/0014-aplicacion-movil-y-panel-de-gestion-web.md)). En la aplicación móvil, la URL se configura con `EXPO_PUBLIC_API_URL` para poder cambiar de entorno sin modificar el código ([ADR-0003](adr/0003-react-native-con-expo-para-frontend.md)). No hay todavía endpoints implementados ni configuración CORS; el backend necesitará CORS para el origen del panel de gestión, algo que la aplicación móvil no requiere.
 
 ## Nivel 3: Componentes del backend
 
@@ -158,6 +168,7 @@ Los siguientes atributos orientan el diseño. Son objetivos arquitectónicos y n
 | Disponibilidad y degradación controlada | Permitir registrar una incidencia aunque una fuente externa no esté disponible. | Tratar los servicios externos como enriquecimiento opcional y aislar sus errores del flujo de registro ([RF26](requirements.md)). |
 | Seguridad y privacidad | Proteger datos personales, evidencias y operaciones administrativas. | Incorporar autenticación y permisos por rol; validar tipo y tamaño de los ficheros recibidos. Estas capacidades todavía no están implementadas. |
 | Rendimiento geoespacial | Consultar incidencias próximas y relacionarlas con territorios y activos urbanos. | Utilizar PostGIS para operaciones espaciales e incorporar índices espaciales cuando las consultas lo requieran ([ADR-0007](adr/0007-postgis-para-datos-geoespaciales.md)). |
+| Rendimiento del mapa | Mantener fluido el mapa del panel de gestión aunque muestre muchas incidencias. | Agrupar los marcadores y cargar solo las incidencias del área visible ([ADR-0015](adr/0015-react-vite-y-leaflet-para-panel-de-gestion.md)). |
 | Modificabilidad | Añadir capacidades al dominio sin acoplar toda la aplicación. | Mantener un monolito organizado por funcionalidades, con capas y dependencias claras ([ADR-0006](adr/0006-arquitectura-monolitica-inicial.md)). |
 | Desplegabilidad | Reproducir el entorno local y separar la configuración del código. | Usar Docker Compose para backend y base de datos, y configurar puertos y credenciales mediante variables de entorno ([ADR-0012](adr/0012-docker-compose-para-desarrollo-local.md)). |
 | Escalabilidad operativa | Mantener baja la complejidad para el volumen inicial y permitir evolucionar si las métricas lo requieren. | Desplegar inicialmente el backend como una única unidad. La aplicación y sus módulos escalarán juntos; una separación en servicios requerirá una decisión arquitectónica posterior. |
@@ -168,10 +179,12 @@ Los siguientes atributos orientan el diseño. Son objetivos arquitectónicos y n
 Las decisiones que fundamentan esta arquitectura se registran en [docs/adr/](adr/). El índice completo está en [docs/adr/README.md](adr/README.md). Las principales decisiones relacionadas con los componentes descritos son:
 
 - [ADR-0001: PostgreSQL como base de datos](adr/0001-postgresql-como-base-de-datos.md).
-- [ADR-0003: React Native con Expo para el frontend](adr/0003-react-native-con-expo-para-frontend.md).
+- [ADR-0003: React Native con Expo para la aplicación móvil](adr/0003-react-native-con-expo-para-frontend.md).
 - [ADR-0004: OpenStreetMap como fuente de cartografía](adr/0004-openstreetmap-como-fuente-de-mapas.md).
 - [ADR-0005: react-native-maps como renderizador](adr/0005-react-native-maps-como-renderizador.md).
 - [ADR-0006: Arquitectura monolítica inicial](adr/0006-arquitectura-monolitica-inicial.md).
 - [ADR-0007: PostGIS para datos geoespaciales](adr/0007-postgis-para-datos-geoespaciales.md).
 - [ADR-0012: Docker Compose para desarrollo local](adr/0012-docker-compose-para-desarrollo-local.md).
 - [ADR-0013: Spring Boot 4 para el backend](adr/0013-spring-boot-4-para-backend.md).
+- [ADR-0014: Aplicación móvil y panel de gestión web](adr/0014-aplicacion-movil-y-panel-de-gestion-web.md).
+- [ADR-0015: React con Vite y Leaflet para el panel de gestión](adr/0015-react-vite-y-leaflet-para-panel-de-gestion.md).
