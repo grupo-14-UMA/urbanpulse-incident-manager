@@ -104,9 +104,9 @@ cp .env.example .env
 npm run dev
 ```
 
-En Windows PowerShell, usa `Copy-Item .env.example .env` en lugar de `cp`. Vite muestra la dirección local al arrancar (por defecto `http://localhost:5173`). La página inicial muestra el mapa base de OpenStreetMap centrado en Málaga; las rutas de listado y detalle son marcadores de posición para trabajo futuro.
+En Windows PowerShell, usa `Copy-Item .env.example .env` en lugar de `cp`. Vite muestra la dirección local al arrancar (por defecto `http://localhost:5173`). La página inicial muestra el mapa de OpenStreetMap centrado en Málaga, con cuatro incidencias de muestra iguales a las iniciales de la app móvil. Las rutas de listado y detalle son marcadores de posición para trabajo futuro.
 
-`VITE_API_URL` en `src/management-panel/.env` configura la URL base del backend y por defecto apunta a `http://localhost:8080`. La capa HTTP del panel está preparada para consumir la API, aunque los endpoints de incidencias todavía no están implementados.
+`VITE_API_URL` en `src/management-panel/.env` configura la URL base del backend y por defecto apunta a `http://localhost:8080`. La capa HTTP del panel está preparada para consumir la API, aunque los endpoints de incidencias todavía no están implementados. Las incidencias de muestra están en memoria y no reflejan las incidencias nuevas que se creen en el móvil; para compartirlas hará falta conectar ambos clientes al backend.
 
 El backend permite peticiones del origen indicado por `MANAGEMENT_PANEL_ORIGIN` solo en `/api/**`. El valor por defecto, `http://localhost:5173`, coincide con el servidor de desarrollo de Vite. Si cambias el puerto del panel, actualiza la variable en el `.env` de la raíz y recrea el backend:
 
