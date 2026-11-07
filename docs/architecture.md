@@ -4,7 +4,7 @@ Este documento describe la arquitectura de UrbanPulse siguiendo el modelo C4. Di
 
 ## Visión general
 
-UrbanPulse es una plataforma para registrar, gestionar y analizar incidencias urbanas en Málaga. Tiene dos clientes: una aplicación móvil React Native con Expo para el ciudadano y el técnico, y un panel de gestión web con React para el operador, el administrador y el analista. Ambos están diseñados para usar un backend monolítico modular con Java 21 y Spring Boot 4, y PostgreSQL con PostGIS. Docker Compose proporciona el entorno local para el backend y la base de datos. Actualmente, la aplicación móvil muestra las incidencias en un mapa, su detalle y un formulario contra una simulación de la API. El panel web ofrece una estructura inicial con navegación y un mapa base de Málaga; las pantallas de gestión y los endpoints de incidencias todavía no están implementados.
+UrbanPulse es una plataforma para registrar, gestionar y analizar incidencias urbanas en Málaga. Tiene dos clientes: una aplicación móvil React Native con Expo para el ciudadano y el técnico, y un panel de gestión web con React para el operador, el administrador y el analista. Ambos están diseñados para usar un backend monolítico modular con Java 21 y Spring Boot 4, y PostgreSQL con PostGIS. Docker Compose proporciona el entorno local para el backend y la base de datos. Actualmente, la aplicación móvil muestra las incidencias en un mapa, su detalle y un formulario contra una simulación de la API. El panel web ofrece una estructura inicial con navegación y un mapa base de Málaga; los endpoints REST de creación y consulta de incidencias ya están disponibles, aunque todavía no se consumen desde los clientes.
 
 ## Nivel 1: Contexto del sistema
 
@@ -85,14 +85,14 @@ flowchart LR
 
 | Contenedor | Tecnología | Responsabilidad y estado |
 | --- | --- | --- |
-| Aplicación móvil | React Native, Expo, `expo-router`, `react-native-maps`, `expo-location` | Implementa una pantalla de mapa centrada en Málaga, con teselas cargadas mediante `UrlTile`, que muestra un marcador por incidencia y recarga las incidencias cada vez que vuelve a primer plano; una pantalla de detalle de una incidencia con un mapa estático de su localización; y una pantalla de nueva incidencia con un mapa en el que el ciudadano marca la localización, que el GPS propone. Todas las llamadas al backend pasan por `src/api.js`, que por ahora simula la API en memoria con unas incidencias de ejemplo; `EXPO_PUBLIC_API_URL` está preparada para cuando se conecte al backend. |
-| Panel de gestión | React, Vite, React Router, `react-leaflet`, CSS propio | Cliente web del operador, el administrador y el analista ([ADR-0015](adr/0015-react-vite-y-leaflet-para-panel-de-gestion.md)). Implementa la estructura inicial, rutas para mapa/listado/detalle y un mapa centrado en Málaga con cuatro incidencias de muestra que reflejan los datos iniciales de demostración del móvil. No se sincronizan incidencias creadas en el móvil: eso requiere la API, cuyos endpoints todavía no existen. Las pantallas de gestión, la agrupación de marcadores y la carga por área visible quedan para siguientes issues. `VITE_API_URL` configura el backend y la capa HTTP compartida está preparada. |
-| Backend | Java 21, Spring Boot 4, Maven | Monolito modular. Ya incluye las entidades y repositorios JPA de `Incident` y `Category`; los controladores y servicios de incidencias aún no están implementados. |
+| Aplicación móvil | React Native, Expo, `expo-router`, `react-native-maps`, `expo-location` | Implementa una pantalla de mapa centrada en Málaga, con teselas cargadas mediante `UrlTile`, que muestra un marcador por incidencia y recarga las incidencias cada vez que vuelve a primer plano; una pantalla de detalle de una incidencia con un mapa estático de su localización; y una pantalla de nueva incidencia con un mapa en el que el ciudadano marca la localización, que el GPS propone. Todas las llamadas pasan por `src/api.js`, que todavía simula la API en memoria con unas incidencias de ejemplo. `EXPO_PUBLIC_API_URL` configura el backend para la futura conexión del cliente (#50). |
+| Panel de gestión | React, Vite, React Router, `react-leaflet`, CSS propio | Cliente web del operador, el administrador y el analista ([ADR-0015](adr/0015-react-vite-y-leaflet-para-panel-de-gestion.md)). Implementa la estructura inicial, rutas para mapa/listado/detalle y un mapa centrado en Málaga con cuatro incidencias de muestra. La API de incidencias ya está disponible, pero el panel aún no carga ni modifica esos datos; las pantallas de gestión, la agrupación de marcadores y la carga por área visible quedan para siguientes issues. `VITE_API_URL` configura el backend y la capa HTTP compartida está preparada. |
+| Backend | Java 21, Spring Boot 4, Maven | Monolito modular. Expone la creación y consulta de incidencias y la consulta de categorías mediante REST; usa las entidades y repositorios JPA de `Incident` y `Category`. |
 | Base de datos | PostgreSQL con PostGIS | Docker Compose utiliza `postgis/postgis`. Flyway crea el esquema MVP de `Incident` y `Category`, incluida la ubicación espacial y las categorías iniciales. |
 
 En el entorno local, Docker Compose publica el backend en el puerto `8080` y PostgreSQL en el puerto `5432` por defecto. El backend se conecta a la base de datos mediante el nombre de servicio `db` dentro de la red de Compose. La aplicación móvil se inicia aparte con Expo. Para que un teléfono pueda acceder al backend, `EXPO_PUBLIC_API_URL` debe apuntar a la dirección de red del equipo que ejecuta Docker, no a `localhost`.
 
-Los dos clientes usarán la misma API REST mediante HTTP con JSON; lo que cada uno puede hacer depende de los permisos del rol, no de endpoints distintos por cliente ([ADR-0014](adr/0014-aplicacion-movil-y-panel-de-gestion-web.md)). La aplicación móvil configura la URL con `EXPO_PUBLIC_API_URL` ([ADR-0003](adr/0003-react-native-con-expo-para-frontend.md)) y el panel con `VITE_API_URL`. El backend permite CORS en `/api/**` para el origen configurado en `MANAGEMENT_PANEL_ORIGIN`, cuyo valor local por defecto es `http://localhost:5173`. Los controladores y endpoints de incidencias aún no están implementados.
+Los dos clientes consumen la misma API REST mediante HTTP con JSON; lo que cada uno puede hacer depende de los permisos del rol, no de endpoints distintos por cliente ([ADR-0014](adr/0014-aplicacion-movil-y-panel-de-gestion-web.md)). La aplicación móvil configura la URL con `EXPO_PUBLIC_API_URL` ([ADR-0003](adr/0003-react-native-con-expo-para-frontend.md)) y el panel con `VITE_API_URL`. El backend permite CORS en `/api/**` para el origen configurado en `MANAGEMENT_PANEL_ORIGIN`, cuyo valor local por defecto es `http://localhost:5173`. La API no requiere autenticación en esta entrega.
 
 ## Nivel 3: Componentes del backend
 
@@ -100,28 +100,28 @@ El backend se mantiene como un monolito modular. La estructura separa responsabi
 
 | Componente previsto | Responsabilidad |
 | --- | --- |
-| Controladores REST | Recibir solicitudes HTTP, validar la entrada y devolver respuestas de la API. |
-| Servicios de aplicación | Coordinar los casos de uso y las transacciones del dominio. |
+| Controladores REST | Recibir solicitudes HTTP, validar la entrada y devolver respuestas de la API. Implementados para incidencias y categorías. |
+| Servicios de aplicación | Coordinar los casos de uso y las transacciones del dominio. Implementados para crear y consultar incidencias y consultar categorías. |
 | Repositorios | Consultar y persistir entidades mediante Spring Data JPA. Implementados para `Incident` y `Category`. |
 | Entidades y modelo de dominio | Representar incidencias, categorías y las demás entidades del sistema. Implementadas `Incident` y `Category`; las demás se añaden con sus funcionalidades. |
 | Migraciones Flyway | Crear y evolucionar el esquema de la base de datos. La migración inicial crea `Incident` y `Category` y precarga las categorías del MVP. Flyway es la única autoridad para modificar el esquema. |
 | Integraciones externas | Consultar fuentes de datos urbanos u otros proveedores sin acoplar el dominio a sus formatos. |
 | Documentación API | Generar documentación OpenAPI con springdoc-openapi. |
 
-Los controladores y servicios de aplicación aún están previstos. La persistencia implementada incluye las entidades y repositorios `Incident` y `Category`, además de la migración inicial Flyway.
+La API implementa los controladores y servicios para el contrato REST del MVP. La persistencia incluye las entidades y repositorios `Incident` y `Category`, además de la migración inicial Flyway.
 
 ## API
 
-Las siguientes rutas representan el contrato funcional previsto y no están implementadas en la versión actual.
+La API REST disponible en el MVP expone estas rutas:
 
-| Método | Ruta | Descripción prevista |
+| Método | Ruta | Descripción |
 | --- | --- | --- |
-| `POST` | `/api/incidents` | Crear una incidencia. |
-| `GET` | `/api/incidents` | Listar incidencias. |
-| `GET` | `/api/incidents/{id}` | Consultar el detalle de una incidencia. |
+| `POST` | `/api/incidents` | Crear una incidencia con título, descripción, latitud, longitud y categoría opcional. Devuelve la incidencia creada, con estado `REPORTED` (etiqueta visible: «Registrada»). |
+| `GET` | `/api/incidents` | Listar todas las incidencias. La paginación queda para una siguiente entrega. |
+| `GET` | `/api/incidents/{id}` | Consultar el detalle de una incidencia; devuelve 404 si no existe. |
 | `GET` | `/api/categories` | Listar categorías disponibles. |
 
-El proyecto incluye la dependencia de springdoc-openapi. La documentación interactiva se expondrá mediante Swagger UI cuando se implementen los controladores y sus operaciones.
+springdoc-openapi publica las operaciones y modelos en `http://localhost:8080/swagger-ui.html` y `http://localhost:8080/v3/api-docs`.
 
 ## Modelo de datos
 
