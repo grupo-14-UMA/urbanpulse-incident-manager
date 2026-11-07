@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="680" viewBox="0 0 1200 680">
+  <rect width="1200" height="680" fill="#f8fafc"/>
+  <style>
+    text { font-family: "Segoe UI", Arial, sans-serif; fill: #233044; }
+    .title { font-size: 30px; font-weight: 700; fill: #191970; }
+    .sub { font-size: 17px; fill: #64748b; }
+    .head { font-size: 21px; font-weight: 700; fill: #191970; }
+    .row { font-size: 17px; }
+    .note { font-size: 15px; font-style: italic; fill: #64748b; }
+    .box { fill: #fff; stroke: #4682b4; stroke-width: 2; }
+    .band { fill: #e6effa; }
+  </style>
+  <text x="42" y="55" class="title">UrbanPulse · esquema persistido MVP</text>
+  <text x="44" y="88" class="sub">Flyway V1 · PostgreSQL + PostGIS</text>
+  <rect x="95" y="135" width="570" height="430" rx="8" class="box"/>
+  <path d="M103 135h554a8 8 0 0 1 8 8v42H95v-42a8 8 0 0 1 8-8" class="band"/>
+  <text x="118" y="169" class="head">Incident</text>
+  <text x="120" y="220" class="row">id · INTEGER · PK · identity</text>
+  <text x="120" y="260" class="row">title · VARCHAR(255) · NOT NULL</text>
+  <text x="120" y="300" class="row">description · VARCHAR</text>
+  <text x="120" y="340" class="row">category_id · INTEGER · FK · nullable</text>
+  <text x="120" y="380" class="row">location · geometry(Point, 4326) · NOT NULL</text>
+  <text x="120" y="420" class="row">status_id · INTEGER · default 1 (REPORTED)</text>
+  <text x="120" y="460" class="row">created_at · TIMESTAMP</text>
+  <text x="120" y="500" class="row">updated_at · TIMESTAMP</text>
+  <rect x="830" y="220" width="300" height="220" rx="8" class="box"/>
+  <path d="M838 220h284a8 8 0 0 1 8 8v40H830v-40a8 8 0 0 1 8-8" class="band"/>
+  <text x="850" y="253" class="head">Category</text>
+  <text x="850" y="310" class="row">id · INTEGER · PK · identity</text>
+  <text x="850" y="350" class="row">name · VARCHAR(100) · UNIQUE</text>
+  <path d="M665 360H817" fill="none" stroke="#4682b4" stroke-width="3" marker-end="url(#arrow)"/>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#4682b4"/></marker></defs>
+  <text x="675" y="390" class="note">0..1 categoría por incidencia</text>
+  <text x="95" y="620" class="row">Índices: GiST(location) · B-tree(category_id)</text>
+</svg>
