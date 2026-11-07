@@ -27,7 +27,7 @@ export default function App() {
       const response = await checkApiConnection();
       setApiStatus({
         kind: 'reachable',
-        label: response.status === 404 ? 'Backend accesible · endpoint pendiente' : `Respuesta HTTP ${response.status}`,
+        label: response.status === 404 ? 'Backend accesible · ruta no encontrada' : `Respuesta HTTP ${response.status}`,
       });
     } catch {
       setApiStatus({ kind: 'error', label: 'Sin conexión o CORS bloqueado' });

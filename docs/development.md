@@ -56,6 +56,17 @@ cd src/backend
 
 Flyway aplica al arrancar el backend las migraciones de `src/backend/src/main/resources/db/migration/`. La migración inicial activa PostGIS, crea las tablas `Incident` y `Category` y carga estas categorías: alumbrado, limpieza, mobiliario urbano, tráfico y semáforos, arbolado y otros. La ubicación se almacena como `geometry(Point, 4326)`; `status_id = 1` representa el estado inicial `REPORTED` hasta que se añada la tabla `Status`.
 
+La API REST permite crear y consultar incidencias y listar categorías:
+
+| Método | Ruta | Uso |
+| --- | --- | --- |
+| `POST` | `/api/incidents` | Crear una incidencia con título, descripción, latitud, longitud y `categoryId` opcional. |
+| `GET` | `/api/incidents` | Listar todas las incidencias (sin paginación en esta entrega). |
+| `GET` | `/api/incidents/{id}` | Consultar una incidencia por identificador. |
+| `GET` | `/api/categories` | Consultar las categorías disponibles. |
+
+El POST responde con la incidencia creada, incluidos `id`, coordenadas, categoría, `status: "REPORTED"` y `createdAt`. La etiqueta para el ciudadano es «Registrada». Los datos inválidos producen HTTP 400 con un mensaje en español; una incidencia inexistente produce HTTP 404. Las operaciones se documentan en Swagger UI. La API no requiere autenticación en esta entrega.
+
 ## Aplicación móvil
 
 La app es un proyecto Expo (JavaScript, expo-router) en `src/frontend`. Se abre en el móvil con Expo Go, sin compilar código nativo.
@@ -69,7 +80,7 @@ npx expo start
 
 Escanea el código QR con Expo Go (en iPhone, con la cámara). El móvil y el portátil deben estar en la misma red. La app abre un mapa de OpenStreetMap (teselas de `tile.openstreetmap.de`) centrado en Málaga con un marcador por incidencia; al tocar uno aparece un resumen, y al tocar el resumen se abre el detalle. El botón «Nueva incidencia» abre el formulario para registrar una; la primera vez pide permiso de ubicación.
 
-Por ahora la app no llama al backend: `src/api.js` simula la API en memoria, así que no hace falta arrancarlo. Arranca con unas incidencias de ejemplo, y las creadas se pierden al recargar la app.
+Por ahora la app no llama al backend: `src/api.js` simula la API en memoria, así que no hace falta arrancar el backend para probar la interfaz. Arranca con unas incidencias de ejemplo, y las creadas se pierden al recargar la app. La conexión de este cliente a los endpoints reales se implementará en el issue #50.
 
 En redes que aíslan a los dispositivos entre sí, como eduroam, el móvil no llega al portátil y Expo Go muestra «Something went wrong». En ese caso arranca con túnel (la primera vez pide instalar `@expo/ngrok`) o conecta el portátil al punto de acceso del móvil:
 
@@ -106,7 +117,7 @@ npm run dev
 
 En Windows PowerShell, usa `Copy-Item .env.example .env` en lugar de `cp`. Vite muestra la dirección local al arrancar (por defecto `http://localhost:5173`). La página inicial muestra el mapa de OpenStreetMap centrado en Málaga, con cuatro incidencias de muestra iguales a las iniciales de la app móvil. Las rutas de listado y detalle son marcadores de posición para trabajo futuro.
 
-`VITE_API_URL` en `src/management-panel/.env` configura la URL base del backend y por defecto apunta a `http://localhost:8080`. La capa HTTP del panel está preparada para consumir la API, aunque los endpoints de incidencias todavía no están implementados. Las incidencias de muestra están en memoria y no reflejan las incidencias nuevas que se creen en el móvil; para compartirlas hará falta conectar ambos clientes al backend.
+`VITE_API_URL` en `src/management-panel/.env` configura la URL base del backend y por defecto apunta a `http://localhost:8080`. El panel puede comprobar la conexión con el endpoint de listado; sus pantallas todavía muestran datos de muestra y no consumen ni modifican las incidencias de la API.
 
 El backend permite peticiones del origen indicado por `MANAGEMENT_PANEL_ORIGIN` solo en `/api/**`. El valor por defecto, `http://localhost:5173`, coincide con el servidor de desarrollo de Vite. Si cambias el puerto del panel, actualiza la variable en el `.env` de la raíz y recrea el backend:
 
