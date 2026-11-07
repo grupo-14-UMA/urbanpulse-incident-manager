@@ -54,7 +54,7 @@ cd src/backend
 - Swagger UI: `http://localhost:8080/swagger-ui.html`
 - Documento OpenAPI: `http://localhost:8080/v3/api-docs`
 
-Flyway aplica al arrancar el backend las migraciones de `src/backend/src/main/resources/db/migration/`.
+Flyway aplica al arrancar el backend las migraciones de `src/backend/src/main/resources/db/migration/`. La migración inicial activa PostGIS, crea las tablas `Incident` y `Category` y carga estas categorías: alumbrado, limpieza, mobiliario urbano, tráfico y semáforos, arbolado y otros. La ubicación se almacena como `geometry(Point, 4326)`; `status_id = 1` representa el estado inicial `REPORTED` hasta que se añada la tabla `Status`.
 
 ## Aplicación móvil
 

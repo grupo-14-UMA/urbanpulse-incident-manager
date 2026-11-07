@@ -15,7 +15,8 @@ Plataforma cloud para comunicar, gestionar y analizar incidencias urbanas en Má
 | Tecnología | Uso | Decisión |
 | --- | --- | --- |
 | Java 21 + Spring Boot 4 | Backend y API REST | [ADR-0013](docs/adr/0013-spring-boot-4-para-backend.md) |
-| PostgreSQL | Base de datos | [ADR-0001](docs/adr/0001-postgresql-como-base-de-datos.md) |
+| PostgreSQL + PostGIS | Persistencia relacional y geoespacial | [ADR-0001](docs/adr/0001-postgresql-como-base-de-datos.md), [ADR-0007](docs/adr/0007-postgis-para-datos-geoespaciales.md) |
+| Hibernate Spatial | Mapeo JPA de geometrías PostGIS | [ADR-0007](docs/adr/0007-postgis-para-datos-geoespaciales.md) |
 | Flyway | Migraciones del esquema de base de datos | [ADR-0013](docs/adr/0013-spring-boot-4-para-backend.md) |
 | springdoc-openapi | Documentación de la API y Swagger UI | [#9](https://github.com/grupo-14-UMA/urbanpulse-incident-manager/issues/9) |
 | Testcontainers | Pruebas del backend contra PostgreSQL con PostGIS | [#9](https://github.com/grupo-14-UMA/urbanpulse-incident-manager/issues/9) |
