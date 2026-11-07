@@ -64,6 +64,8 @@ export default function NewIncidentScreen() {
   const [location, setLocation] = useState(null);
 
   const [categories, setCategories] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoriesError, setCategoriesError] = useState(null);
   const [locating, setLocating] = useState(true);
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
@@ -73,8 +75,19 @@ export default function NewIncidentScreen() {
   useEffect(() => {
     let active = true;
     getCategories()
-      .then((result) => active && setCategories(result))
-      .catch(() => {});
+      .then((result) => {
+        if (active) {
+          setCategories(result);
+          setCategoriesLoading(false);
+          setCategoriesError(null);
+        }
+      })
+      .catch((error) => {
+        if (active) {
+          setCategoriesLoading(false);
+          setCategoriesError(error?.message || 'No se pudieron cargar las categorías.');
+        }
+      });
     return () => {
       active = false;
     };
@@ -158,8 +171,8 @@ export default function NewIncidentScreen() {
       });
       sendingRef.current = false;
       router.back();
-    } catch {
-      setSubmitError('No se pudo enviar la incidencia. Inténtalo de nuevo.');
+    } catch (error) {
+      setSubmitError(error?.message || 'No se pudo enviar la incidencia. Inténtalo de nuevo.');
       sendingRef.current = false;
       setSending(false);
     }
@@ -221,6 +234,11 @@ export default function NewIncidentScreen() {
           );
         })}
       </View>
+      {categoriesLoading && <Text style={styles.categoryStatus}>Cargando categorías…</Text>}
+      {categoriesError && <Text style={styles.errorText}>{categoriesError}</Text>}
+      {!categoriesLoading && !categoriesError && categories.length === 0 && (
+        <Text style={styles.categoryStatus}>No hay categorías disponibles.</Text>
+      )}
 
       <Text style={styles.label}>Localización</Text>
       <View
@@ -320,6 +338,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+  },
+  categoryStatus: {
+    marginTop: 4,
+    fontSize: 13,
+    color: COLORS.textMuted,
   },
   chip: {
     paddingHorizontal: 12,
