@@ -9,8 +9,8 @@ Todos los miembros desarrollan. Cada uno tiene una responsabilidad en el equipo 
 | Rol | Miembro | Responsabilidades |
 | --- | --- | --- |
 | Team Leader y Product Owner | Alfonso (@alraro) | Redacta y prioriza los issues, organiza las entregas. |
-| Reviewer | Andrea (@apr2004) | Revisa los pull requests. |
-| Tester | María (@mmartinmaria) | Comprueba los criterios de aceptación antes de cerrar un issue. |
+| Reviewer | Andrea (@apr2004) | Revisa los pull requests, sobre todo el código. |
+| Tester | María (@mmartinmaria) | Revisa los pull requests, sobre todo que cumplen los criterios de aceptación del issue. |
 | Maintainer | Daniel (@daniiroblees) | Configuración del repositorio, etiquetas, CI y releases. |
 
 ### Áreas de desarrollo
@@ -30,9 +30,8 @@ El dueño de un área desarrolla los issues con su etiqueta, revisa los PR que t
 2. **Rama**: se crea desde `main` actualizado, con el nombre `<tipo>/<descripcion-corta>` (por ejemplo `feat/incident-map`, `fix/login-timeout`). Una rama por issue.
 3. **Commits**: siguen [Conventional Commits](https://www.conventionalcommits.org/) (ver abajo).
 4. **Pull request**: se abre contra `main` rellenando la plantilla y enlazando el issue con `Closes #<n>`.
-5. **Revisión**: hace falta 1 aprobación. GitHub pide la revisión automáticamente según [`.github/CODEOWNERS`](.github/CODEOWNERS): siempre al Reviewer y, si el PR toca su carpeta, también al dueño del área de desarrollo, al Maintainer, al Tester o al Product Owner. Los PR del backend se piden a sus dos dueños, así que siempre los revisa alguien distinto del autor. Nunca se hace push directo a `main`.
+5. **Revisión**: hace falta 1 aprobación. GitHub pide la revisión automáticamente según [`.github/CODEOWNERS`](.github/CODEOWNERS): siempre al Reviewer y al Tester y, si el PR toca su carpeta, también al dueño del área de desarrollo, al Maintainer o al Product Owner. El Reviewer y el Tester revisan los dos el código y los criterios de aceptación del issue, cada uno con más atención a su parte; en un PR sin cambios de comportamiento (documentación, configuración) basta un vistazo. Como siempre se pide a los dos, un PR de uno de ellos lo aprueba el otro. Nunca se hace push directo a `main`.
 6. **Merge**: lo hace el autor del PR una vez aprobado.
-7. **Verificación**: el Tester comprueba los criterios de aceptación del issue.
 
 Los PR se fusionan con *Squash and merge* y la rama se borra después del merge.
 
