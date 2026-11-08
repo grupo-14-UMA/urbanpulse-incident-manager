@@ -7,6 +7,7 @@ import java.util.Objects;
 import org.locationtech.jts.geom.Point;
 
 import es.uma.urbanpulse.category.Category;
+import es.uma.urbanpulse.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
@@ -42,6 +43,11 @@ public class Incident {
 	@JoinColumn(name = "category_id", foreignKey = @ForeignKey(name = "fk_incident_category"))
 	private Category category;
 
+	/** Null only for incidents stored before authentication existed. */
+	@ManyToOne(fetch = FetchType.LAZY, optional = true)
+	@JoinColumn(name = "reporter_id", updatable = false, foreignKey = @ForeignKey(name = "fk_incident_reporter"))
+	private User reporter;
+
 	@Column(name = "location", nullable = false, columnDefinition = "geometry(Point, 4326)")
 	private Point location;
 
@@ -58,8 +64,9 @@ public class Incident {
 	protected Incident() {
 	}
 
-	public Incident(String title, String description, Category category, Point location) {
+	public Incident(String title, String description, Category category, Point location, User reporter) {
 		this.title = title;
+		this.reporter = Objects.requireNonNull(reporter, "reporter must not be null");
 		this.description = description;
 		this.category = category;
 		this.location = toWgs84(location);
@@ -103,6 +110,10 @@ public class Incident {
 
 	public void setCategory(Category category) {
 		this.category = category;
+	}
+
+	public User getReporter() {
+		return reporter;
 	}
 
 	public Point getLocation() {
