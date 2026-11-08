@@ -24,6 +24,8 @@ Política común de UrbanPulse ante una petición o un recurso que falla: qué v
 
 El cliente clasifica el error en un único sitio, su capa de acceso a la API, y las pantallas solo reciben el tipo y el texto para el usuario. Una pantalla puede sustituir el texto de un tipo por otro más concreto (como en el 404), pero no mostrar el diagnóstico técnico.
 
+La pantalla de inicio de sesión es la excepción del 401: allí significa que el email o la contraseña no son correctos, no que la sesión haya caducado. Muestra el `message` del backend («El email o la contraseña no son correctos.»), conserva lo que escribió el usuario y no redirige.
+
 ## Contrato de errores de la API
 
 - Toda respuesta de error usa `ApiErrorResponse`: `message`, un texto general, y `errors`, un mapa de campo a mensaje que puede estar vacío.
