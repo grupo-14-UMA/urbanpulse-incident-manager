@@ -4,7 +4,7 @@ Este documento describe la arquitectura de UrbanPulse siguiendo el modelo C4. Di
 
 ## Visión general
 
-UrbanPulse es una plataforma para registrar, gestionar y analizar incidencias urbanas en Málaga. Tiene dos clientes: una aplicación móvil React Native con Expo para el ciudadano y el técnico, y un panel de gestión web con React para el operador, el administrador y el analista. Ambos están diseñados para usar un backend monolítico modular con Java 21 y Spring Boot 4, y PostgreSQL con PostGIS. Docker Compose proporciona el entorno local para el backend y la base de datos. Actualmente, la aplicación móvil muestra las incidencias en un mapa, su detalle y un formulario contra una simulación de la API. El panel web ofrece una estructura inicial con navegación y un mapa base de Málaga; los endpoints REST de creación y consulta de incidencias ya están disponibles, aunque todavía no se consumen desde los clientes.
+UrbanPulse es una plataforma para registrar, gestionar y analizar incidencias urbanas en Málaga. Tiene dos clientes: una aplicación móvil React Native con Expo para el ciudadano y el técnico, y un panel de gestión web con React para el operador, el administrador y el analista. Ambos están diseñados para usar un backend monolítico modular con Java 21 y Spring Boot 4, y PostgreSQL con PostGIS. Docker Compose proporciona el entorno local para el backend y la base de datos. La aplicación móvil consume la API para mostrar incidencias, consultar sus detalles y registrar nuevas incidencias. El panel web ofrece una estructura inicial con navegación y un mapa base de Málaga; sus pantallas todavía no consumen la API.
 
 ## Nivel 1: Contexto del sistema
 
@@ -75,7 +75,7 @@ flowchart LR
     citizen --> mobile
     technician -.-> mobile
     staff --> web
-    mobile -->|HTTP / JSON<br/>EXPO_PUBLIC_API_URL<br/>previsto| api
+    mobile -->|HTTP / JSON<br/>EXPO_PUBLIC_API_URL| api
     web -->|HTTP / JSON · VITE_API_URL| api
     api -->|JDBC| db
     mobile -->|Teselas raster| osm
@@ -85,7 +85,7 @@ flowchart LR
 
 | Contenedor | Tecnología | Responsabilidad y estado |
 | --- | --- | --- |
-| Aplicación móvil | React Native, Expo, `expo-router`, `react-native-maps`, `expo-location` | Implementa una pantalla de mapa centrada en Málaga, con teselas cargadas mediante `UrlTile`, que muestra un marcador por incidencia y recarga las incidencias cada vez que vuelve a primer plano; una pantalla de detalle de una incidencia con un mapa estático de su localización; y una pantalla de nueva incidencia con un mapa en el que el ciudadano marca la localización, que el GPS propone. Todas las llamadas pasan por `src/api.js`, que todavía simula la API en memoria con unas incidencias de ejemplo. `EXPO_PUBLIC_API_URL` configura el backend para la futura conexión del cliente (#50). |
+| Aplicación móvil | React Native, Expo, `expo-router`, `react-native-maps`, `expo-location` | Implementa una pantalla de mapa centrada en Málaga, con teselas cargadas mediante `UrlTile`, que muestra las incidencias del backend y las recarga al volver a primer plano; una pantalla de detalle con un mapa estático de la localización; y un formulario para registrar incidencias con coordenadas propuestas por GPS o marcadas por el ciudadano. Las llamadas REST se centralizan en `src/api.js`, y `EXPO_PUBLIC_API_URL` configura la dirección base del backend. |
 | Panel de gestión | React, Vite, React Router, `react-leaflet`, CSS propio | Cliente web del operador, el administrador y el analista ([ADR-0015](adr/0015-react-vite-y-leaflet-para-panel-de-gestion.md)). Implementa la estructura inicial, rutas para mapa/listado/detalle y un mapa centrado en Málaga con cuatro incidencias de muestra. La API de incidencias ya está disponible, pero el panel aún no carga ni modifica esos datos; las pantallas de gestión, la agrupación de marcadores y la carga por área visible quedan para siguientes issues. `VITE_API_URL` configura el backend y la capa HTTP compartida está preparada. |
 | Backend | Java 21, Spring Boot 4, Maven | Monolito modular. Expone la creación y consulta de incidencias y la consulta de categorías mediante REST; usa las entidades y repositorios JPA de `Incident` y `Category`. |
 | Base de datos | PostgreSQL con PostGIS | Docker Compose utiliza `postgis/postgis`. Flyway crea el esquema MVP de `Incident` y `Category`, incluida la ubicación espacial y las categorías iniciales. |
@@ -154,7 +154,7 @@ erDiagram
     URBAN_ASSET o|--o{ INCIDENT : relates_to
 ```
 
-La ubicación se almacena como `geometry(Point, 4326)` en PostGIS, usando WGS 84. La API expondrá las coordenadas como latitud y longitud y el backend se encargará de convertirlas al formato geoespacial de la base de datos ([ADR-0007](adr/0007-postgis-para-datos-geoespaciales.md)). En el MVP, `status_id = 1` representa `REPORTED`; la tabla `Status` se añade cuando se implemente la gestión del ciclo de vida.
+La ubicación se almacena como `geometry(Point, 4326)` en PostGIS, usando WGS 84. La API expone las coordenadas como latitud y longitud y el backend las convierte al formato geoespacial de la base de datos ([ADR-0007](adr/0007-postgis-para-datos-geoespaciales.md)). En el MVP, `status_id = 1` representa `REPORTED`; la tabla `Status` se añade cuando se implemente la gestión del ciclo de vida.
 
 La persistencia inicial cubre las entidades asociadas al registro de incidencias y sus categorías. Usuarios, roles, asignaciones, evidencias, activos urbanos e integraciones de contexto se incorporarán cuando se implementen sus requisitos.
 

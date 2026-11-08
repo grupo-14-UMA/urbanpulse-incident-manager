@@ -80,7 +80,7 @@ npx expo start
 
 Escanea el código QR con Expo Go (en iPhone, con la cámara). El móvil y el portátil deben estar en la misma red. La app abre un mapa de OpenStreetMap (teselas de `tile.openstreetmap.de`) centrado en Málaga con un marcador por incidencia; al tocar uno aparece un resumen, y al tocar el resumen se abre el detalle. El botón «Nueva incidencia» abre el formulario para registrar una; la primera vez pide permiso de ubicación.
 
-Por ahora la app no llama al backend: `src/api.js` simula la API en memoria, así que no hace falta arrancar el backend para probar la interfaz. Arranca con unas incidencias de ejemplo, y las creadas se pierden al recargar la app. La conexión de este cliente a los endpoints reales se implementará en el issue #50.
+La app consume el backend para cargar las incidencias y categorías, consultar el detalle y registrar incidencias. Arranca Docker Compose antes de iniciar Expo y configura `EXPO_PUBLIC_API_URL` en `src/frontend/.env` con una dirección alcanzable desde el móvil. Si el backend no está disponible, la app muestra un mensaje de error; el detalle y las categorías del formulario permiten reintentar la carga.
 
 En redes que aíslan a los dispositivos entre sí, como eduroam, el móvil no llega al portátil y Expo Go muestra «Something went wrong». En ese caso arranca con túnel (la primera vez pide instalar `@expo/ngrok`) o conecta el portátil al punto de acceso del móvil:
 
@@ -115,7 +115,7 @@ cp .env.example .env
 npm run dev
 ```
 
-En Windows PowerShell, usa `Copy-Item .env.example .env` en lugar de `cp`. Vite muestra la dirección local al arrancar (por defecto `http://localhost:5173`). La página inicial muestra el mapa de OpenStreetMap centrado en Málaga, con cuatro incidencias de muestra iguales a las iniciales de la app móvil. Las rutas de listado y detalle son marcadores de posición para trabajo futuro.
+En Windows PowerShell, usa `Copy-Item .env.example .env` en lugar de `cp`. Vite muestra la dirección local al arrancar (por defecto `http://localhost:5173`). La página inicial muestra el mapa de OpenStreetMap centrado en Málaga, con cuatro incidencias de muestra. Las rutas de listado y detalle son marcadores de posición para trabajo futuro.
 
 `VITE_API_URL` en `src/management-panel/.env` configura la URL base del backend y por defecto apunta a `http://localhost:8080`. El panel puede comprobar la conexión con el endpoint de listado; sus pantallas todavía muestran datos de muestra y no consumen ni modifican las incidencias de la API.
 

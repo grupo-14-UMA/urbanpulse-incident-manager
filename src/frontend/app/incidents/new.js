@@ -64,6 +64,10 @@ export default function NewIncidentScreen() {
   const [location, setLocation] = useState(null);
 
   const [categories, setCategories] = useState([]);
+  // 'loading' | 'loaded' | 'error'
+  const [categoriesState, setCategoriesState] = useState('loading');
+  const [categoriesError, setCategoriesError] = useState(null);
+  const [categoriesAttempt, setCategoriesAttempt] = useState(0);
   const [locating, setLocating] = useState(true);
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
@@ -73,12 +77,22 @@ export default function NewIncidentScreen() {
   useEffect(() => {
     let active = true;
     getCategories()
-      .then((result) => active && setCategories(result))
-      .catch(() => {});
+      .then((result) => {
+        if (active) {
+          setCategories(result);
+          setCategoriesState('loaded');
+        }
+      })
+      .catch((error) => {
+        if (active) {
+          setCategoriesError(error?.message || 'No se pudieron cargar las categorías.');
+          setCategoriesState('error');
+        }
+      });
     return () => {
       active = false;
     };
-  }, []);
+  }, [categoriesAttempt]);
 
   useEffect(() => {
     let active = true;
@@ -158,8 +172,8 @@ export default function NewIncidentScreen() {
       });
       sendingRef.current = false;
       router.back();
-    } catch {
-      setSubmitError('No se pudo enviar la incidencia. Inténtalo de nuevo.');
+    } catch (error) {
+      setSubmitError(error?.message || 'No se pudo enviar la incidencia. Inténtalo de nuevo.');
       sendingRef.current = false;
       setSending(false);
     }
@@ -221,6 +235,30 @@ export default function NewIncidentScreen() {
           );
         })}
       </View>
+      {categoriesState === 'loading' && (
+        <Text style={styles.categoryStatus}>Cargando categorías…</Text>
+      )}
+      {categoriesState === 'error' && (
+        <>
+          <Text style={styles.errorText}>{categoriesError}</Text>
+          <Pressable
+            style={({ pressed }) => [
+              styles.retryButton,
+              pressed && styles.retryButtonPressed,
+            ]}
+            onPress={() => {
+              setCategoriesState('loading');
+              setCategoriesAttempt((attempt) => attempt + 1);
+            }}
+            accessibilityRole="button"
+          >
+            <Text style={styles.retryButtonText}>Reintentar</Text>
+          </Pressable>
+        </>
+      )}
+      {categoriesState === 'loaded' && categories.length === 0 && (
+        <Text style={styles.categoryStatus}>No hay categorías disponibles.</Text>
+      )}
 
       <Text style={styles.label}>Localización</Text>
       <View
@@ -320,6 +358,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+  },
+  categoryStatus: {
+    marginTop: 4,
+    fontSize: 13,
+    color: COLORS.textMuted,
+  },
+  retryButton: {
+    alignSelf: 'flex-start',
+    marginTop: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: COLORS.primary,
+  },
+  retryButtonPressed: {
+    backgroundColor: COLORS.primaryPressed,
+  },
+  retryButtonText: {
+    color: COLORS.onPrimary,
+    fontSize: 16,
+    fontWeight: '600',
   },
   chip: {
     paddingHorizontal: 12,

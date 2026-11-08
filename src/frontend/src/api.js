@@ -1,114 +1,159 @@
-// Single entry point for every backend call. Screens never call `fetch` directly.
-//
-// For now this is an in-memory mock of the contract in #13, so the app can be
-// built and demoed before the backend exists. #50 replaces it with real HTTP calls
-// without changing these function signatures. Everything is forgotten when the
-// app reloads.
+import { API_URL } from './config';
 
-const MOCK_DELAY_MS = 300;
+const BASE_URL = typeof API_URL === 'string' ? API_URL.trim().replace(/\/+$/, '') : '';
+const REQUEST_TIMEOUT_MS = 10000;
+const CONNECTION_ERROR =
+  'No se pudo conectar con el backend. Comprueba que está en ejecución y que EXPO_PUBLIC_API_URL es accesible desde el móvil.';
+const INVALID_CREATED_AT_ERROR = 'El backend devolvió una fecha de registro no válida.';
 
-// The six categories seeded in #12.
-const CATEGORIES = [
-  { id: 1, name: 'alumbrado' },
-  { id: 2, name: 'limpieza' },
-  { id: 3, name: 'mobiliario urbano' },
-  { id: 4, name: 'tráfico y semáforos' },
-  { id: 5, name: 'arbolado' },
-  { id: 6, name: 'otros' },
-];
+class ApiError extends Error {
+  constructor(message, { status, payload, cause } = {}) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.payload = payload;
+    this.cause = cause;
+  }
+}
 
-// Example incidents so the map is not empty in the demo. Incidents created from
-// the form are added to them.
-const incidents = [
-  {
-    id: 1,
-    title: 'Farola fundida en calle Larios',
-    description: 'La farola frente al número 12 lleva varias noches sin encenderse.',
-    latitude: 36.7196,
-    longitude: -4.4216,
-    categoryId: 1,
-    categoryName: 'alumbrado',
-    status: 'REPORTED',
-    createdAt: '2026-10-28T19:42:00.000Z',
-  },
-  {
-    id: 2,
-    title: 'Contenedor desbordado en El Perchel',
-    description: 'El contenedor de la esquina tiene bolsas acumuladas en la acera desde el fin de semana.',
-    latitude: 36.7155,
-    longitude: -4.4302,
-    categoryId: 2,
-    categoryName: 'limpieza',
-    status: 'REPORTED',
-    createdAt: '2026-10-30T08:15:00.000Z',
-  },
-  {
-    id: 3,
-    title: 'Semáforo apagado en avenida de Andalucía',
-    description: 'El semáforo para peatones del cruce con calle Héroe de Sostoa no funciona.',
-    latitude: 36.7139,
-    longitude: -4.4361,
-    categoryId: 4,
-    categoryName: 'tráfico y semáforos',
-    status: 'REPORTED',
-    createdAt: '2026-11-01T11:03:00.000Z',
-  },
-  {
-    id: 4,
-    title: 'Banco roto en el paseo de La Malagueta',
-    description: 'A uno de los bancos del paseo le faltan dos tablones del respaldo.',
-    latitude: 36.7193,
-    longitude: -4.4082,
-    categoryId: null,
-    categoryName: null,
-    status: 'REPORTED',
-    createdAt: '2026-11-02T17:30:00.000Z',
-  },
-];
-let nextIncidentId = incidents.length + 1;
+function logFailure(method, path, status, startedAt) {
+  const statusLabel = status ?? 'sin respuesta';
+  const durationMs = Date.now() - startedAt;
+  console.warn('[api] ' + method + ' ' + path + ' -> ' + statusLabel + ' (' + durationMs + ' ms)');
+}
 
-function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function getResponseErrorMessage(payload, status) {
+  const message =
+    (typeof payload?.message === 'string' && payload.message) ||
+    (typeof payload?.detail === 'string' && payload.detail) ||
+    'El backend respondió con el código HTTP ' + status + '.';
+  const fieldMessages = Object.values(payload?.errors ?? {}).filter(
+    (fieldMessage) => typeof fieldMessage === 'string' && fieldMessage,
+  );
+
+  return [message, ...fieldMessages].join(' ');
+}
+
+async function request(path, { method = 'GET', body } = {}) {
+  if (!BASE_URL) {
+    throw new ApiError(
+      'Configura EXPO_PUBLIC_API_URL en src/frontend/.env con una dirección del backend accesible desde el móvil.',
+    );
+  }
+
+  const startedAt = Date.now();
+  let response;
+  let responseText;
+  const controller = new AbortController();
+  let timeout;
+  try {
+    timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    response = await fetch(BASE_URL + path, {
+      method,
+      headers: {
+        Accept: 'application/json',
+        ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+      },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      signal: controller.signal,
+    });
+    responseText = await response.text();
+  } catch (cause) {
+    const message = controller.signal.aborted
+      ? 'El backend no respondió en ' +
+        REQUEST_TIMEOUT_MS / 1000 +
+        ' segundos. Comprueba la conexión de red y EXPO_PUBLIC_API_URL.'
+      : CONNECTION_ERROR;
+    const error = new ApiError(message, { cause });
+    logFailure(method, path, undefined, startedAt);
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  let payload = null;
+  if (responseText) {
+    try {
+      payload = JSON.parse(responseText);
+    } catch {
+      if (response.ok) {
+        const error = new ApiError('El backend devolvió una respuesta que no es JSON válido.', {
+          status: response.status,
+        });
+        logFailure(method, path, response.status, startedAt);
+        throw error;
+      }
+    }
+  }
+
+  if (!response.ok) {
+    const error = new ApiError(getResponseErrorMessage(payload, response.status), {
+      status: response.status,
+      payload,
+    });
+    logFailure(method, path, response.status, startedAt);
+    throw error;
+  }
+
+  return payload;
+}
+
+function normalizeCreatedAt(createdAt) {
+  if (typeof createdAt !== 'string') {
+    throw new ApiError(INVALID_CREATED_AT_ERROR);
+  }
+
+  // Workaround: the backend sends UTC timestamps without a zone. Remove when #85 is done.
+  let timestamp = createdAt;
+  if (!/(?:Z|[+-]\d{2}:?\d{2})$/i.test(timestamp)) {
+    timestamp += 'Z';
+  }
+  timestamp = timestamp.replace(/(\.\d{3})\d+(?=Z$)/, '$1');
+
+  const parsedTimestamp = new Date(timestamp);
+  if (Number.isNaN(parsedTimestamp.getTime())) {
+    throw new ApiError(INVALID_CREATED_AT_ERROR);
+  }
+  return parsedTimestamp.toISOString();
+}
+
+function normalizeIncident(incident) {
+  if (!incident || typeof incident !== 'object' || Array.isArray(incident)) {
+    throw new ApiError('El backend devolvió una incidencia no válida.');
+  }
+
+  return {
+    ...incident,
+    createdAt: normalizeCreatedAt(incident.createdAt),
+  };
+}
+
+function expectArray(payload, resource) {
+  if (!Array.isArray(payload)) {
+    throw new ApiError('El backend devolvió una lista de ' + resource + ' no válida.');
+  }
+  return payload;
 }
 
 export async function getCategories() {
-  return CATEGORIES.map((category) => ({ ...category }));
+  return expectArray(await request('/api/categories'), 'categorías');
 }
 
 export async function getIncidents() {
-  await delay(MOCK_DELAY_MS);
-  return incidents.map((incident) => ({ ...incident }));
+  return expectArray(await request('/api/incidents'), 'incidencias').map(normalizeIncident);
 }
 
-// Rejects with an error whose `status` is 404 when no incident has that id, the
-// same shape the real `GET /api/incidents/{id}` will give.
 export async function getIncident(id) {
-  await delay(MOCK_DELAY_MS);
-  const incident = incidents.find((i) => String(i.id) === String(id));
-  if (!incident) {
-    const error = new Error(`Incident ${id} not found`);
-    error.status = 404;
-    throw error;
-  }
-  return { ...incident };
+  const incident = await request('/api/incidents/' + encodeURIComponent(String(id)));
+  return normalizeIncident(incident);
 }
 
 export async function createIncident({ title, description, latitude, longitude, categoryId }) {
-  await delay(MOCK_DELAY_MS);
+  const body = { title, description, latitude, longitude };
+  if (categoryId !== null && categoryId !== undefined) {
+    body.categoryId = categoryId;
+  }
 
-  const category = CATEGORIES.find((c) => c.id === categoryId) ?? null;
-  const incident = {
-    id: nextIncidentId++,
-    title,
-    description,
-    latitude,
-    longitude,
-    categoryId: category ? category.id : null,
-    categoryName: category ? category.name : null,
-    status: 'REPORTED',
-    createdAt: new Date().toISOString(),
-  };
-  incidents.push(incident);
-
-  return { ...incident };
+  const incident = await request('/api/incidents', { method: 'POST', body });
+  return normalizeIncident(incident);
 }
