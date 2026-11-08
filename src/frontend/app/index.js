@@ -18,7 +18,7 @@ export default function MapScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [incidents, setIncidents] = useState([]);
-  const [loadFailed, setLoadFailed] = useState(false);
+  const [loadError, setLoadError] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
   // Bumped on every load and on blur, so only the latest load while focused applies.
   const loadIdRef = useRef(0);
@@ -33,12 +33,12 @@ export default function MapScreen() {
             return;
           }
           setIncidents(result);
-          setLoadFailed(false);
+          setLoadError(null);
         })
-        .catch(() => {
+        .catch((error) => {
           // Keep the markers already shown; they are only possibly out of date.
           if (loadId === loadIdRef.current) {
-            setLoadFailed(true);
+            setLoadError(error?.message || 'No se pudieron cargar las incidencias.');
           }
         });
       return () => {
@@ -71,9 +71,9 @@ export default function MapScreen() {
         ))}
       </MapView>
       <OsmAttribution style={{ bottom: insets.bottom }} />
-      {loadFailed && (
+      {loadError && (
         <View style={styles.notice} pointerEvents="none" accessibilityLiveRegion="polite">
-          <Text style={styles.noticeText}>No se pudieron cargar las incidencias</Text>
+          <Text style={styles.noticeText}>{loadError}</Text>
         </View>
       )}
       {selectedIncident && (

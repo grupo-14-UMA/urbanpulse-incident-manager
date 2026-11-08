@@ -115,7 +115,7 @@ cp .env.example .env
 npm run dev
 ```
 
-En Windows PowerShell, usa `Copy-Item .env.example .env` en lugar de `cp`. Vite muestra la dirección local al arrancar (por defecto `http://localhost:5173`). La página inicial muestra el mapa de OpenStreetMap centrado en Málaga, con cuatro incidencias de muestra iguales a las iniciales de la app móvil. Las rutas de listado y detalle son marcadores de posición para trabajo futuro.
+En Windows PowerShell, usa `Copy-Item .env.example .env` en lugar de `cp`. Vite muestra la dirección local al arrancar (por defecto `http://localhost:5173`). La página inicial muestra el mapa de OpenStreetMap centrado en Málaga, con cuatro incidencias de muestra. Las rutas de listado y detalle son marcadores de posición para trabajo futuro.
 
 `VITE_API_URL` en `src/management-panel/.env` configura la URL base del backend y por defecto apunta a `http://localhost:8080`. El panel puede comprobar la conexión con el endpoint de listado; sus pantallas todavía muestran datos de muestra y no consumen ni modifican las incidencias de la API.
 

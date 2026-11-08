@@ -64,8 +64,10 @@ export default function NewIncidentScreen() {
   const [location, setLocation] = useState(null);
 
   const [categories, setCategories] = useState([]);
-  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  // 'loading' | 'loaded' | 'error'
+  const [categoriesState, setCategoriesState] = useState('loading');
   const [categoriesError, setCategoriesError] = useState(null);
+  const [categoriesAttempt, setCategoriesAttempt] = useState(0);
   const [locating, setLocating] = useState(true);
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
@@ -78,20 +80,19 @@ export default function NewIncidentScreen() {
       .then((result) => {
         if (active) {
           setCategories(result);
-          setCategoriesLoading(false);
-          setCategoriesError(null);
+          setCategoriesState('loaded');
         }
       })
       .catch((error) => {
         if (active) {
-          setCategoriesLoading(false);
           setCategoriesError(error?.message || 'No se pudieron cargar las categorías.');
+          setCategoriesState('error');
         }
       });
     return () => {
       active = false;
     };
-  }, []);
+  }, [categoriesAttempt]);
 
   useEffect(() => {
     let active = true;
@@ -234,9 +235,28 @@ export default function NewIncidentScreen() {
           );
         })}
       </View>
-      {categoriesLoading && <Text style={styles.categoryStatus}>Cargando categorías…</Text>}
-      {categoriesError && <Text style={styles.errorText}>{categoriesError}</Text>}
-      {!categoriesLoading && !categoriesError && categories.length === 0 && (
+      {categoriesState === 'loading' && (
+        <Text style={styles.categoryStatus}>Cargando categorías…</Text>
+      )}
+      {categoriesState === 'error' && (
+        <>
+          <Text style={styles.errorText}>{categoriesError}</Text>
+          <Pressable
+            style={({ pressed }) => [
+              styles.retryButton,
+              pressed && styles.retryButtonPressed,
+            ]}
+            onPress={() => {
+              setCategoriesState('loading');
+              setCategoriesAttempt((attempt) => attempt + 1);
+            }}
+            accessibilityRole="button"
+          >
+            <Text style={styles.retryButtonText}>Reintentar</Text>
+          </Pressable>
+        </>
+      )}
+      {categoriesState === 'loaded' && categories.length === 0 && (
         <Text style={styles.categoryStatus}>No hay categorías disponibles.</Text>
       )}
 
@@ -343,6 +363,22 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontSize: 13,
     color: COLORS.textMuted,
+  },
+  retryButton: {
+    alignSelf: 'flex-start',
+    marginTop: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: COLORS.primary,
+  },
+  retryButtonPressed: {
+    backgroundColor: COLORS.primaryPressed,
+  },
+  retryButtonText: {
+    color: COLORS.onPrimary,
+    fontSize: 16,
+    fontWeight: '600',
   },
   chip: {
     paddingHorizontal: 12,
