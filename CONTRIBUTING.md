@@ -17,16 +17,16 @@ Todos los miembros desarrollan. Cada uno tiene una responsabilidad en el equipo 
 
 | Área | Miembro | Etiqueta | Carpeta | Se encarga de |
 | --- | --- | --- | --- | --- |
-| Core & Security Engineer | Alfonso (@alraro) | `area: core` | `src/backend/` | Cuentas, roles y autenticación; ciclo de vida de la incidencia; logging del backend. |
-| Data & Performance Engineer | Andrea (@apr2004) | `area: data` | `src/backend/` | Consultas acotadas (área visible, paginación), índices, dataset sintético y fotos, también en la app móvil. |
-| Mobile Engineer | María (@mmartinmaria) | `area: mobile` | `src/frontend/` | App móvil del Ciudadano y del Técnico, sus tests y su gestión de errores. |
-| Ops Panel Engineer | Daniel (@daniiroblees) | `area: panel` | `src/management-panel/` | Panel de gestión del Operador. |
+| Core & Security Engineer | Alfonso (@alraro) | `area: ⚙️ core` | `src/backend/` | Cuentas, roles y autenticación; ciclo de vida de la incidencia; logging del backend. |
+| Data & Performance Engineer | Andrea (@apr2004) | `area: 🗄️ data` | `src/backend/` | Consultas acotadas (área visible, paginación), índices, dataset sintético y fotos, también en la app móvil. |
+| Mobile Engineer | María (@mmartinmaria) | `area: 📱 mobile` | `src/frontend/` | App móvil del Ciudadano y del Técnico, sus tests y su gestión de errores. |
+| Ops Panel Engineer | Daniel (@daniiroblees) | `area: 🖥️ panel` | `src/management-panel/` | Panel de gestión del Operador. |
 
-El dueño de un área desarrolla los issues con su etiqueta, revisa los PR que tocan su carpeta y vela por que su parte cumpla los atributos de calidad (consultas acotadas, índices, logs). Cuando su área está bloqueada o al día, ayuda en las demás. Los issues de configuración del repositorio llevan `area: repo` y son del Maintainer.
+El dueño de un área desarrolla los issues con su etiqueta, revisa los PR que tocan su carpeta y vela por que su parte cumpla los atributos de calidad (consultas acotadas, índices, logs). Cuando su área está bloqueada o al día, ayuda en las demás. Los issues de configuración del repositorio llevan `area: 🔧 repo` y son del Maintainer.
 
 ## Flujo de trabajo
 
-1. **Issue**: todo cambio empieza en un issue de GitHub con descripción y criterios de aceptación. Usa las plantillas de `.github/ISSUE_TEMPLATE/`.
+1. **Issue**: todo cambio empieza en un issue de GitHub con descripción y criterios de aceptación, creado según [Crear un issue](#crear-un-issue).
 2. **Rama**: se crea desde `main` actualizado, con el nombre `<tipo>/<descripcion-corta>` (por ejemplo `feat/incident-map`, `fix/login-timeout`). Una rama por issue.
 3. **Commits**: siguen [Conventional Commits](https://www.conventionalcommits.org/) (ver abajo).
 4. **Pull request**: se abre contra `main` rellenando la plantilla y enlazando el issue con `Closes #<n>`.
@@ -62,23 +62,42 @@ docs: update development guide
 
 Los títulos de los issues y de los PR siguen la misma convención.
 
+## Crear un issue
+
+Todo issue, lo cree una persona o un agente, sale con todo esto:
+
+- [ ] **Título** con el prefijo de [Conventional Commits](#convención-de-commits) (`feat: …`, `fix: …`, `docs: …`).
+- [ ] **Plantilla** de `.github/ISSUE_TEMPLATE/`: `feature_request.md` para `feat:`, `bug_report.md` para `fix:` y `task.md` para el resto.
+- [ ] **Tipo** (*issue type*) según el prefijo: `fix:` → `Bug`, `feat:` → `Feature`, cualquier otro → `Task`. La plantilla lo pone sola.
+- [ ] **Estado**: `✅ ready` si está especificado con criterios de aceptación; `🔍 triage` si hay que evaluarlo en equipo.
+- [ ] **Prioridad**: una etiqueta `priority: …`.
+- [ ] **Área**: una etiqueta `area: …`, la del área responsable del issue.
+- [ ] **Assignee**: el dueño de esa área (ver [Áreas de desarrollo](#áreas-de-desarrollo)).
+- [ ] **Milestone** de la entrega actual.
+- [ ] **Sub-issue** del epic de la entrega.
+- [ ] **Dependencias**: los issues que tienen que cerrarse antes, como *blocked by*.
+
+Los epic llevan `🗺️ epic` en vez de área y prioridad. Los comandos `gh` de cada paso están en [docs/agents/issue-tracker.md](docs/agents/issue-tracker.md).
+
 ## Etiquetas
 
 | Etiqueta | Significado |
 | --- | --- |
-| `triage` | Hay que evaluarlo en equipo |
-| `ready` | Especificado y listo para empezar |
-| `question` | Falta información |
-| `wontfix` | No se va a hacer |
-| `priority: high` | Necesario para la entrega actual, va primero |
-| `priority: medium` | Necesario para la entrega actual, no bloquea |
-| `priority: low` | Deseable |
-| `area: core` | Área Core & Security |
-| `area: data` | Área Data & Performance |
-| `area: mobile` | Área App móvil |
-| `area: panel` | Área Panel de gestión |
-| `area: repo` | Configuración del repositorio, CI y releases |
-| `epic` | Issue de una entrega que agrupa sub-issues |
+| `🔍 triage` | Hay que evaluarlo en equipo |
+| `✅ ready` | Especificado y listo para empezar |
+| `❓ question` | Falta información |
+| `🚫 wontfix` | No se va a hacer |
+| `priority: 🔴 high` | Necesario para la entrega actual, va primero |
+| `priority: 🟡 medium` | Necesario para la entrega actual, no bloquea |
+| `priority: 🟢 low` | Deseable |
+| `area: ⚙️ core` | Área Core & Security |
+| `area: 🗄️ data` | Área Data & Performance |
+| `area: 📱 mobile` | Área App móvil |
+| `area: 🖥️ panel` | Área Panel de gestión |
+| `area: 🔧 repo` | Configuración del repositorio, CI y releases |
+| `🗺️ epic` | Issue de una entrega que agrupa sub-issues |
+
+Cada familia tiene su color, y una etiqueta nueva sigue el de la suya: prioridad en semáforo (rojo, amarillo, verde), áreas en tonos pastel distintos entre sí y sin rojo, amarillo ni verde, estados en grises y `🗺️ epic` en negro. El tipo de issue no es una etiqueta: es el *issue type*.
 
 Cada issue lleva una sola etiqueta `area: …`, la del área dueña, aunque toque otras carpetas. Los epic no llevan etiqueta de área.
 
