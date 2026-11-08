@@ -54,7 +54,7 @@ cd src/backend
 - Swagger UI: `http://localhost:8080/swagger-ui.html`
 - Documento OpenAPI: `http://localhost:8080/v3/api-docs`
 
-Flyway aplica al arrancar el backend las migraciones de `src/backend/src/main/resources/db/migration/`. La migración inicial activa PostGIS, crea las tablas `Incident` y `Category` y carga estas categorías: alumbrado, limpieza, mobiliario urbano, tráfico y semáforos, arbolado y otros. La ubicación se almacena como `geometry(Point, 4326)`; `status_id = 1` representa el estado inicial `REPORTED` hasta que se añada la tabla `Status`.
+Flyway aplica al arrancar el backend las migraciones de `src/backend/src/main/resources/db/migration/`. La migración inicial activa PostGIS, crea las tablas `Incident` y `Category` y carga estas categorías: alumbrado, limpieza, mobiliario urbano, tráfico y semáforos, arbolado y otros. La ubicación se almacena como `geometry(Point, 4326)`; `status_id = 1` representa el estado inicial `REPORTED` hasta que se añada la tabla `Status`. Las fechas `created_at` y `updated_at` son `timestamptz` con valor por defecto `now()`, así que también las filas insertadas directamente en la base de datos quedan en un instante inequívoco.
 
 La API REST permite crear y consultar incidencias y listar categorías:
 
@@ -65,7 +65,7 @@ La API REST permite crear y consultar incidencias y listar categorías:
 | `GET` | `/api/incidents/{id}` | Consultar una incidencia por identificador. |
 | `GET` | `/api/categories` | Consultar las categorías disponibles. |
 
-El POST responde con la incidencia creada, incluidos `id`, coordenadas, categoría, `status: "REPORTED"` y `createdAt`. La etiqueta para el ciudadano es «Registrada». Los datos inválidos producen HTTP 400 con un mensaje en español; una incidencia inexistente produce HTTP 404. Las operaciones se documentan en Swagger UI. La API no requiere autenticación en esta entrega.
+El POST responde con la incidencia creada, incluidos `id`, coordenadas, categoría, `status: "REPORTED"` y la fecha de registro `createdAt`, en ISO-8601 en UTC con milisegundos y sufijo `Z` (`2026-11-07T10:15:30.123Z`). Los GET devuelven el mismo valor. La etiqueta para el ciudadano es «Registrada». Los datos inválidos producen HTTP 400 con un mensaje en español; una incidencia inexistente produce HTTP 404. Las operaciones se documentan en Swagger UI. La API no requiere autenticación en esta entrega.
 
 ## Aplicación móvil
 

@@ -98,34 +98,19 @@ async function request(path, { method = 'GET', body } = {}) {
   return payload;
 }
 
-function normalizeCreatedAt(createdAt) {
-  if (typeof createdAt !== 'string') {
+function validateCreatedAt(createdAt) {
+  if (typeof createdAt !== 'string' || Number.isNaN(new Date(createdAt).getTime())) {
     throw new ApiError(INVALID_CREATED_AT_ERROR);
   }
-
-  // Workaround: the backend sends UTC timestamps without a zone. Remove when #85 is done.
-  let timestamp = createdAt;
-  if (!/(?:Z|[+-]\d{2}:?\d{2})$/i.test(timestamp)) {
-    timestamp += 'Z';
-  }
-  timestamp = timestamp.replace(/(\.\d{3})\d+(?=Z$)/, '$1');
-
-  const parsedTimestamp = new Date(timestamp);
-  if (Number.isNaN(parsedTimestamp.getTime())) {
-    throw new ApiError(INVALID_CREATED_AT_ERROR);
-  }
-  return parsedTimestamp.toISOString();
 }
 
-function normalizeIncident(incident) {
+function expectIncident(incident) {
   if (!incident || typeof incident !== 'object' || Array.isArray(incident)) {
     throw new ApiError('El backend devolvió una incidencia no válida.');
   }
 
-  return {
-    ...incident,
-    createdAt: normalizeCreatedAt(incident.createdAt),
-  };
+  validateCreatedAt(incident.createdAt);
+  return incident;
 }
 
 function expectArray(payload, resource) {
@@ -140,12 +125,12 @@ export async function getCategories() {
 }
 
 export async function getIncidents() {
-  return expectArray(await request('/api/incidents'), 'incidencias').map(normalizeIncident);
+  return expectArray(await request('/api/incidents'), 'incidencias').map(expectIncident);
 }
 
 export async function getIncident(id) {
   const incident = await request('/api/incidents/' + encodeURIComponent(String(id)));
-  return normalizeIncident(incident);
+  return expectIncident(incident);
 }
 
 export async function createIncident({ title, description, latitude, longitude, categoryId }) {
@@ -155,5 +140,5 @@ export async function createIncident({ title, description, latitude, longitude, 
   }
 
   const incident = await request('/api/incidents', { method: 'POST', body });
-  return normalizeIncident(incident);
+  return expectIncident(incident);
 }

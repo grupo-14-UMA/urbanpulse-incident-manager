@@ -125,11 +125,11 @@ springdoc-openapi publica las operaciones y modelos en `http://localhost:8080/sw
 
 ## Modelo de datos
 
-El modelo completo está descrito en [DBML](data-model/urbanpulse.dbml) y [SQL](data-model/urbanpulse.sql). El [diagrama del esquema MVP](data-model/UrbanPulse-mvp.svg) muestra el subconjunto persistido por la primera migración: `Incident` y `Category`; las demás entidades se incorporarán con las funcionalidades que las necesiten.
+El modelo completo está descrito en [DBML](data-model/urbanpulse.dbml) y [SQL](data-model/urbanpulse.sql). El [diagrama del esquema MVP](data-model/UrbanPulse-mvp.svg) muestra el subconjunto persistido por las migraciones actuales: `Incident` y `Category`; las demás entidades se incorporarán con las funcionalidades que las necesiten.
 
 | Entidad | Atributos principales previstos | Uso |
 | --- | --- | --- |
-| `Incident` | Identificador, título, descripción, `category_id`, ubicación, `status_id`, prioridad y fechas de creación y actualización | Incidencia registrada por un ciudadano. Puede tener una categoría, evidencias, asignaciones e historial de cambios. |
+| `Incident` | Identificador, título, descripción, `category_id`, ubicación, `status_id`, prioridad, fecha de registro y fecha de actualización | Incidencia registrada por un ciudadano. Puede tener una categoría, evidencias, asignaciones e historial de cambios. |
 | `Category` | Identificador y nombre | Clasificación opcional de una incidencia. El MVP precarga seis categorías. |
 | `User` | Identificador, datos de identidad y estado de cuenta | Representa a ciudadanos y personal municipal. |
 | `Role` | Identificador y nombre | Define permisos para los distintos tipos de usuario. |
@@ -155,6 +155,8 @@ erDiagram
 ```
 
 La ubicación se almacena como `geometry(Point, 4326)` en PostGIS, usando WGS 84. La API expone las coordenadas como latitud y longitud y el backend las convierte al formato geoespacial de la base de datos ([ADR-0007](adr/0007-postgis-para-datos-geoespaciales.md)). En el MVP, `status_id = 1` representa `REPORTED`; la tabla `Status` se añade cuando se implemente la gestión del ciclo de vida.
+
+Todos los instantes se guardan como `timestamptz`, se manejan en el backend como `Instant` truncado a milisegundos y la API los expone en ISO-8601 en UTC con milisegundos y sufijo `Z`, por ejemplo `2026-11-07T10:15:30.123Z`. Los clientes deciden en qué zona los muestran ([ADR-0016](adr/0016-instantes-en-utc-con-zona-explicita.md)).
 
 La persistencia inicial cubre las entidades asociadas al registro de incidencias y sus categorías. Usuarios, roles, asignaciones, evidencias, activos urbanos e integraciones de contexto se incorporarán cuando se implementen sus requisitos.
 
