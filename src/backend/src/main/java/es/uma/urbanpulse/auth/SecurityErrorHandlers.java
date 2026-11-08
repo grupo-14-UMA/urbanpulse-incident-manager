@@ -26,7 +26,7 @@ import tools.jackson.databind.ObjectMapper;
 @Component
 class SecurityErrorHandlers implements AuthenticationEntryPoint, AccessDeniedHandler {
 
-	static final String FORBIDDEN_MESSAGE = "No tienes permiso para realizar esta acción.";
+	static final String FORBIDDEN_MESSAGE = "No tienes permiso para hacer esto.";
 
 	private static final String ROLE_PREFIX = "ROLE_";
 

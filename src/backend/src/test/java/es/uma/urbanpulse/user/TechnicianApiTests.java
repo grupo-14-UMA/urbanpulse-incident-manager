@@ -75,7 +75,7 @@ class TechnicianApiTests {
 			.expectStatus()
 			.isForbidden()
 			.expectBody()
-			.jsonPath("$.message").isEqualTo("No tienes permiso para realizar esta acción.");
+			.jsonPath("$.message").isEqualTo("No tienes permiso para hacer esto.");
 		this.client.get()
 			.uri("/api/technicians")
 			.header("Authorization", bearer(login(this.client, TECHNICIAN_EMAIL)))

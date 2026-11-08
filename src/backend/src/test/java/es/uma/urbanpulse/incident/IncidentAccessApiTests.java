@@ -102,7 +102,7 @@ class IncidentAccessApiTests {
 				.expectStatus()
 				.isForbidden()
 				.expectBody()
-				.jsonPath("$.message").isEqualTo("No tienes permiso para realizar esta acción.");
+				.jsonPath("$.message").isEqualTo("No tienes permiso para hacer esto.");
 		}
 	}
 
