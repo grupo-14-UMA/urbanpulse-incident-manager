@@ -49,6 +49,7 @@ docs/           Documentación: arquitectura, desarrollo, despliegue, ADRs, requ
 
 - [Arquitectura](docs/architecture.md)
 - [Guía de desarrollo](docs/development.md)
+- [Gestión de errores](docs/error-handling.md)
 - [Guía de despliegue](docs/deployment.md)
 - [Decisiones de arquitectura (ADRs)](docs/adr/)
 - [Requisitos](docs/requirements.md)
