@@ -28,3 +28,4 @@ Cada ADR recoge una decisión relevante: su contexto, las opciones consideradas,
 | [0013](0013-spring-boot-4-para-backend.md) | Spring Boot 4 para el backend | accepted |
 | [0014](0014-aplicacion-movil-y-panel-de-gestion-web.md) | Aplicación móvil y panel de gestión web | accepted |
 | [0015](0015-react-vite-y-leaflet-para-panel-de-gestion.md) | React con Vite y Leaflet para el panel de gestión | accepted |
+| [0016](0016-instantes-en-utc-con-zona-explicita.md) | Instantes en UTC con zona explícita | accepted |

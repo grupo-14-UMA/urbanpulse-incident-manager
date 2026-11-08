@@ -20,6 +20,10 @@ _Evitar_: posición, ubicación, punto
 Fase del ciclo de vida en la que se encuentra una incidencia. Toda incidencia empieza en **Registrada** (`REPORTED`), el estado que tiene en cuanto el ciudadano la registra.
 _Evitar_: situación, fase
 
+**Fecha de registro** (`createdAt`):
+Instante en que el ciudadano registra una incidencia, el mismo en el que pasa a **Registrada**. Se refiere al mismo momento para cualquier cliente, esté donde esté.
+_Evitar_: fecha de creación, fecha de alta
+
 **Categoría** (`Category`):
 Tipo de problema al que pertenece una incidencia. Es opcional cuando el ciudadano la registra.
 _Evitar_: tipo, clase
