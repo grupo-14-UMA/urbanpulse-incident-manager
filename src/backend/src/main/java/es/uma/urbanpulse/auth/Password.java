@@ -27,7 +27,7 @@ public @interface Password {
 
 	int MAX_BYTES = 72;
 
-	String message() default "La contraseña debe tener entre 8 y 72 caracteres.";
+	String message() default "La contraseña debe tener entre 8 y 72 caracteres. Las letras con tilde y la ñ cuentan como dos.";
 
 	Class<?>[] groups() default {};
 

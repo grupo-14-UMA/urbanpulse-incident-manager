@@ -26,7 +26,7 @@ El backend emite y valida sus propios JWT con Spring Security y el soporte de se
 - **Contenido**: el identificador del usuario como `sub` y el rol en el claim `role`. La autorización lee el rol del token.
 - **Sin estado**: no hay sesiones en el servidor. Cerrar sesión consiste en que el cliente descarte el token.
 - **Duración y renovación deslizante**: el token dura 7 días. `POST /api/auth/refresh` cambia un token todavía válido por otro nuevo de 7 días, con el rol actual del usuario. Los clientes lo renuevan al arrancar, así que el usuario solo vuelve a iniciar sesión tras 7 días sin usar el cliente.
-- **Contraseñas**: BCrypt, con una sal aleatoria por contraseña. Entre 8 y 72 caracteres (72 bytes es el límite de BCrypt), sin reglas de composición, según NIST SP 800-63B.
+- **Contraseñas**: BCrypt, con una sal aleatoria por contraseña. Entre 8 caracteres y 72 bytes en UTF-8, el límite de BCrypt (las letras con tilde y la ñ ocupan dos), sin reglas de composición, según NIST SP 800-63B.
 
 ## Consecuencias
 

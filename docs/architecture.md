@@ -137,13 +137,13 @@ El backend emite y valida sus propios JWT, firmados con HS256 y el secreto `JWT_
 
 Cada usuario tiene un único rol. Los ciudadanos crean su cuenta con `/api/auth/register`; las cuentas de operadores y técnicos existen de antemano. Los roles de administrador y analista todavía no existen.
 
-Una petición sin token válido recibe 401 y una petición de un rol no permitido recibe 403, ambas con `ApiErrorResponse` y un mensaje en español. Las contraseñas se guardan con BCrypt y deben tener entre 8 y 72 caracteres, sin reglas de composición. El email se compara sin distinguir mayúsculas y minúsculas.
+Una petición sin token válido recibe 401 y una petición de un rol no permitido recibe 403, ambas con `ApiErrorResponse` y un mensaje en español. Las contraseñas se guardan con BCrypt y deben tener entre 8 y 72 caracteres, sin reglas de composición; como BCrypt admite como máximo 72 bytes, las letras con tilde y la ñ cuentan como dos. El email se compara sin distinguir mayúsculas y minúsculas.
 
 El backend registra en el log los registros de ciudadanos, los inicios de sesión fallidos y las peticiones rechazadas con 403, con el email enmascarado (`a***@mail.com`). Nunca registra contraseñas, hashes ni tokens.
 
 ## Modelo de datos
 
-El modelo completo está descrito en [DBML](data-model/urbanpulse.dbml) y [SQL](data-model/urbanpulse.sql). El [diagrama del esquema MVP](data-model/UrbanPulse-mvp.svg) muestra el subconjunto persistido por la primera migración: `Incident` y `Category`. La segunda migración añade `User`, `Role` y la columna `reporter_id` de `Incident`; las demás entidades se incorporarán con las funcionalidades que las necesiten.
+El modelo completo está descrito en [DBML](data-model/urbanpulse.dbml) y [SQL](data-model/urbanpulse.sql). El [diagrama del esquema MVP](data-model/UrbanPulse-mvp.svg) muestra el subconjunto `Incident` y `Category`. El esquema persistido incluye además `User`, `Role` y la columna `reporter_id` de `Incident`; las demás entidades se incorporarán con las funcionalidades que las necesiten.
 
 | Entidad | Atributos principales previstos | Uso |
 | --- | --- | --- |

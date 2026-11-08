@@ -34,7 +34,7 @@ public class AuthService {
 	public AuthResponse register(RegisterRequest request) {
 		String email = User.normalizeEmail(request.email());
 		if (userRepository.existsByEmail(email)) {
-			log.info("Sign-up rejected, email already registered: email={}", EmailMask.mask(email));
+			log.info("Registration rejected, email already registered: email={}", EmailMask.mask(email));
 			throw new EmailAlreadyRegisteredException();
 		}
 		User user = new User(request.name().trim(), email, passwordEncoder.encode(request.password()), Role.CITIZEN);
@@ -42,10 +42,10 @@ public class AuthService {
 			user = userRepository.saveAndFlush(user);
 		}
 		catch (DataIntegrityViolationException exception) {
-			log.info("Sign-up rejected, email registered concurrently: email={}", EmailMask.mask(email));
+			log.info("Registration rejected, email registered concurrently: email={}", EmailMask.mask(email));
 			throw new EmailAlreadyRegisteredException();
 		}
-		log.info("Citizen signed up: userId={}, email={}", user.getId(), EmailMask.mask(email));
+		log.info("Citizen registered: userId={}, email={}", user.getId(), EmailMask.mask(email));
 		return authResponse(user);
 	}
 

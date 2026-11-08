@@ -57,7 +57,7 @@ export SPRING_FLYWAY_LOCATIONS=classpath:db/migration,classpath:db/dev-seed   # 
 - Swagger UI: `http://localhost:8080/swagger-ui.html`
 - Documento OpenAPI: `http://localhost:8080/v3/api-docs`
 
-Flyway aplica al arrancar el backend las migraciones de `src/backend/src/main/resources/db/migration/`. La migración inicial activa PostGIS, crea las tablas `Incident` y `Category` y carga estas categorías: alumbrado, limpieza, mobiliario urbano, tráfico y semáforos, arbolado y otros. La segunda crea `User` y `Role`, carga los roles `CITIZEN`, `OPERATOR` y `TECHNICIAN` y añade a `Incident` el ciudadano que la registró. La ubicación se almacena como `geometry(Point, 4326)`; `status_id = 1` representa el estado inicial `REPORTED` hasta que se añada la tabla `Status`.
+Flyway aplica al arrancar el backend las migraciones de `src/backend/src/main/resources/db/migration/`. La migración inicial activa PostGIS, crea las tablas `Incident` y `Category` y carga estas categorías: alumbrado, limpieza, mobiliario urbano, tráfico y semáforos, arbolado y otros. Otra crea `User` y `Role`, carga los roles `CITIZEN`, `OPERATOR` y `TECHNICIAN` y añade a `Incident` el ciudadano que la registró. La ubicación se almacena como `geometry(Point, 4326)`; `status_id = 1` representa el estado inicial `REPORTED` hasta que se añada la tabla `Status`.
 
 La API REST permite registrarse e iniciar sesión, crear y consultar incidencias, listar categorías y listar técnicos. Las rutas, quién puede usar cada una y el formato de la respuesta de autenticación están en la [arquitectura](architecture.md#api). Los datos inválidos producen HTTP 400 con un mensaje en español; una incidencia inexistente produce HTTP 404. Las operaciones se documentan en Swagger UI.
 
