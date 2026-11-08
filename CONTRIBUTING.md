@@ -4,7 +4,7 @@ Este documento describe cómo trabaja el equipo en el repositorio. Para preparar
 
 ## Roles
 
-Todos los miembros desarrollan. Además, cada uno tiene una responsabilidad:
+Todos los miembros desarrollan. Cada uno tiene una responsabilidad en el equipo y es dueño de un área de desarrollo:
 
 | Rol | Miembro | Responsabilidades |
 | --- | --- | --- |
@@ -13,13 +13,24 @@ Todos los miembros desarrollan. Además, cada uno tiene una responsabilidad:
 | Tester | María (@mmartinmaria) | Comprueba los criterios de aceptación antes de cerrar un issue. |
 | Maintainer | Daniel (@daniiroblees) | Configuración del repositorio, etiquetas, CI y releases. |
 
+### Áreas de desarrollo
+
+| Área | Miembro | Etiqueta | Carpeta | Se encarga de |
+| --- | --- | --- | --- | --- |
+| Core & Security Engineer | Alfonso (@alraro) | `area: core` | `src/backend/` | Cuentas, roles y autenticación; ciclo de vida de la incidencia; logging del backend. |
+| Data & Performance Engineer | Andrea (@apr2004) | `area: data` | `src/backend/` | Consultas acotadas (área visible, paginación), índices, dataset sintético y fotos, también en la app móvil. |
+| Mobile Engineer | María (@mmartinmaria) | `area: mobile` | `src/frontend/` | App móvil del Ciudadano y del Técnico, sus tests y su gestión de errores. |
+| Ops Panel Engineer | Daniel (@daniiroblees) | `area: panel` | `src/management-panel/` | Panel de gestión del Operador. |
+
+El dueño de un área desarrolla los issues con su etiqueta, revisa los PR que tocan su carpeta y vela por que su parte cumpla los atributos de calidad (consultas acotadas, índices, logs). Cuando su área está bloqueada o al día, ayuda en las demás. Los issues de configuración del repositorio llevan `area: repo` y son del Maintainer.
+
 ## Flujo de trabajo
 
 1. **Issue**: todo cambio empieza en un issue de GitHub con descripción y criterios de aceptación. Usa las plantillas de `.github/ISSUE_TEMPLATE/`.
 2. **Rama**: se crea desde `main` actualizado, con el nombre `<tipo>/<descripcion-corta>` (por ejemplo `feat/incident-map`, `fix/login-timeout`). Una rama por issue.
 3. **Commits**: siguen [Conventional Commits](https://www.conventionalcommits.org/) (ver abajo).
 4. **Pull request**: se abre contra `main` rellenando la plantilla y enlazando el issue con `Closes #<n>`.
-5. **Revisión**: hace falta 1 aprobación. GitHub pide la revisión automáticamente según [`.github/CODEOWNERS`](.github/CODEOWNERS): siempre al Reviewer y, si el PR toca su área, también al Maintainer, al Tester o al Product Owner. Nunca se hace push directo a `main`.
+5. **Revisión**: hace falta 1 aprobación. GitHub pide la revisión automáticamente según [`.github/CODEOWNERS`](.github/CODEOWNERS): siempre al Reviewer y, si el PR toca su carpeta, también al dueño del área de desarrollo, al Maintainer, al Tester o al Product Owner. Los PR del backend se piden a sus dos dueños, así que siempre los revisa alguien distinto del autor. Nunca se hace push directo a `main`.
 6. **Merge**: lo hace el autor del PR una vez aprobado.
 7. **Verificación**: el Tester comprueba los criterios de aceptación del issue.
 
@@ -63,6 +74,14 @@ Los títulos de los issues y de los PR siguen la misma convención.
 | `priority: high` | Necesario para la entrega actual, va primero |
 | `priority: medium` | Necesario para la entrega actual, no bloquea |
 | `priority: low` | Deseable |
+| `area: core` | Área Core & Security |
+| `area: data` | Área Data & Performance |
+| `area: mobile` | Área App móvil |
+| `area: panel` | Área Panel de gestión |
+| `area: repo` | Configuración del repositorio, CI y releases |
+| `epic` | Issue de una entrega que agrupa sub-issues |
+
+Cada issue lleva una sola etiqueta `area: …`, la del área dueña, aunque toque otras carpetas. Los epic no llevan etiqueta de área.
 
 Los issues de cada entrega se agrupan en un milestone (por ejemplo "Entrega 1"). El orden entre issues se marca con las dependencias nativas de GitHub (*blocked by*).
 
