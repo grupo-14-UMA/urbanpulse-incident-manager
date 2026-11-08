@@ -85,14 +85,14 @@ flowchart LR
 
 | Contenedor | Tecnología | Responsabilidad y estado |
 | --- | --- | --- |
-| Aplicación móvil | React Native, Expo, `expo-router`, `react-native-maps`, `expo-location` | Implementa una pantalla de mapa centrada en Málaga, con teselas cargadas mediante `UrlTile`, que muestra las incidencias del backend y las recarga al volver a primer plano; una pantalla de detalle con un mapa estático de la localización; y un formulario para registrar incidencias con coordenadas propuestas por GPS o marcadas por el ciudadano. Las llamadas REST se centralizan en `src/api.js`, y `EXPO_PUBLIC_API_URL` configura la dirección base del backend. |
+| Aplicación móvil | React Native, Expo, `expo-router`, `react-native-maps`, `expo-location` | Implementa una pantalla de mapa centrada en Málaga, con teselas cargadas mediante `UrlTile`, que muestra las incidencias del backend y las recarga al volver a primer plano; una pantalla de detalle con un mapa estático de la localización; y un formulario para registrar incidencias con coordenadas propuestas por GPS o marcadas por el ciudadano. Las llamadas REST se centralizan en `src/api.js`, y `EXPO_PUBLIC_API_URL` configura la dirección base del backend. Todavía no inicia sesión, así que el backend rechaza sus peticiones con 401 hasta que se añada el inicio de sesión (#65). |
 | Panel de gestión | React, Vite, React Router, `react-leaflet`, CSS propio | Cliente web del operador, el administrador y el analista ([ADR-0015](adr/0015-react-vite-y-leaflet-para-panel-de-gestion.md)). Implementa la estructura inicial, rutas para mapa/listado/detalle y un mapa centrado en Málaga con cuatro incidencias de muestra. La API de incidencias ya está disponible, pero el panel aún no carga ni modifica esos datos; las pantallas de gestión, la agrupación de marcadores y la carga por área visible quedan para siguientes issues. `VITE_API_URL` configura el backend y la capa HTTP compartida está preparada. |
-| Backend | Java 21, Spring Boot 4, Maven | Monolito modular. Expone la creación y consulta de incidencias y la consulta de categorías mediante REST; usa las entidades y repositorios JPA de `Incident` y `Category`. |
-| Base de datos | PostgreSQL con PostGIS | Docker Compose utiliza `postgis/postgis`. Flyway crea el esquema MVP de `Incident` y `Category`, incluida la ubicación espacial y las categorías iniciales. |
+| Backend | Java 21, Spring Boot 4, Spring Security, Maven | Monolito modular. Expone mediante REST el registro e inicio de sesión de usuarios, la creación y consulta de incidencias, la consulta de categorías y el listado de técnicos; usa las entidades y repositorios JPA de `Incident`, `Category` y `User`. |
+| Base de datos | PostgreSQL con PostGIS | Docker Compose utiliza `postgis/postgis`. Flyway crea el esquema de `Incident`, `Category`, `User` y `Role`, incluida la ubicación espacial, las categorías iniciales y los roles. |
 
 En el entorno local, Docker Compose publica el backend en el puerto `8080` y PostgreSQL en el puerto `5432` por defecto. El backend se conecta a la base de datos mediante el nombre de servicio `db` dentro de la red de Compose. La aplicación móvil se inicia aparte con Expo. Para que un teléfono pueda acceder al backend, `EXPO_PUBLIC_API_URL` debe apuntar a la dirección de red del equipo que ejecuta Docker, no a `localhost`.
 
-Los dos clientes consumen la misma API REST mediante HTTP con JSON; lo que cada uno puede hacer depende de los permisos del rol, no de endpoints distintos por cliente ([ADR-0014](adr/0014-aplicacion-movil-y-panel-de-gestion-web.md)). La aplicación móvil configura la URL con `EXPO_PUBLIC_API_URL` ([ADR-0003](adr/0003-react-native-con-expo-para-frontend.md)) y el panel con `VITE_API_URL`. El backend permite CORS en `/api/**` para el origen configurado en `MANAGEMENT_PANEL_ORIGIN`, cuyo valor local por defecto es `http://localhost:5173`. La API no requiere autenticación en esta entrega.
+Los dos clientes consumen la misma API REST mediante HTTP con JSON; lo que cada uno puede hacer depende de los permisos del rol, no de endpoints distintos por cliente ([ADR-0014](adr/0014-aplicacion-movil-y-panel-de-gestion-web.md)). La aplicación móvil configura la URL con `EXPO_PUBLIC_API_URL` ([ADR-0003](adr/0003-react-native-con-expo-para-frontend.md)) y el panel con `VITE_API_URL`. El backend permite CORS en `/api/**` para el origen configurado en `MANAGEMENT_PANEL_ORIGIN`, cuyo valor local por defecto es `http://localhost:5173`. Los dos clientes se autentican igual, con un token en la cabecera `Authorization` (ver [Autenticación y roles](#autenticación-y-roles)).
 
 ## Nivel 3: Componentes del backend
 
@@ -100,39 +100,57 @@ El backend se mantiene como un monolito modular. La estructura separa responsabi
 
 | Componente previsto | Responsabilidad |
 | --- | --- |
-| Controladores REST | Recibir solicitudes HTTP, validar la entrada y devolver respuestas de la API. Implementados para incidencias y categorías. |
-| Servicios de aplicación | Coordinar los casos de uso y las transacciones del dominio. Implementados para crear y consultar incidencias y consultar categorías. |
-| Repositorios | Consultar y persistir entidades mediante Spring Data JPA. Implementados para `Incident` y `Category`. |
-| Entidades y modelo de dominio | Representar incidencias, categorías y las demás entidades del sistema. Implementadas `Incident` y `Category`; las demás se añaden con sus funcionalidades. |
-| Migraciones Flyway | Crear y evolucionar el esquema de la base de datos. La migración inicial crea `Incident` y `Category` y precarga las categorías del MVP. Flyway es la única autoridad para modificar el esquema. |
+| Controladores REST | Recibir solicitudes HTTP, validar la entrada y devolver respuestas de la API. Implementados para autenticación, usuarios, incidencias y categorías. |
+| Servicios de aplicación | Coordinar los casos de uso y las transacciones del dominio. Implementados para registrar usuarios e iniciar sesión, crear y consultar incidencias, consultar categorías y listar técnicos. |
+| Repositorios | Consultar y persistir entidades mediante Spring Data JPA. Implementados para `Incident`, `Category` y `User`. |
+| Entidades y modelo de dominio | Representar incidencias, categorías y las demás entidades del sistema. Implementadas `Incident`, `Category` y `User`, con el rol como enumeración; las demás se añaden con sus funcionalidades. |
+| Migraciones Flyway | Crear y evolucionar el esquema de la base de datos. Las migraciones de `db/migration` crean `Incident`, `Category`, `User` y `Role` y precargan las categorías y los roles. Las cuentas de personal de desarrollo están en una ubicación aparte, `db/dev-seed`, que solo activan Docker Compose y las pruebas. Flyway es la única autoridad para modificar el esquema. |
 | Integraciones externas | Consultar fuentes de datos urbanos u otros proveedores sin acoplar el dominio a sus formatos. |
+| Seguridad | Validar el token de cada petición y aplicar los permisos por rol con Spring Security ([ADR-0016](adr/0016-autenticacion-con-jwt-propio.md)). |
 | Documentación API | Generar documentación OpenAPI con springdoc-openapi. |
 
-La API implementa los controladores y servicios para el contrato REST del MVP. La persistencia incluye las entidades y repositorios `Incident` y `Category`, además de la migración inicial Flyway.
+La API implementa los controladores y servicios para el contrato REST descrito abajo. La persistencia incluye las entidades y repositorios `Incident`, `Category` y `User`, además de las migraciones Flyway.
 
 ## API
 
-La API REST disponible en el MVP expone estas rutas:
+La API REST expone estas rutas. La columna «Acceso» indica quién puede usarlas: «público» no necesita token y «autenticado» admite cualquier rol.
 
-| Método | Ruta | Descripción |
-| --- | --- | --- |
-| `POST` | `/api/incidents` | Crear una incidencia con título, descripción, latitud, longitud y categoría opcional. Devuelve la incidencia creada, con estado `REPORTED` (etiqueta visible: «Registrada»). |
-| `GET` | `/api/incidents` | Listar todas las incidencias. La paginación queda para una siguiente entrega. |
-| `GET` | `/api/incidents/{id}` | Consultar el detalle de una incidencia; devuelve 404 si no existe. |
-| `GET` | `/api/categories` | Listar categorías disponibles. |
+| Método | Ruta | Acceso | Descripción |
+| --- | --- | --- | --- |
+| `POST` | `/api/auth/register` | Público | Crear una cuenta de ciudadano con nombre, email y contraseña. Devuelve 201 con el token; 409 si el email ya tiene cuenta. |
+| `POST` | `/api/auth/login` | Público | Iniciar sesión con email y contraseña. Devuelve el token; 401 si las credenciales no son correctas. |
+| `POST` | `/api/auth/refresh` | Autenticado | Cambiar un token todavía válido por otro nuevo de 7 días. |
+| `GET` | `/api/users/me` | Autenticado | Consultar el usuario actual (identificador, nombre, email y rol). |
+| `GET` | `/api/technicians?limit=` | Operador | Listar los técnicos por nombre. `limit` vale 50 por defecto y como máximo 200. |
+| `POST` | `/api/incidents` | Ciudadano | Crear una incidencia con título, descripción, latitud, longitud y categoría opcional. El ciudadano que la registra se toma del token. Devuelve la incidencia creada, con estado `REPORTED` (etiqueta visible: «Registrada»). |
+| `GET` | `/api/incidents` | Autenticado | Listar todas las incidencias. La paginación queda para una siguiente entrega. |
+| `GET` | `/api/incidents/{id}` | Autenticado | Consultar el detalle de una incidencia; devuelve 404 si no existe. |
+| `GET` | `/api/categories` | Autenticado | Listar categorías disponibles. |
 
-springdoc-openapi publica las operaciones y modelos en `http://localhost:8080/swagger-ui.html` y `http://localhost:8080/v3/api-docs`.
+Registro, inicio de sesión y renovación devuelven la misma respuesta: `{ token, expiresAt, user: { id, name, email, role } }`. Las respuestas de incidencias no exponen quién las registró.
+
+springdoc-openapi publica las operaciones y modelos en `http://localhost:8080/swagger-ui.html` y `http://localhost:8080/v3/api-docs`, que no requieren token. Swagger UI permite introducir el token con «Authorize».
+
+### Autenticación y roles
+
+El backend emite y valida sus propios JWT, firmados con HS256 y el secreto `JWT_SECRET` ([ADR-0016](adr/0016-autenticacion-con-jwt-propio.md)). El token lleva el identificador del usuario y su rol, dura 7 días y se renueva con `/api/auth/refresh`; los clientes lo renuevan al arrancar. No hay sesiones en el servidor: cerrar sesión consiste en descartar el token. El backend no arranca si `JWT_SECRET` falta o tiene menos de 32 bytes.
+
+Cada usuario tiene un único rol. Los ciudadanos crean su cuenta con `/api/auth/register`; las cuentas de operadores y técnicos existen de antemano. Los roles de administrador y analista todavía no existen.
+
+Una petición sin token válido recibe 401 y una petición de un rol no permitido recibe 403, ambas con `ApiErrorResponse` y un mensaje en español. Las contraseñas se guardan con BCrypt y deben tener entre 8 y 72 caracteres, sin reglas de composición. El email se compara sin distinguir mayúsculas y minúsculas.
+
+El backend registra en el log los registros de ciudadanos, los inicios de sesión fallidos y las peticiones rechazadas con 403, con el email enmascarado (`a***@mail.com`). Nunca registra contraseñas, hashes ni tokens.
 
 ## Modelo de datos
 
-El modelo completo está descrito en [DBML](data-model/urbanpulse.dbml) y [SQL](data-model/urbanpulse.sql). El [diagrama del esquema MVP](data-model/UrbanPulse-mvp.svg) muestra el subconjunto persistido por la primera migración: `Incident` y `Category`; las demás entidades se incorporarán con las funcionalidades que las necesiten.
+El modelo completo está descrito en [DBML](data-model/urbanpulse.dbml) y [SQL](data-model/urbanpulse.sql). El [diagrama del esquema MVP](data-model/UrbanPulse-mvp.svg) muestra el subconjunto persistido por la primera migración: `Incident` y `Category`. La segunda migración añade `User`, `Role` y la columna `reporter_id` de `Incident`; las demás entidades se incorporarán con las funcionalidades que las necesiten.
 
 | Entidad | Atributos principales previstos | Uso |
 | --- | --- | --- |
-| `Incident` | Identificador, título, descripción, `category_id`, ubicación, `status_id`, prioridad y fechas de creación y actualización | Incidencia registrada por un ciudadano. Puede tener una categoría, evidencias, asignaciones e historial de cambios. |
+| `Incident` | Identificador, título, descripción, `category_id`, ubicación, `status_id`, `reporter_id`, prioridad y fechas de creación y actualización | Incidencia registrada por un ciudadano. Puede tener una categoría, evidencias, asignaciones e historial de cambios. |
 | `Category` | Identificador y nombre | Clasificación opcional de una incidencia. El MVP precarga seis categorías. |
-| `User` | Identificador, datos de identidad y estado de cuenta | Representa a ciudadanos y personal municipal. |
-| `Role` | Identificador y nombre | Define permisos para los distintos tipos de usuario. |
+| `User` | Identificador, nombre, email único, hash de la contraseña y `role_id` | Representa a ciudadanos y personal municipal. `nif` y `phone`, previstos en el modelo completo, no se crean hasta que algo los use. |
+| `Role` | Identificador y nombre | Define permisos para los distintos tipos de usuario. Se precargan `CITIZEN`, `OPERATOR` y `TECHNICIAN`. |
 | `IncidentStatusHistory` | Incidencia, estado anterior, estado nuevo, fecha, actor y motivo | Mantiene la trazabilidad del ciclo de vida de una incidencia. |
 | `Evidence` | Incidencia, referencia al fichero, tipo, tamaño y fecha de registro | Conserva referencias a fotografías u otros ficheros asociados. |
 | `Department` | Identificador y nombre | Representa a las unidades municipales responsables de atender incidencias. |
@@ -156,7 +174,7 @@ erDiagram
 
 La ubicación se almacena como `geometry(Point, 4326)` en PostGIS, usando WGS 84. La API expone las coordenadas como latitud y longitud y el backend las convierte al formato geoespacial de la base de datos ([ADR-0007](adr/0007-postgis-para-datos-geoespaciales.md)). En el MVP, `status_id = 1` representa `REPORTED`; la tabla `Status` se añade cuando se implemente la gestión del ciclo de vida.
 
-La persistencia inicial cubre las entidades asociadas al registro de incidencias y sus categorías. Usuarios, roles, asignaciones, evidencias, activos urbanos e integraciones de contexto se incorporarán cuando se implementen sus requisitos.
+La persistencia cubre las incidencias, sus categorías, los usuarios y sus roles. `reporter_id` admite nulos solo porque las incidencias anteriores a la autenticación no tienen ciudadano; el servicio lo rellena siempre. El índice `(reporter_id, created_at)` de `Incident` respalda la consulta de las incidencias de un ciudadano, y el índice `(role_id, name, id)` de `User` el listado de técnicos. Asignaciones, evidencias, activos urbanos e integraciones de contexto se incorporarán cuando se implementen sus requisitos.
 
 ## Atributos de calidad
 
@@ -166,7 +184,7 @@ Los siguientes atributos orientan el diseño. Son objetivos arquitectónicos y n
 | --- | --- | --- |
 | Integridad y trazabilidad | Mantener coherente el ciclo de vida de una incidencia y poder explicar sus cambios. | Gestionar cambios de estado mediante transacciones y conservar actor, fecha y motivo en el historial. |
 | Disponibilidad y degradación controlada | Permitir registrar una incidencia aunque una fuente externa no esté disponible. | Tratar los servicios externos como enriquecimiento opcional y aislar sus errores del flujo de registro ([RF26](requirements.md)). |
-| Seguridad y privacidad | Proteger datos personales, evidencias y operaciones administrativas. | Incorporar autenticación y permisos por rol; validar tipo y tamaño de los ficheros recibidos. Estas capacidades todavía no están implementadas. |
+| Seguridad y privacidad | Proteger datos personales, evidencias y operaciones administrativas. | Autenticar cada petición con JWT y aplicar permisos por rol ([ADR-0016](adr/0016-autenticacion-con-jwt-propio.md)); guardar las contraseñas con BCrypt; no exponer quién registró una incidencia ni registrar contraseñas, tokens o emails completos en el log. Validar tipo y tamaño de los ficheros recibidos, todavía no implementado. Los tokens no se pueden revocar. |
 | Rendimiento | Responder de forma fluida, incluidas las consultas de incidencias próximas y su relación con territorios y activos urbanos, y medirlo frente a una línea base. | Utilizar PostGIS para operaciones espaciales e incorporar índices, también espaciales, cuando las consultas lo requieran ([ADR-0007](adr/0007-postgis-para-datos-geoespaciales.md)). En los mapas, cargar solo las incidencias del área visible y, en el panel de gestión, agrupar los marcadores ([ADR-0015](adr/0015-react-vite-y-leaflet-para-panel-de-gestion.md)). |
 | Modificabilidad | Añadir capacidades al dominio sin acoplar toda la aplicación. | Mantener un monolito organizado por funcionalidades, con capas y dependencias claras ([ADR-0006](adr/0006-arquitectura-monolitica-inicial.md)). |
 | Desplegabilidad | Reproducir el entorno local y separar la configuración del código. | Usar Docker Compose para backend y base de datos, y configurar puertos y credenciales mediante variables de entorno ([ADR-0012](adr/0012-docker-compose-para-desarrollo-local.md)). |
