@@ -5,7 +5,7 @@ import java.text.Normalizer;
 
 /**
  * The password rules. Every password is normalized and checked against BCrypt's limit, both at sign-up
- * and at login. The new-password rules ({@link #isAcceptableLength}, {@link #isOnlySpaces}) only apply at
+ * and at login. The new-password rules ({@link #hasMinimumLength}, {@link #isOnlySpaces}) only apply at
  * sign-up, through {@link Password}: login only compares, so changing them never locks out an account.
  */
 final class Passwords {
@@ -30,8 +30,8 @@ final class Passwords {
 		return password.getBytes(StandardCharsets.UTF_8).length > MAX_BYTES;
 	}
 
-	static boolean isAcceptableLength(String password) {
-		return password.codePointCount(0, password.length()) >= MIN_LENGTH && !exceedsBcryptLimit(password);
+	static boolean hasMinimumLength(String password) {
+		return password.codePointCount(0, password.length()) >= MIN_LENGTH;
 	}
 
 	/** {@link String#isBlank()} misses no-break spaces, so Unicode space separators count too. */

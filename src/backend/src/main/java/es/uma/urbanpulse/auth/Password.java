@@ -24,7 +24,11 @@ public @interface Password {
 
 	String ONLY_SPACES_MESSAGE = "La contraseña no puede estar formada solo por espacios.";
 
-	String message() default "La contraseña debe tener entre 8 y 72 caracteres. Las letras con tilde y la ñ cuentan como dos.";
+	String MIN_LENGTH_MESSAGE = "La contraseña debe tener al menos 8 caracteres.";
+
+	String TOO_LONG_MESSAGE = "La contraseña es demasiado larga. Elige una más corta.";
+
+	String message() default MIN_LENGTH_MESSAGE;
 
 	Class<?>[] groups() default {};
 
@@ -34,7 +38,12 @@ public @interface Password {
 
 		@Override
 		public boolean isValid(String password, ConstraintValidatorContext context) {
-			if (password == null || !Passwords.isAcceptableLength(password)) {
+			if (password == null || !Passwords.hasMinimumLength(password)) {
+				return false;
+			}
+			if (Passwords.exceedsBcryptLimit(password)) {
+				context.disableDefaultConstraintViolation();
+				context.buildConstraintViolationWithTemplate(TOO_LONG_MESSAGE).addConstraintViolation();
 				return false;
 			}
 			if (Passwords.isOnlySpaces(password)) {

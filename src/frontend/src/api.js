@@ -3,8 +3,11 @@ import { API_URL } from './config';
 const BASE_URL = typeof API_URL === 'string' ? API_URL.trim().replace(/\/+$/, '') : '';
 const REQUEST_TIMEOUT_MS = 10000;
 const CONNECTION_ERROR =
-  'No se pudo conectar con el backend. Comprueba que está en ejecución y que EXPO_PUBLIC_API_URL es accesible desde el móvil.';
-const INVALID_CREATED_AT_ERROR = 'El backend devolvió una fecha de registro no válida.';
+  'No se pudo conectar con UrbanPulse. Comprueba tu conexión e inténtalo de nuevo.';
+const SERVER_ERROR = 'Algo ha fallado en UrbanPulse. Inténtalo de nuevo en unos minutos.';
+const INVALID_CREATED_AT_ERROR = SERVER_ERROR;
+let accessToken = null;
+let unauthorizedHandler = null;
 
 class ApiError extends Error {
   constructor(message, { status, payload, cause } = {}) {
@@ -16,17 +19,17 @@ class ApiError extends Error {
   }
 }
 
-function logFailure(method, path, status, startedAt) {
+function logFailure(method, path, status, startedAt, type) {
   const statusLabel = status ?? 'sin respuesta';
   const durationMs = Date.now() - startedAt;
-  console.warn('[api] ' + method + ' ' + path + ' -> ' + statusLabel + ' (' + durationMs + ' ms)');
+  console.warn('[api] ' + method + ' ' + path + ' -> ' + statusLabel + ' (' + durationMs + ' ms, ' + type + ')');
 }
 
 function getResponseErrorMessage(payload, status) {
   const message =
     (typeof payload?.message === 'string' && payload.message) ||
     (typeof payload?.detail === 'string' && payload.detail) ||
-    'El backend respondió con el código HTTP ' + status + '.';
+    '';
   const fieldMessages = Object.values(payload?.errors ?? {}).filter(
     (fieldMessage) => typeof fieldMessage === 'string' && fieldMessage,
   );
@@ -34,11 +37,42 @@ function getResponseErrorMessage(payload, status) {
   return [message, ...fieldMessages].join(' ');
 }
 
-async function request(path, { method = 'GET', body } = {}) {
+function errorForResponse(payload, status, preserveUnauthorizedMessage) {
+  if (status === 401) {
+    if (preserveUnauthorizedMessage) {
+      return new ApiError(getResponseErrorMessage(payload, status), { status, payload });
+    }
+    return new ApiError('Tu sesión ha caducado. Vuelve a iniciar sesión.', { status, payload });
+  }
+  if (status === 403) {
+    return new ApiError('No tienes permiso para hacer esto.', { status, payload });
+  }
+  if (status >= 500) {
+    return new ApiError(SERVER_ERROR, { status, payload });
+  }
+  if (status === 404) {
+    return new ApiError(getResponseErrorMessage(payload, status), { status, payload });
+  }
+  return new ApiError(getResponseErrorMessage(payload, status) || 'Revisa los datos e inténtalo de nuevo.', {
+    status,
+    payload,
+  });
+}
+
+export function setAccessToken(token) {
+  accessToken = typeof token === 'string' && token ? token : null;
+}
+
+export function setUnauthorizedHandler(handler) {
+  unauthorizedHandler = typeof handler === 'function' ? handler : null;
+}
+
+async function request(
+  path,
+  { method = 'GET', body, authenticated = true, handleUnauthorized = true, preserveUnauthorizedMessage = false } = {},
+) {
   if (!BASE_URL) {
-    throw new ApiError(
-      'Configura EXPO_PUBLIC_API_URL en src/frontend/.env con una dirección del backend accesible desde el móvil.',
-    );
+    throw new ApiError(CONNECTION_ERROR);
   }
 
   const startedAt = Date.now();
@@ -53,19 +87,15 @@ async function request(path, { method = 'GET', body } = {}) {
       headers: {
         Accept: 'application/json',
         ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+        ...(authenticated && accessToken ? { Authorization: 'Bearer ' + accessToken } : {}),
       },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       signal: controller.signal,
     });
     responseText = await response.text();
   } catch (cause) {
-    const message = controller.signal.aborted
-      ? 'El backend no respondió en ' +
-        REQUEST_TIMEOUT_MS / 1000 +
-        ' segundos. Comprueba la conexión de red y EXPO_PUBLIC_API_URL.'
-      : CONNECTION_ERROR;
-    const error = new ApiError(message, { cause });
-    logFailure(method, path, undefined, startedAt);
+    const error = new ApiError(CONNECTION_ERROR, { cause });
+    logFailure(method, path, undefined, startedAt, controller.signal.aborted ? 'timeout' : 'network');
     throw error;
   } finally {
     clearTimeout(timeout);
@@ -77,25 +107,43 @@ async function request(path, { method = 'GET', body } = {}) {
       payload = JSON.parse(responseText);
     } catch {
       if (response.ok) {
-        const error = new ApiError('El backend devolvió una respuesta que no es JSON válido.', {
+        const error = new ApiError(SERVER_ERROR, {
           status: response.status,
         });
-        logFailure(method, path, response.status, startedAt);
+        logFailure(method, path, response.status, startedAt, 'unexpected-response');
         throw error;
       }
     }
   }
 
   if (!response.ok) {
-    const error = new ApiError(getResponseErrorMessage(payload, response.status), {
-      status: response.status,
-      payload,
-    });
-    logFailure(method, path, response.status, startedAt);
+    const error = errorForResponse(payload, response.status, preserveUnauthorizedMessage);
+    logFailure(method, path, response.status, startedAt, 'http-' + response.status);
+    if (response.status === 401 && handleUnauthorized && unauthorizedHandler) {
+      void unauthorizedHandler();
+    }
     throw error;
   }
 
   return payload;
+}
+
+export async function register({ name, email, password }) {
+  return request('/api/auth/register', { method: 'POST', body: { name, email, password }, authenticated: false, handleUnauthorized: false });
+}
+
+export async function login({ email, password }) {
+  return request('/api/auth/login', {
+    method: 'POST',
+    body: { email, password },
+    authenticated: false,
+    handleUnauthorized: false,
+    preserveUnauthorizedMessage: true,
+  });
+}
+
+export async function refresh() {
+  return request('/api/auth/refresh', { method: 'POST' });
 }
 
 function validateCreatedAt(createdAt) {
