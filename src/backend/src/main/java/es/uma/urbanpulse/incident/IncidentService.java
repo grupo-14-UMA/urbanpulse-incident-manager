@@ -73,7 +73,7 @@ public class IncidentService {
 				.limit(MAP_RESULT_LIMIT)
 				.map(IncidentService::toResponse)
 				.toList();
-		LOGGER.debug("Loaded {} public map incidents (truncated={}) in {} ms",
+		LOGGER.info("Loaded {} public map incidents (truncated={}) in {} ms",
 				incidents.size(), truncated, queryDurationMs);
 		return new IncidentMapResponse(incidents, truncated);
 	}

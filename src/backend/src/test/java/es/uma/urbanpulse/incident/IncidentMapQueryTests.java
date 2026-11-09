@@ -73,6 +73,28 @@ class IncidentMapQueryTests {
 	}
 
 	@Test
+	void rejectsInvertedOutOfRangeAndMalformedBounds() {
+		for (String invalidQuery : List.of(
+				"/api/incidents?west=-4.38&south=36.68&east=-4.45&north=36.77",
+				"/api/incidents?west=-4.45&south=36.77&east=-4.38&north=36.68",
+				"/api/incidents?west=-181&south=36.68&east=-4.38&north=36.77",
+				"/api/incidents?west=-4.45&south=36.68&east=-4.38&north=95",
+				"/api/incidents?west=invalid&south=36.68&east=-4.38&north=36.77")) {
+			String body = client.get()
+					.uri(invalidQuery)
+					.header("Authorization", this.authorization)
+					.exchange()
+					.expectStatus()
+					.isBadRequest()
+					.expectBody(String.class)
+					.returnResult()
+					.getResponseBody();
+
+			assertThat(body).doesNotContain("java.lang", "Failed to convert");
+		}
+	}
+
+	@Test
 	void capsResultsAndSignalsThatTheMapShouldZoomIn() {
 		insertReportedIncidents(501);
 

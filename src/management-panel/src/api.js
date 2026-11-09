@@ -66,15 +66,23 @@ export async function apiRequest(path, options = {}) {
     ...requestHeaders,
   };
 
+  const timeoutSignal = AbortSignal.timeout(10_000);
+  const signal = fetchOptions.signal
+    ? AbortSignal.any([fetchOptions.signal, timeoutSignal])
+    : timeoutSignal;
+
   let response;
   try {
     response = await fetch(`${API_BASE_URL}${normalizedPath}`, {
       ...fetchOptions,
       headers,
-      signal: fetchOptions.signal || AbortSignal.timeout(10_000),
+      signal,
     });
   } catch (error) {
-    const hint = error?.name === 'TimeoutError' || error?.name === 'AbortError' ? 'timeout' : 'network';
+    if (fetchOptions.signal?.aborted && !timeoutSignal.aborted) {
+      throw error;
+    }
+    const hint = timeoutSignal.aborted || error?.name === 'TimeoutError' ? 'timeout' : 'network';
     logApiFailure({ method, path: normalizedPath, status: null, kind: 'network', hint, startedAt });
     throw new ApiError(USER_MESSAGES.network, { kind: 'network' });
   }
