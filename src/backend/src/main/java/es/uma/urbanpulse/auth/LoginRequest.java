@@ -1,5 +1,6 @@
 package es.uma.urbanpulse.auth;
 
+import es.uma.urbanpulse.user.User;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -16,8 +17,8 @@ public record LoginRequest(
 		String password) {
 
 	public LoginRequest {
-		// Trimmed before validation: mobile keyboards often add a space after the email.
-		email = email == null ? null : email.trim();
+		// Normalized before validation: mobile keyboards often add a space after the email.
+		email = email == null ? null : User.normalizeEmail(email);
 		password = Passwords.normalize(password);
 	}
 

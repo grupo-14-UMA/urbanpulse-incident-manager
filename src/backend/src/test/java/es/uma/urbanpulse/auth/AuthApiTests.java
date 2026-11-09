@@ -96,6 +96,15 @@ class AuthApiTests {
 			.expectBody()
 			.jsonPath("$.user.email").isEqualTo(email);
 		login(email + " ", "contraseña-segura").expectStatus().isOk();
+
+		// Some keyboards add a no-break space instead.
+		String other = uniqueEmail();
+		register("Ana García", other + " ", "contraseña-segura")
+			.expectStatus()
+			.isCreated()
+			.expectBody()
+			.jsonPath("$.user.email").isEqualTo(other);
+		login(other + " ", "contraseña-segura").expectStatus().isOk();
 	}
 
 	@Test
