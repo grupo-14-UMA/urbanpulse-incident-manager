@@ -63,16 +63,19 @@ class AuthApiTests {
 			.expectStatus()
 			.isBadRequest()
 			.expectBody()
-			.jsonPath("$.errors.password").isEqualTo("La contraseña debe tener entre 8 y 72 caracteres. Las letras con tilde y la ñ cuentan como dos.");
+			.jsonPath("$.errors.password").isEqualTo("La contraseña debe tener al menos 8 caracteres.");
 
 		register("Ana García", uniqueEmail(), "x".repeat(73))
 			.expectStatus()
 			.isBadRequest()
 			.expectBody()
-			.jsonPath("$.errors.password").isEqualTo("La contraseña debe tener entre 8 y 72 caracteres. Las letras con tilde y la ñ cuentan como dos.");
+			.jsonPath("$.errors.password").isEqualTo("La contraseña es demasiado larga. Elige una más corta.");
 
-		// 72 characters but more than BCrypt's 72 bytes.
-		register("Ana García", uniqueEmail(), "ñ".repeat(72)).expectStatus().isBadRequest();
+		register("Ana García", uniqueEmail(), "ñ".repeat(72))
+			.expectStatus()
+			.isBadRequest()
+			.expectBody()
+			.jsonPath("$.errors.password").isEqualTo("La contraseña es demasiado larga. Elige una más corta.");
 	}
 
 	@Test

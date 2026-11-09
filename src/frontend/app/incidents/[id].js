@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from 'expo-router';
+import { Redirect, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
@@ -8,13 +8,28 @@ import { getIncident } from '../../src/api';
 import { categoryLabel, statusLabel } from '../../src/labels';
 import { OSM_MAP_PROPS, OsmAttribution, OsmTiles, STREET_DELTA } from '../../src/map';
 import { COLORS } from '../../src/theme';
+import { useAuth } from '../../src/AuthContext';
 
 export default function IncidentDetailScreen() {
+  const { status, session } = useAuth();
   const { id } = useLocalSearchParams();
+
+  if (status === 'restoring') {
+    return <View style={styles.centered}><ActivityIndicator size="large" color={COLORS.primary} /></View>;
+  }
+  if (status !== 'signedIn' || session.user.role !== 'CITIZEN') {
+    return <Redirect href="/" />;
+  }
+
+  return <IncidentDetailContent id={id} />;
+}
+
+function IncidentDetailContent({ id }) {
   const insets = useSafeAreaInsets();
   // 'loading' | 'loaded' | 'notFound' | 'error'
   const [state, setState] = useState('loading');
   const [incident, setIncident] = useState(null);
+  const [errorMessage, setErrorMessage] = useState(null);
   const [attempt, setAttempt] = useState(0);
 
   // Loaded by id, not passed through navigation, so it follows GET /api/incidents/{id}
@@ -31,6 +46,7 @@ export default function IncidentDetailScreen() {
       .catch((error) => {
         if (active) {
           setState(error?.status === 404 ? 'notFound' : 'error');
+          setErrorMessage(error?.message || 'Algo ha fallado en UrbanPulse. Inténtalo de nuevo en unos minutos.');
         }
       });
     return () => {
@@ -57,7 +73,7 @@ export default function IncidentDetailScreen() {
   if (state === 'error') {
     return (
       <View style={styles.centered}>
-        <Text style={styles.message}>No se pudo cargar la incidencia.</Text>
+        <Text style={styles.message}>{errorMessage}</Text>
         <Pressable
           style={({ pressed }) => [styles.retryButton, pressed && styles.retryButtonPressed]}
           onPress={() => {

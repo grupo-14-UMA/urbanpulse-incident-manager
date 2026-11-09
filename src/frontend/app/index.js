@@ -8,15 +8,44 @@ import { getIncidents } from '../src/api';
 import { IncidentCard } from '../src/IncidentCard';
 import { MALAGA_REGION, OSM_MAP_PROPS, OsmAttribution, OsmTiles } from '../src/map';
 import { COLORS } from '../src/theme';
+import { AuthenticationScreen } from '../src/AuthenticationScreen';
+import { useAuth } from '../src/AuthContext';
 
 // Distance from the bottom safe area to the "+ Nueva incidencia" button.
 const BUTTON_BOTTOM = 32;
 // The card sits above the button so the button is always visible and usable.
 const CARD_BOTTOM = BUTTON_BOTTOM + 64;
 
-export default function MapScreen() {
+export default function HomeScreen() {
+  const { status, session, notice } = useAuth();
+
+  if (status === 'restoring') {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.loadingText}>Recuperando tu sesión…</Text>
+      </View>
+    );
+  }
+
+  if (status === 'signedOut') {
+    return <AuthenticationScreen initialNotice={notice} />;
+  }
+
+  if (session.user.role === 'TECHNICIAN') {
+    return <TechnicianHome />;
+  }
+
+  if (session.user.role === 'OPERATOR') {
+    return <OperatorHome />;
+  }
+
+  return <CitizenMapScreen />;
+}
+
+function CitizenMapScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { signOut } = useAuth();
   const [incidents, setIncidents] = useState([]);
   const [loadError, setLoadError] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
@@ -71,6 +100,13 @@ export default function MapScreen() {
         ))}
       </MapView>
       <OsmAttribution style={{ bottom: insets.bottom }} />
+      <Pressable
+        style={[styles.signOutButton, { top: insets.top + 12 }]}
+        onPress={signOut}
+        accessibilityRole="button"
+      >
+        <Text style={styles.signOutButtonText}>Cerrar sesión</Text>
+      </Pressable>
       {loadError && (
         <View style={styles.notice} pointerEvents="none" accessibilityLiveRegion="polite">
           <Text style={styles.noticeText}>{loadError}</Text>
@@ -99,9 +135,45 @@ export default function MapScreen() {
   );
 }
 
+function TechnicianHome() {
+  return <RoleScreen title="Mis trabajos" message="Todavía no tienes trabajos asignados." />;
+}
+
+function OperatorHome() {
+  return (
+    <RoleScreen
+      title="Panel de gestión"
+      message="Usa el panel de gestión desde un ordenador para gestionar las incidencias."
+    />
+  );
+}
+
+function RoleScreen({ title, message }) {
+  const { signOut } = useAuth();
+  return (
+    <View style={styles.roleScreen}>
+      <Text style={styles.roleTitle}>{title}</Text>
+      <Text style={styles.roleMessage}>{message}</Text>
+      <Pressable style={styles.roleSignOutButton} onPress={signOut} accessibilityRole="button">
+        <Text style={styles.roleSignOutButtonText}>Cerrar sesión</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  centered: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.surface,
+  },
+  loadingText: {
+    color: COLORS.text,
+    fontSize: 16,
   },
   notice: {
     position: 'absolute',
@@ -141,6 +213,52 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primaryPressed,
   },
   newIncidentButtonText: {
+    color: COLORS.onPrimary,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  signOutButton: {
+    position: 'absolute',
+    right: 16,
+    borderRadius: 18,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: COLORS.surface,
+    elevation: 3,
+  },
+  signOutButtonText: {
+    color: COLORS.primary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  roleScreen: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: 24,
+    backgroundColor: COLORS.surface,
+  },
+  roleTitle: {
+    color: COLORS.text,
+    fontSize: 24,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  roleMessage: {
+    marginTop: 16,
+    color: COLORS.text,
+    fontSize: 16,
+    lineHeight: 24,
+    textAlign: 'center',
+  },
+  roleSignOutButton: {
+    alignSelf: 'center',
+    marginTop: 28,
+    borderRadius: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: COLORS.primary,
+  },
+  roleSignOutButtonText: {
     color: COLORS.onPrimary,
     fontSize: 16,
     fontWeight: '600',
