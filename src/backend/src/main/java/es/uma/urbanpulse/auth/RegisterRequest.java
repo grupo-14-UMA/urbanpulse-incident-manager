@@ -19,7 +19,7 @@ public record RegisterRequest(
 		String email,
 
 		@Password
-		@Schema(description = "Entre 8 y 72 caracteres.", example = "contraseña-segura")
+		@Schema(description = "Entre 8 caracteres y 72 bytes, y no solo espacios. Se envía tal como la escribe el usuario, sin recortar.", example = "contraseña-segura")
 		String password) {
 
 	public RegisterRequest {
