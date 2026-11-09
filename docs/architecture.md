@@ -4,7 +4,7 @@ Este documento describe la arquitectura de UrbanPulse siguiendo el modelo C4. Di
 
 ## Visión general
 
-UrbanPulse es una plataforma para registrar, gestionar y analizar incidencias urbanas en Málaga. Tiene dos clientes: una aplicación móvil React Native con Expo para el ciudadano y el técnico, y un panel de gestión web con React para el operador, el administrador y el analista. Ambos están diseñados para usar un backend monolítico modular con Java 21 y Spring Boot 4, y PostgreSQL con PostGIS. Docker Compose proporciona el entorno local para el backend y la base de datos. La aplicación móvil consume la API para mostrar incidencias, consultar sus detalles y registrar nuevas incidencias. El panel web ofrece una estructura inicial con navegación y un mapa base de Málaga; sus pantallas todavía no consumen la API.
+UrbanPulse es una plataforma para registrar, gestionar y analizar incidencias urbanas en Málaga. Tiene dos clientes: una aplicación móvil React Native con Expo para el ciudadano y el técnico, y un panel de gestión web con React para el operador, el administrador y el analista. Ambos usan un backend monolítico modular con Java 21 y Spring Boot 4, y PostgreSQL con PostGIS. Docker Compose proporciona el entorno local para el backend y la base de datos. La aplicación móvil consume la API para mostrar las incidencias del área visible, consultar sus detalles y registrar nuevas incidencias. El mapa del panel web también carga las incidencias visibles desde la API; sus rutas de listado y detalle aún son pantallas de estructura.
 
 ## Nivel 1: Contexto del sistema
 
@@ -85,9 +85,9 @@ flowchart LR
 
 | Contenedor | Tecnología | Responsabilidad y estado |
 | --- | --- | --- |
-| Aplicación móvil | React Native, Expo, `expo-router`, `react-native-maps`, `expo-location` | Implementa una pantalla de mapa centrada en Málaga, con teselas cargadas mediante `UrlTile`, que muestra las incidencias del backend y las recarga al volver a primer plano; una pantalla de detalle con un mapa estático de la localización; y un formulario para registrar incidencias con coordenadas propuestas por GPS o marcadas por el ciudadano. Las llamadas REST se centralizan en `src/api.js`, y `EXPO_PUBLIC_API_URL` configura la dirección base del backend. |
-| Panel de gestión | React, Vite, React Router, `react-leaflet`, CSS propio | Cliente web del operador, el administrador y el analista ([ADR-0015](adr/0015-react-vite-y-leaflet-para-panel-de-gestion.md)). Implementa la estructura inicial, rutas para mapa/listado/detalle y un mapa centrado en Málaga con cuatro incidencias de muestra. La API de incidencias ya está disponible, pero el panel aún no carga ni modifica esos datos; las pantallas de gestión, la agrupación de marcadores y la carga por área visible quedan para siguientes issues. `VITE_API_URL` configura el backend y la capa HTTP compartida está preparada. |
-| Backend | Java 21, Spring Boot 4, Maven | Monolito modular. Expone la creación y consulta de incidencias y la consulta de categorías mediante REST; usa las entidades y repositorios JPA de `Incident` y `Category`. |
+| Aplicación móvil | React Native, Expo, `expo-router`, `react-native-maps`, `expo-location` | Implementa una pantalla de mapa centrada en Málaga, con teselas cargadas mediante `UrlTile`, que solicita las incidencias del rectángulo visible al cargar, cuando termina un movimiento o cambio de zoom y al volver a primer plano; una pantalla de detalle con un mapa estático de la localización; y un formulario para registrar incidencias con coordenadas propuestas por GPS o marcadas por el ciudadano. Las llamadas REST se centralizan en `src/api.js`, y `EXPO_PUBLIC_API_URL` configura la dirección base del backend. |
+| Panel de gestión | React, Vite, React Router, `react-leaflet`, CSS propio | Cliente web del operador, el administrador y el analista ([ADR-0015](adr/0015-react-vite-y-leaflet-para-panel-de-gestion.md)). El mapa centrado en Málaga carga las incidencias del rectángulo visible desde la API cuando se abre y cuando se mueve o amplía. La agrupación de marcadores prevista en ADR-0015 está pendiente. Las rutas de listado y detalle siguen siendo pantallas de estructura. `VITE_API_URL` configura el backend y la capa HTTP compartida. |
+| Backend | Java 21, Spring Boot 4, Maven | Monolito modular. Expone la creación y consulta de incidencias y categorías mediante REST. El mapa consulta con PostGIS y el índice GiST de `Incident.location`; responde con hasta 500 incidencias `REPORTED` y `truncated` indica si hay más en el área. |
 | Base de datos | PostgreSQL con PostGIS | Docker Compose utiliza `postgis/postgis`. Flyway crea el esquema MVP de `Incident` y `Category`, incluida la ubicación espacial y las categorías iniciales. |
 
 En el entorno local, Docker Compose publica el backend en el puerto `8080` y PostgreSQL en el puerto `5432` por defecto. El backend se conecta a la base de datos mediante el nombre de servicio `db` dentro de la red de Compose. La aplicación móvil se inicia aparte con Expo. Para que un teléfono pueda acceder al backend, `EXPO_PUBLIC_API_URL` debe apuntar a la dirección de red del equipo que ejecuta Docker, no a `localhost`.
@@ -117,7 +117,7 @@ La API REST disponible en el MVP expone estas rutas:
 | Método | Ruta | Descripción |
 | --- | --- | --- |
 | `POST` | `/api/incidents` | Crear una incidencia con título, descripción, latitud, longitud y categoría opcional. Devuelve la incidencia creada, con estado `REPORTED` (etiqueta visible: «Registrada»). |
-| `GET` | `/api/incidents` | Listar todas las incidencias. La paginación queda para una siguiente entrega. |
+| `GET` | `/api/incidents?west=…&south=…&east=…&north=…` | Consultar hasta 500 incidencias `REPORTED` dentro del rectángulo WGS 84 del mapa. Los cuatro límites son obligatorios; `west < east` y `south < north`. La respuesta incluye `incidents` y `truncated`; la consulta usa `ST_Intersects` y el índice GiST de la ubicación. |
 | `GET` | `/api/incidents/{id}` | Consultar el detalle de una incidencia; devuelve 404 si no existe. |
 | `GET` | `/api/categories` | Listar categorías disponibles. |
 

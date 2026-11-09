@@ -56,16 +56,16 @@ cd src/backend
 
 Flyway aplica al arrancar el backend las migraciones de `src/backend/src/main/resources/db/migration/`. La migración inicial activa PostGIS, crea las tablas `Incident` y `Category` y carga estas categorías: alumbrado, limpieza, mobiliario urbano, tráfico y semáforos, arbolado y otros. La ubicación se almacena como `geometry(Point, 4326)`; `status_id = 1` representa el estado inicial `REPORTED` hasta que se añada la tabla `Status`.
 
-La API REST permite crear y consultar incidencias y listar categorías:
+La API REST permite crear y consultar incidencias, cargar las del área visible del mapa y listar categorías:
 
 | Método | Ruta | Uso |
 | --- | --- | --- |
 | `POST` | `/api/incidents` | Crear una incidencia con título, descripción, latitud, longitud y `categoryId` opcional. |
-| `GET` | `/api/incidents` | Listar todas las incidencias (sin paginación en esta entrega). |
+| `GET` | `/api/incidents?west=…&south=…&east=…&north=…` | Consultar hasta 500 incidencias `REPORTED` dentro de los límites WGS 84; los cuatro límites son obligatorios y el rectángulo debe tener área positiva. |
 | `GET` | `/api/incidents/{id}` | Consultar una incidencia por identificador. |
 | `GET` | `/api/categories` | Consultar las categorías disponibles. |
 
-El POST responde con la incidencia creada, incluidos `id`, coordenadas, categoría, `status: "REPORTED"` y `createdAt`. La etiqueta para el ciudadano es «Registrada». Los datos inválidos producen HTTP 400 con un mensaje en español; una incidencia inexistente produce HTTP 404. Las operaciones se documentan en Swagger UI. La API no requiere autenticación en esta entrega.
+El POST responde con la incidencia creada, incluidos `id`, coordenadas, categoría, `status: "REPORTED"` y `createdAt`. La etiqueta para el ciudadano es «Registrada». La consulta espacial usa `ST_Intersects` y el índice GiST de `Incident.location`; las coordenadas del rectángulo respetan el orden longitud oeste, latitud sur, longitud este y latitud norte. La respuesta del mapa tiene la forma `{ "incidents": [...], "truncated": false }`; incluye como máximo 500 elementos y devuelve `truncated: true` si encontró más, para que las aplicaciones pidan al usuario que amplíe el zoom. En el MVP solo se conoce el estado `REPORTED`; la consulta permite únicamente ese estado, por lo que estados rechazados o aún no modelados no se publican en el mapa. Los datos inválidos producen HTTP 400 con un mensaje en español; una incidencia inexistente produce HTTP 404. Las operaciones se documentan en Swagger UI. La API no requiere autenticación en esta entrega.
 
 ## Aplicación móvil
 
@@ -78,7 +78,7 @@ cp .env.example .env    # y edita la IP, ver más abajo
 npx expo start
 ```
 
-Escanea el código QR con Expo Go (en iPhone, con la cámara). El móvil y el portátil deben estar en la misma red. La app abre un mapa de OpenStreetMap (teselas de `tile.openstreetmap.de`) centrado en Málaga con un marcador por incidencia; al tocar uno aparece un resumen, y al tocar el resumen se abre el detalle. El botón «Nueva incidencia» abre el formulario para registrar una; la primera vez pide permiso de ubicación.
+Escanea el código QR con Expo Go (en iPhone, con la cámara). El móvil y el portátil deben estar en la misma red. La app abre un mapa de OpenStreetMap (teselas de `tile.openstreetmap.de`) centrado en Málaga y solicita solo las incidencias que caben en el área visible. Cuando termina de moverse o ampliarse el mapa, espera brevemente antes de consultar el nuevo rectángulo; al tocar un marcador aparece un resumen y al tocarlo se abre el detalle. El botón «Nueva incidencia» abre el formulario para registrar una; la primera vez pide permiso de ubicación.
 
 La app consume el backend para cargar las incidencias y categorías, consultar el detalle y registrar incidencias. Arranca Docker Compose antes de iniciar Expo y configura `EXPO_PUBLIC_API_URL` en `src/frontend/.env` con una dirección alcanzable desde el móvil. Si el backend no está disponible, la app muestra un mensaje de error; el detalle y las categorías del formulario permiten reintentar la carga.
 
@@ -115,9 +115,9 @@ cp .env.example .env
 npm run dev
 ```
 
-En Windows PowerShell, usa `Copy-Item .env.example .env` en lugar de `cp`. Vite muestra la dirección local al arrancar (por defecto `http://localhost:5173`). La página inicial muestra el mapa de OpenStreetMap centrado en Málaga, con cuatro incidencias de muestra. Las rutas de listado y detalle son marcadores de posición para trabajo futuro.
+En Windows PowerShell, usa `Copy-Item .env.example .env` en lugar de `cp`. Vite muestra la dirección local al arrancar (por defecto `http://localhost:5173`). La página inicial muestra el mapa de OpenStreetMap centrado en Málaga y carga las incidencias del área visible desde el backend cuando termina cada movimiento o cambio de zoom; las rutas de listado y detalle son marcadores de posición para trabajo futuro.
 
-`VITE_API_URL` en `src/management-panel/.env` configura la URL base del backend y por defecto apunta a `http://localhost:8080`. El panel puede comprobar la conexión con el endpoint de listado; sus pantallas todavía muestran datos de muestra y no consumen ni modifican las incidencias de la API.
+`VITE_API_URL` en `src/management-panel/.env` configura la URL base del backend y por defecto apunta a `http://localhost:8080`. El botón «Probar» comprueba la conexión con la API de categorías. El mapa carga y refresca las incidencias de su área visible; las rutas de listado y detalle todavía no gestionan incidencias.
 
 El backend permite peticiones del origen indicado por `MANAGEMENT_PANEL_ORIGIN` solo en `/api/**`. El valor por defecto, `http://localhost:5173`, coincide con el servidor de desarrollo de Vite. Si cambias el puerto del panel, actualiza la variable en el `.env` de la raíz y recrea el backend:
 

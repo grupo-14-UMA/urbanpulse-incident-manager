@@ -34,7 +34,7 @@ function getResponseErrorMessage(payload, status) {
   return [message, ...fieldMessages].join(' ');
 }
 
-async function request(path, { method = 'GET', body } = {}) {
+async function request(path, { method = 'GET', body, signal: requestSignal } = {}) {
   if (!BASE_URL) {
     throw new ApiError(
       'Configura EXPO_PUBLIC_API_URL en src/frontend/.env con una dirección del backend accesible desde el móvil.',
@@ -46,8 +46,18 @@ async function request(path, { method = 'GET', body } = {}) {
   let responseText;
   const controller = new AbortController();
   let timeout;
+  let timedOut = false;
+  const abortFromRequest = () => controller.abort();
   try {
-    timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    if (requestSignal?.aborted) {
+      controller.abort();
+    } else {
+      requestSignal?.addEventListener('abort', abortFromRequest, { once: true });
+    }
+    timeout = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, REQUEST_TIMEOUT_MS);
     response = await fetch(BASE_URL + path, {
       method,
       headers: {
@@ -59,7 +69,10 @@ async function request(path, { method = 'GET', body } = {}) {
     });
     responseText = await response.text();
   } catch (cause) {
-    const message = controller.signal.aborted
+    if (requestSignal?.aborted && !timedOut) {
+      throw cause;
+    }
+    const message = timedOut
       ? 'El backend no respondió en ' +
         REQUEST_TIMEOUT_MS / 1000 +
         ' segundos. Comprueba la conexión de red y EXPO_PUBLIC_API_URL.'
@@ -69,6 +82,7 @@ async function request(path, { method = 'GET', body } = {}) {
     throw error;
   } finally {
     clearTimeout(timeout);
+    requestSignal?.removeEventListener('abort', abortFromRequest);
   }
 
   let payload = null;
@@ -139,8 +153,23 @@ export async function getCategories() {
   return expectArray(await request('/api/categories'), 'categorías');
 }
 
-export async function getIncidents() {
-  return expectArray(await request('/api/incidents'), 'incidencias').map(normalizeIncident);
+export async function getIncidentsWithinBounds(bounds, { signal } = {}) {
+  const query = [
+    ['west', bounds.west],
+    ['south', bounds.south],
+    ['east', bounds.east],
+    ['north', bounds.north],
+  ]
+    .map(([name, value]) => `${name}=${encodeURIComponent(String(value))}`)
+    .join('&');
+  const payload = await request(`/api/incidents?${query}`, { signal });
+  if (!payload || !Array.isArray(payload.incidents) || typeof payload.truncated !== 'boolean') {
+    throw new ApiError('El backend devolvió un resultado de mapa no válido.');
+  }
+  return {
+    incidents: payload.incidents.map(normalizeIncident),
+    truncated: payload.truncated,
+  };
 }
 
 export async function getIncident(id) {

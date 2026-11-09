@@ -4,8 +4,7 @@ Plataforma cloud para comunicar, gestionar y analizar incidencias urbanas en Má
 
 ## Características principales
 
-- [x] Panel web inicial con navegación y mapa de OpenStreetMap centrado en Málaga, con incidencias de muestra.
-- [x] Mapa de Málaga con las incidencias registradas.
+- [x] Panel web y aplicación móvil con mapas que cargan hasta 500 incidencias del área visible y piden ampliar el zoom cuando hay más.
 - [x] Detalle de una incidencia: título, descripción, categoría, estado y fecha.
 - [x] Registro de incidencias con ubicación (GPS o seleccionada en el mapa) y categoría opcional.
 - [ ] Documentación interactiva de la API (Swagger UI).
