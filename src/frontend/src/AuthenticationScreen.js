@@ -30,6 +30,13 @@ function validateLogin({ email, password }) {
 function validateRegistration({ name, email, password }) {
   const errors = validateLogin({ email, password });
   if (!name.trim()) errors.name = 'Introduce tu nombre.';
+  if (password) {
+    if (Array.from(password).length < 8) {
+      errors.password = 'La contraseña debe tener al menos 8 caracteres.';
+    } else if (!password.trim()) {
+      errors.password = 'La contraseña no puede estar formada solo por espacios.';
+    }
+  }
   return errors;
 }
 
@@ -93,52 +100,52 @@ export function AuthenticationScreen({ initialNotice }) {
         automaticallyAdjustKeyboardInsets
       >
         <View style={styles.card}>
-        <Text style={styles.title}>{isRegistration ? 'Crear cuenta' : 'Iniciar sesión'}</Text>
-        <Text style={styles.subtitle}>
-          {isRegistration ? 'Crea una cuenta para registrar incidencias.' : 'Accede para consultar y registrar incidencias.'}
-        </Text>
+          <Text style={styles.title}>{isRegistration ? 'Crear cuenta' : 'Iniciar sesión'}</Text>
+          <Text style={styles.subtitle}>
+            {isRegistration ? 'Crea una cuenta para registrar incidencias.' : 'Accede para consultar y registrar incidencias.'}
+          </Text>
 
-        {isRegistration && (
-          <Field label="Nombre" value={name} onChangeText={setName} error={errors.name} editable={!sending} />
-        )}
-        <Field
-          label="Email"
-          value={email}
-          onChangeText={setEmail}
-          error={errors.email}
-          editable={!sending}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoComplete="email"
-        />
-        <Field
-          label="Contraseña"
-          value={password}
-          onChangeText={setPassword}
-          error={errors.password}
-          editable={!sending}
-          secureTextEntry={!passwordVisible}
-          autoCapitalize="none"
-          autoComplete={isRegistration ? 'new-password' : 'current-password'}
-          rightAction={{
-            label: passwordVisible ? 'Ocultar contraseña' : 'Mostrar contraseña',
-            onPress: () => setPasswordVisible((visible) => !visible),
-          }}
-        />
+          {isRegistration && (
+            <Field label="Nombre" value={name} onChangeText={setName} error={errors.name} editable={!sending} />
+          )}
+          <Field
+            label="Email"
+            value={email}
+            onChangeText={setEmail}
+            error={errors.email}
+            editable={!sending}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoComplete="email"
+          />
+          <Field
+            label="Contraseña"
+            value={password}
+            onChangeText={setPassword}
+            error={errors.password}
+            editable={!sending}
+            secureTextEntry={!passwordVisible}
+            autoCapitalize="none"
+            autoComplete={isRegistration ? 'new-password' : 'current-password'}
+            rightAction={{
+              label: passwordVisible ? 'Ocultar contraseña' : 'Mostrar contraseña',
+              onPress: () => setPasswordVisible((visible) => !visible),
+            }}
+          />
 
-        {submitError && <Text style={styles.submitError}>{submitError}</Text>}
-        <Pressable
-          style={({ pressed }) => [styles.submitButton, (pressed || sending) && styles.submitButtonPressed]}
-          onPress={submit}
-          disabled={sending}
-          accessibilityRole="button"
-          accessibilityState={{ busy: sending, disabled: sending }}
-        >
-          {sending ? <ActivityIndicator color={COLORS.onPrimary} /> : <Text style={styles.submitText}>{isRegistration ? 'Crear cuenta' : 'Iniciar sesión'}</Text>}
-        </Pressable>
-        <Pressable onPress={switchMode} disabled={sending} accessibilityRole="button">
-          <Text style={styles.switchText}>{isRegistration ? 'Ya tengo una cuenta' : 'Crear cuenta'}</Text>
-        </Pressable>
+          {submitError && <Text style={styles.submitError}>{submitError}</Text>}
+          <Pressable
+            style={({ pressed }) => [styles.submitButton, (pressed || sending) && styles.submitButtonPressed]}
+            onPress={submit}
+            disabled={sending}
+            accessibilityRole="button"
+            accessibilityState={{ busy: sending, disabled: sending }}
+          >
+            {sending ? <ActivityIndicator color={COLORS.onPrimary} /> : <Text style={styles.submitText}>{isRegistration ? 'Crear cuenta' : 'Iniciar sesión'}</Text>}
+          </Pressable>
+          <Pressable onPress={switchMode} disabled={sending} accessibilityRole="button">
+            <Text style={styles.switchText}>{isRegistration ? 'Ya tengo una cuenta' : 'Crear cuenta'}</Text>
+          </Pressable>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
