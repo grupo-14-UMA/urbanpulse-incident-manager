@@ -70,4 +70,10 @@ El fichero `.env` no se versiona. Los valores por defecto solo sirven para el en
 
 ## Integración continua
 
-El workflow de GitHub Actions `.github/workflows/backend-ci.yml` se ejecuta en cada pull request contra `main`. Prepara Java 21 y lanza `./mvnw verify` en `src/backend`, que compila el backend y ejecuta sus pruebas contra PostgreSQL con PostGIS mediante Testcontainers. El despliegue no está automatizado.
+Los workflows de GitHub Actions se ejecutan en cada pull request contra `main` cuando cambia su área correspondiente:
+
+- `.github/workflows/backend-ci.yml` prepara Java 21 y lanza `./mvnw verify` en `src/backend`, que compila el backend y ejecuta sus pruebas contra PostgreSQL con PostGIS mediante Testcontainers.
+- `.github/workflows/management-panel-ci.yml` instala las dependencias del panel con `npm ci` y ejecuta `npm run build` cuando cambia `src/management-panel/`.
+- `.github/workflows/mobile-app-ci.yml` instala las dependencias de la aplicación móvil con `npm ci` y ejecuta `npm run lint` y `npm test -- --runInBand` cuando cambia `src/frontend/`.
+
+El despliegue no está automatizado.
