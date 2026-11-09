@@ -3,10 +3,11 @@ CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE TABLE "User" (
   "id" integer PRIMARY KEY,
   "nif" varchar,
-  "name" varchar,
-  "email" varchar,
+  "name" varchar(100) NOT NULL,
+  "email" varchar(254) NOT NULL UNIQUE,
+  "password_hash" varchar(60) NOT NULL,
   "phone" integer,
-  "role_id" integer
+  "role_id" integer NOT NULL
 );
 
 CREATE TABLE "Role" (
@@ -53,7 +54,7 @@ CREATE TABLE "Incident" (
   "location" geometry(Point, 4326) NOT NULL,
   "priority" varchar,
   "status_id" integer NOT NULL,
-  "user_id" integer,
+  "reporter_id" integer,
   "urban_asset_id" integer,
   "urban_context_id" integer,
   "created_at" timestamp NOT NULL,
@@ -138,7 +139,7 @@ CREATE TABLE "KnowledgeDocument" (
   "created_at" timestamp
 );
 
-ALTER TABLE "Incident" ADD FOREIGN KEY ("user_id") REFERENCES "User" ("id") DEFERRABLE INITIALLY IMMEDIATE;
+ALTER TABLE "Incident" ADD FOREIGN KEY ("reporter_id") REFERENCES "User" ("id") DEFERRABLE INITIALLY IMMEDIATE;
 
 ALTER TABLE "Incident" ADD FOREIGN KEY ("urban_asset_id") REFERENCES "UrbanAsset" ("id") DEFERRABLE INITIALLY IMMEDIATE;
 

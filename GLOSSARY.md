@@ -26,6 +26,14 @@ _Evitar_: tipo, clase
 
 ### Actores
 
+**Usuario** (`User`):
+Persona con cuenta en UrbanPulse. Tiene un único rol, que decide qué puede hacer.
+_Evitar_: cuenta, perfil
+
+**Rol** (`Role`):
+Papel que desempeña un usuario en UrbanPulse: ciudadano, operador, técnico, administrador o analista.
+_Evitar_: perfil, tipo de usuario
+
 **Ciudadano** (`Citizen`):
 Persona que registra incidencias y sigue su estado.
 _Evitar_: vecino, cliente, usuario (sin más)

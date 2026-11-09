@@ -4,6 +4,8 @@ import java.net.URI;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -13,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import es.uma.urbanpulse.api.ApiErrorResponse;
+import es.uma.urbanpulse.auth.AuthTokens;
 import es.uma.urbanpulse.incident.IncidentService;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -35,7 +38,8 @@ public class IncidentController {
 	}
 
 	@PostMapping
-	@Operation(summary = "Registrar una incidencia")
+	@Operation(summary = "Registrar una incidencia (solo ciudadanos)",
+			description = "El ciudadano que la registra se toma del token, nunca del cuerpo.")
 	@ApiResponses({
 			@ApiResponse(responseCode = "201", description = "Incidencia creada."),
 			@ApiResponse(
@@ -43,10 +47,17 @@ public class IncidentController {
 					description = "La solicitud contiene datos no válidos.",
 					content = @Content(
 							mediaType = "application/json",
+							schema = @Schema(implementation = ApiErrorResponse.class))),
+			@ApiResponse(
+					responseCode = "403",
+					description = "Solo los ciudadanos pueden registrar incidencias.",
+					content = @Content(
+							mediaType = "application/json",
 							schema = @Schema(implementation = ApiErrorResponse.class)))
 	})
-	public ResponseEntity<IncidentResponse> create(@Valid @RequestBody CreateIncidentRequest request) {
-		IncidentResponse created = incidentService.create(request);
+	public ResponseEntity<IncidentResponse> create(@Valid @RequestBody CreateIncidentRequest request,
+			@AuthenticationPrincipal Jwt jwt) {
+		IncidentResponse created = incidentService.create(request, AuthTokens.subjectOf(jwt).userId());
 		return ResponseEntity.created(URI.create("/api/incidents/" + created.id())).body(created);
 	}
 
