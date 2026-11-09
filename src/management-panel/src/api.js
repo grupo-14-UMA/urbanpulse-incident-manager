@@ -1,29 +1,120 @@
+import { getStoredSession } from './authStorage.js';
+
 const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8080').replace(/\/+$/, '');
+
+export class ApiError extends Error {
+  constructor(message, { kind = 'unexpected', status = null, errors = {} } = {}) {
+    super(message);
+    this.name = 'ApiError';
+    this.kind = kind;
+    this.status = status;
+    this.errors = errors;
+  }
+}
+
+const USER_MESSAGES = {
+  network: 'No se pudo conectar con UrbanPulse. Comprueba tu conexión e inténtalo de nuevo.',
+  server: 'Algo ha fallado en UrbanPulse. Inténtalo de nuevo en unos minutos.',
+  session: 'Tu sesión ha caducado. Vuelve a iniciar sesión.',
+  forbidden: 'No tienes permiso para hacer esto.',
+  validation: 'Revisa los datos e inténtalo de nuevo.',
+  notFound: 'No se encontró el recurso solicitado.',
+  unexpected: 'Algo ha fallado en UrbanPulse. Inténtalo de nuevo en unos minutos.',
+};
 
 export function getApiBaseUrl() {
   return API_BASE_URL;
 }
 
-export async function checkApiConnection() {
-  return fetch(`${API_BASE_URL}/api/incidents`, {
-    headers: { Accept: 'application/json' },
-  });
+function logApiFailure({ method, path, status, kind, hint, startedAt }) {
+  const duration = Math.round(performance.now() - startedAt);
+  console.warn(
+    `[api] ${method} ${path} -> ${status ?? 'sin respuesta'} (${duration} ms) kind=${kind} attempt=1${hint ? ` hint=${hint}` : ''}`,
+  );
+}
+
+function authExpired() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('urbanpulse:session-expired'));
+  }
 }
 
 export async function apiRequest(path, options = {}) {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  const response = await fetch(`${API_BASE_URL}${normalizedPath}`, {
-    ...options,
-    headers: {
-      Accept: 'application/json',
-      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-      ...options.headers,
-    },
-  });
+  const { skipAuth = false, headers: requestHeaders, ...fetchOptions } = options;
+  const method = (fetchOptions.method || 'GET').toUpperCase();
+  const startedAt = performance.now();
+  const session = skipAuth ? null : getStoredSession();
+  const headers = {
+    Accept: 'application/json',
+    ...(fetchOptions.body ? { 'Content-Type': 'application/json' } : {}),
+    ...(session?.token ? { Authorization: `Bearer ${session.token}` } : {}),
+    ...requestHeaders,
+  };
 
-  if (!response.ok) {
-    throw new Error(`La API respondió con ${response.status} ${response.statusText}`);
+  let response;
+  try {
+    response = await fetch(`${API_BASE_URL}${normalizedPath}`, {
+      ...fetchOptions,
+      headers,
+      signal: fetchOptions.signal || AbortSignal.timeout(10_000),
+    });
+  } catch (error) {
+    const hint = error?.name === 'TimeoutError' || error?.name === 'AbortError' ? 'timeout' : 'network';
+    logApiFailure({ method, path: normalizedPath, status: null, kind: 'network', hint, startedAt });
+    throw new ApiError(USER_MESSAGES.network, { kind: 'network' });
   }
 
-  return response.status === 204 ? null : response.json();
+  let payload = null;
+  if (response.status !== 204) {
+    try {
+      payload = await response.json();
+    } catch {
+      if (response.ok) {
+        logApiFailure({ method, path: normalizedPath, status: response.status, kind: 'unexpected', hint: 'invalid-json', startedAt });
+        throw new ApiError(USER_MESSAGES.unexpected, { kind: 'unexpected', status: response.status });
+      }
+    }
+  }
+
+  if (!response.ok) {
+    const isLogin = normalizedPath === '/api/auth/login';
+    const isRefresh = normalizedPath === '/api/auth/refresh';
+    const kind = response.status === 401 ? (isLogin ? 'credentials' : 'session')
+      : response.status === 403 ? 'forbidden'
+        : response.status === 400 ? 'validation'
+          : response.status >= 500 ? 'server' : 'unexpected';
+    logApiFailure({ method, path: normalizedPath, status: response.status, kind, hint: 'http-response', startedAt });
+    if (response.status === 401) {
+      if (session?.token && !isRefresh) authExpired();
+      throw new ApiError(
+        isLogin && typeof payload?.message === 'string' ? payload.message : USER_MESSAGES.session,
+        { kind: isLogin ? 'credentials' : 'session', status: 401 },
+      );
+    }
+    if (response.status === 403) {
+      throw new ApiError(USER_MESSAGES.forbidden, { kind: 'forbidden', status: 403 });
+    }
+    if (response.status === 400) {
+      const fieldMessages = Object.values(payload?.errors || {}).filter((message) => typeof message === 'string');
+      const message = typeof payload?.message === 'string'
+        ? payload.message
+        : fieldMessages.join(' ') || USER_MESSAGES.validation;
+      throw new ApiError(message, { kind: 'validation', status: 400, errors: payload?.errors || {} });
+    }
+    if (response.status === 404) {
+      throw new ApiError(USER_MESSAGES.notFound, { kind: 'notFound', status: 404 });
+    }
+    if (response.status >= 500 || [502, 503, 504].includes(response.status)) {
+      throw new ApiError(USER_MESSAGES.server, { kind: 'server', status: response.status });
+    }
+    throw new ApiError(USER_MESSAGES.unexpected, { kind: 'unexpected', status: response.status });
+  }
+
+  return payload;
+}
+
+export async function checkApiConnection() {
+  await apiRequest('/api/users/me');
+  return { status: 200 };
 }

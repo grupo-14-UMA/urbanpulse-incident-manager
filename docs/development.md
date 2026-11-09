@@ -129,9 +129,11 @@ cp .env.example .env
 npm run dev
 ```
 
-En Windows PowerShell, usa `Copy-Item .env.example .env` en lugar de `cp`. Vite muestra la dirección local al arrancar (por defecto `http://localhost:5173`). La página inicial muestra el mapa de OpenStreetMap centrado en Málaga, con cuatro incidencias de muestra. Las rutas de listado y detalle son marcadores de posición para trabajo futuro.
+En Windows PowerShell, usa `Copy-Item .env.example .env` en lugar de `cp`. Vite muestra la dirección local al arrancar (por defecto `http://localhost:5173`). El panel pide iniciar sesión antes de mostrar sus pantallas. Usa la cuenta de Operador de desarrollo de la tabla anterior (`operador@urbanpulse.test` / `urbanpulse-dev`). La página inicial muestra el mapa de OpenStreetMap centrado en Málaga, con cuatro incidencias de muestra. Las rutas de listado y detalle son marcadores de posición para trabajo futuro.
 
-`VITE_API_URL` en `src/management-panel/.env` configura la URL base del backend y por defecto apunta a `http://localhost:8080`. Sus pantallas todavía muestran datos de muestra y no consumen ni modifican las incidencias de la API. El panel aún no inicia sesión (#70), así que el backend rechaza sus peticiones con 401.
+`VITE_API_URL` en `src/management-panel/.env` configura la URL base del backend y por defecto apunta a `http://localhost:8080`. El inicio de sesión usa `POST /api/auth/login` y solo permite el rol `OPERATOR`; las cuentas de Ciudadano y Técnico reciben un mensaje de falta de permiso. El token se guarda en el almacenamiento local del navegador para conservar la sesión al recargar. Al abrir el panel se renueva con `POST /api/auth/refresh`; si ha caducado, se vuelve al inicio de sesión. «Cerrar sesión» elimina el token guardado. Los errores de credenciales muestran el mensaje de la API sin redirigir.
+
+Las pantallas del mapa, listado y detalle todavía muestran datos de muestra y no consumen ni modifican las incidencias de la API.
 
 El backend permite peticiones del origen indicado por `MANAGEMENT_PANEL_ORIGIN` solo en `/api/**`. El valor por defecto, `http://localhost:5173`, coincide con el servidor de desarrollo de Vite. Si cambias el puerto del panel, actualiza la variable en el `.env` de la raíz y recrea el backend:
 
