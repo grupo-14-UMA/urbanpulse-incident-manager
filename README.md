@@ -4,7 +4,7 @@ Plataforma cloud para comunicar, gestionar y analizar incidencias urbanas en Má
 
 ## Características principales
 
-- [x] Mapa móvil y panel web con consultas limitadas al área visible (máximo 500 incidencias); la sesión del panel está pendiente (#70).
+- [x] Mapas móvil y web con consultas limitadas al área visible (máximo 500 incidencias); el panel requiere una cuenta con rol Operador.
 - [x] Detalle de una incidencia: título, descripción, categoría, estado y fecha.
 - [x] Registro de incidencias con ubicación (GPS o seleccionada en el mapa) y categoría opcional.
 - [x] Cuentas de usuario con roles (ciudadano, operador y técnico) y autenticación con token en la API.
