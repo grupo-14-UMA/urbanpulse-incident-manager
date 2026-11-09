@@ -103,6 +103,54 @@ h1 { margin-bottom: 0; margin-top: 7px; color: #19293c; font-family: 'Manrope', 
 .placeholder-page h2 { margin-top: 9px; font-size: 19px; }
 .placeholder-page p { max-width: 390px; margin: 9px 0 0; color: #7a899b; font-size: 12px; line-height: 1.6; }
 
+.incident-list-page { padding-top: 25px; }
+.list-heading-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; margin-bottom: 20px; }
+.list-heading-row h2 { margin: 6px 0 0; color: #1b2b3f; font-family: 'Manrope', sans-serif; font-size: 20px; letter-spacing: -0.4px; }
+.list-description { margin: 6px 0 0; color: #7a899b; font-size: 12px; }
+.list-sample-badge { padding: 7px 10px; border: 1px solid #f0dfb5; border-radius: 7px; color: #8b691e; background: #fff9e9; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.incident-filters { display: grid; grid-template-columns: repeat(3, minmax(120px, 1fr)) repeat(2, minmax(130px, 0.9fr)) minmax(170px, 1.2fr) auto; align-items: end; gap: 10px; margin-bottom: 16px; padding: 15px; border: 1px solid #e2e8ef; border-radius: 11px; background: #fff; }
+.incident-filters label { display: grid; min-width: 0; gap: 6px; color: #65768a; font-size: 10px; font-weight: 700; }
+.incident-filters select, .incident-filters input { width: 100%; min-width: 0; height: 36px; padding: 0 9px; border: 1px solid #dce5ed; border-radius: 7px; color: #31455a; background: #fbfcfe; font: inherit; font-size: 11px; }
+.incident-filters select:focus, .incident-filters input:focus { border-color: #48b891; outline: 2px solid rgb(72 184 145 / 15%); }
+.clear-filters { min-height: 36px; padding: 0 9px; border: 0; border-radius: 7px; color: #368b70; background: transparent; cursor: pointer; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.clear-filters:hover:not(:disabled) { background: #eef9f4; }
+.clear-filters:disabled { color: #adb8c4; cursor: default; }
+.incident-table-card { overflow: hidden; border: 1px solid #e2e8ef; border-radius: 11px; background: #fff; box-shadow: 0 8px 24px rgb(26 47 73 / 4%); }
+.table-summary { min-height: 43px; display: flex; align-items: center; padding: 0 16px; border-bottom: 1px solid #edf0f4; color: #7c8b9c; font-size: 10px; font-weight: 600; }
+.incident-table-scroll { overflow-x: auto; }
+.incident-table { width: 100%; border-collapse: collapse; text-align: left; }
+.incident-table th { height: 39px; padding: 0 13px; color: #8592a1; background: #f9fafc; font-size: 9px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; white-space: nowrap; }
+.incident-table td { height: 61px; padding: 8px 13px; border-top: 1px solid #edf0f4; color: #5e6f82; font-size: 11px; white-space: nowrap; }
+.incident-table-row { cursor: pointer; outline: none; transition: background 120ms ease; }
+.incident-table-row:hover, .incident-table-row:focus-visible { background: #f2fbf7; }
+.incident-table td:first-child { min-width: 250px; }
+.incident-table td:first-child strong, .incident-table td:first-child small { display: block; }
+.incident-table td:first-child strong { overflow: hidden; max-width: 310px; color: #24374b; font-size: 11px; font-weight: 700; text-overflow: ellipsis; }
+.incident-table td:first-child small { margin-top: 4px; color: #96a2b0; font-size: 9px; }
+.incident-status { display: inline-flex; align-items: center; min-height: 23px; padding: 0 8px; border-radius: 20px; color: #53667a; background: #edf1f5; font-size: 9px; font-weight: 700; }
+.status-reported { color: #92651c; background: #fff4d8; }
+.status-validated, .status-assigned { color: #376caa; background: #eaf3ff; }
+.status-in_progress { color: #8758a8; background: #f4ebfb; }
+.status-resolved { color: #308468; background: #e8f7f0; }
+.status-rejected { color: #a64d52; background: #fff0f0; }
+.incident-priority { display: inline-flex; align-items: center; gap: 6px; color: #63748a; font-size: 10px; font-weight: 600; }
+.incident-priority i { width: 7px; height: 7px; border-radius: 50%; background: #92a0ae; }
+.priority-low i { background: #61b890; }
+.priority-medium i { background: #d1a63c; }
+.priority-high i { background: #e18442; }
+.priority-urgent i { background: #d45c63; }
+.list-pagination { display: flex; min-height: 55px; align-items: center; justify-content: space-between; gap: 12px; padding: 0 15px; border-top: 1px solid #edf0f4; color: #738397; font-size: 10px; }
+.list-pagination div { display: flex; gap: 7px; }
+.list-pagination button { min-height: 31px; padding: 0 10px; border: 1px solid #dce5ed; border-radius: 7px; color: #42586d; background: #fff; cursor: pointer; font-size: 10px; font-weight: 600; }
+.list-pagination button:hover:not(:disabled) { border-color: #8bd9bb; color: #32886b; }
+.list-pagination button:disabled { color: #abb5c0; background: #f7f8fa; cursor: default; }
+.list-state { display: grid; min-height: 270px; justify-items: center; align-content: center; padding: 24px; color: #52677c; text-align: center; }
+.list-state .placeholder-icon { margin-bottom: 12px; }
+.list-state strong { color: #33475c; font-size: 13px; }
+.list-state p { margin: 7px 0 0; color: #8190a1; font-size: 11px; }
+.list-error { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 15px; border-bottom: 1px solid #f0d4d4; background: #fff8f8; }
+.list-error p { margin: 0; color: #963f43; font-size: 11px; }
+
 .login-screen, .auth-state {
   display: grid;
   min-height: 100vh;
@@ -168,6 +216,15 @@ h1 { margin-bottom: 0; margin-top: 7px; color: #19293c; font-family: 'Manrope', 
   .sample-count { padding: 7px 7px; font-size: 8px; }
   .map-city { padding: 7px 8px; font-size: 9px; }
   .map-frame { height: calc(100vh - 245px); min-height: 360px; }
+  .incident-list-page { padding-top: 18px; }
+  .list-heading-row { align-items: flex-start; }
+  .incident-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 12px; }
+  .incident-filters label { font-size: 9px; }
+  .sort-filter { grid-column: span 2; }
+  .clear-filters { justify-self: start; }
+  .incident-table-card { margin-right: -2px; }
+  .incident-table { min-width: 760px; }
+  .list-pagination { position: sticky; left: 0; }
   .login-card, .auth-message-card { padding: 29px 23px; }
 }
 

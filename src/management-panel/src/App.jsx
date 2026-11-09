@@ -4,6 +4,7 @@ import { Link, NavLink, Outlet, Route, Routes, useLocation } from 'react-router-
 import { AuthProvider, useAuth } from './auth/AuthContext.jsx';
 import ProtectedRoute from './auth/ProtectedRoute.jsx';
 import { checkApiConnection, getApiBaseUrl } from './api.js';
+import IncidentListPage from './pages/IncidentListPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import MapPage from './pages/MapPage.jsx';
 import PlaceholderPage from './pages/PlaceholderPage.jsx';
@@ -98,10 +99,7 @@ function PanelRoutes() {
         <Route element={<ProtectedRoute />}>
           <Route element={<ManagementLayout />}>
             <Route element={<MapPage />} path="/" />
-            <Route
-              element={<PlaceholderPage description="Aquí aparecerá el listado filtrable de incidencias." title="Listado de incidencias" />}
-              path="/incidents"
-            />
+            <Route element={<IncidentListPage />} path="/incidents" />
             <Route
               element={<PlaceholderPage description="Aquí se consultará y gestionará cada incidencia." title="Detalle de incidencia" />}
               path="/incidents/:incidentId"
