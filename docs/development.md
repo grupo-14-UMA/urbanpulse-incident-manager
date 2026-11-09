@@ -1,6 +1,6 @@
 # Guía de desarrollo
 
-Cómo preparar el entorno, ejecutar el proyecto y probarlo en local. El flujo de trabajo con Git y los roles están en [CONTRIBUTING.md](../CONTRIBUTING.md).
+Cómo preparar el entorno, ejecutar el proyecto y probarlo en local. El flujo de trabajo con Git y los roles están en [CONTRIBUTING.md](../CONTRIBUTING.md). Cómo tratan los errores los clientes y la API está en [error-handling.md](error-handling.md).
 
 ## Requisitos
 

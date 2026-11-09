@@ -51,6 +51,7 @@ docs/           Documentación: arquitectura, desarrollo, despliegue, ADRs, requ
 
 - [Arquitectura](docs/architecture.md)
 - [Guía de desarrollo](docs/development.md)
+- [Gestión de errores](docs/error-handling.md)
 - [Guía de despliegue](docs/deployment.md)
 - [Decisiones de arquitectura (ADRs)](docs/adr/)
 - [Requisitos](docs/requirements.md)
@@ -59,11 +60,11 @@ docs/           Documentación: arquitectura, desarrollo, despliegue, ADRs, requ
 
 ## Equipo
 
-| Miembro | Rol |
-| --- | --- |
-| Alfonso ([@alraro](https://github.com/alraro)) | Team Leader y Product Owner |
-| Andrea ([@apr2004](https://github.com/apr2004)) | Reviewer |
-| María ([@mmartinmaria](https://github.com/mmartinmaria)) | Tester |
-| Daniel ([@daniiroblees](https://github.com/daniiroblees)) | Maintainer |
+| Miembro | Rol | Área de desarrollo |
+| --- | --- | --- |
+| Alfonso ([@alraro](https://github.com/alraro)) | Team Leader y Product Owner | Core & Security Engineer |
+| Andrea ([@apr2004](https://github.com/apr2004)) | Reviewer | Data & Performance Engineer |
+| María ([@mmartinmaria](https://github.com/mmartinmaria)) | Tester | Mobile Engineer |
+| Daniel ([@daniiroblees](https://github.com/daniiroblees)) | Maintainer | Ops Panel Engineer |
 
 Proyecto de la asignatura: Desarrollo Software en Plataforma en la Nube, Universidad de Málaga.
