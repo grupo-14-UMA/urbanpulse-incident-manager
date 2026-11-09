@@ -37,7 +37,7 @@ Table UrbanContext {
   type_context_id integer
   source varchar
   json JSONB
-  observed_at timestamp
+  observed_at timestamptz
 }
 
 Table ContextType {
@@ -61,8 +61,8 @@ Table Incident {
   reporter_id integer [note: 'Citizen who reported it. Null only for incidents stored before authentication.']
   urban_asset_id integer 
   urban_context_id integer 
-  created_at timestamp [not null]
-  updated_at timestamp [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
 }
 
 Table Status {
@@ -78,7 +78,7 @@ Table Attachment {
   incident_id integer 
   file_url varchar 
   file_type varchar
-  created_at timestamp
+  created_at timestamptz
 }
 
 Table FileType {
@@ -92,7 +92,7 @@ Table Assignment {
   assigned_user_id integer 
   department_id varchar
   team_id varchar
-  assigned_at timestamp
+  assigned_at timestamptz
 }
 
 Table Team {
@@ -115,14 +115,14 @@ Table StatusChange {
   previous_status varchar
   new_status varchar
   updates varchar
-  changed_at timestamp
+  changed_at timestamptz
 }
 
 Table ExternalObservation {
   id integer [primary key]
   incident_id integer
-  observed_at timestamp
-  ingested_at timestamp
+  observed_at timestamptz
+  ingested_at timestamptz
   unit varchar
   quality varchar
 }
@@ -132,7 +132,7 @@ Table Notification {
   user_id integer 
   incident_id integer
   description varchar
-  sent_at timestamp
+  sent_at timestamptz
 }
 
 Table KnowledgeDocument {
@@ -140,7 +140,7 @@ Table KnowledgeDocument {
   title varchar
   content text 
   version varchar
-  created_at timestamp
+  created_at timestamptz
 }
 
 // Relaciones entre entidades
