@@ -4,12 +4,12 @@ Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all o
 
 ## Creating an issue
 
-Every issue follows the checklist in [`CONTRIBUTING.md` → Crear un issue](../../CONTRIBUTING.md#crear-un-issue): Conventional Commits title, template, issue type, `✅ ready` or `🔍 triage`, `priority: …`, `area: …`, assignee (the area owner), milestone, sub-issue of the delivery epic and *blocked by* dependencies. Copy label names exactly from `gh label list` (they include emojis). Look up the area owner in `CONTRIBUTING.md` → Áreas de desarrollo, and the current milestone with `gh api repos/{owner}/{repo}/milestones --jq '.[] | select(.state=="open") | .title'`.
+Every issue follows the checklist in [`CONTRIBUTING.md` → Crear un issue](../../CONTRIBUTING.md#crear-un-issue): Conventional Commits title, template, issue type, `✅ ready` or `🔍 triage`, `area: …`, the `Priority` and `Effort` issue fields, assignee (the area owner), milestone, sub-issue of the delivery epic and *blocked by* dependencies. Copy label names exactly from `gh label list` (they include emojis). Look up the area owner in `CONTRIBUTING.md` → Áreas de desarrollo, and the current milestone with `gh api repos/{owner}/{repo}/milestones --jq '.[] | select(.state=="open") | .title'`.
 
 ```bash
 # 1. Create it with labels, assignee and milestone
 gh issue create --title "feat: …" --body-file body.md \
-  --label "✅ ready" --label "priority: 🟡 medium" --label "area: 📱 mobile" \
+  --label "✅ ready" --label "area: 📱 mobile" \
   --assignee <owner> --milestone "Entrega 2"
 
 # 2. Issue type: Bug, Feature or Task
@@ -22,9 +22,24 @@ gh api --method POST repos/{owner}/{repo}/issues/<epic>/sub_issues \
 # 4. Blocked by: one call per blocker
 gh api --method POST repos/{owner}/{repo}/issues/<n>/dependencies/blocked_by \
   -F issue_id=$(gh api repos/{owner}/{repo}/issues/<blocker> --jq .id)
+
+# 5. Priority and Effort: gh has no flags for issue fields, use GraphQL
+gh api graphql -f query='mutation($id: ID!) { setIssueFieldValue(input: {
+  issueId: $id, issueFields: [
+    { fieldId: "IFSS_kgDOAtzvIg", singleSelectOptionId: "IFSSO_kgDOBQMSLA" },
+    { fieldId: "IFSS_kgDOAtzvJQ", singleSelectOptionId: "IFSSO_kgDOBQMSLw" }
+  ] }) { clientMutationId } }' \
+  -f id=$(gh api repos/{owner}/{repo}/issues/<n> --jq .node_id)
 ```
 
-Check the result with `gh issue view <n> --json labels,assignees,milestone` and `gh api repos/{owner}/{repo}/issues/<n> --jq '.type.name'`.
+Issue field and option ids (org-level, the same for every repo in `grupo-14-UMA`). Pick values with the scales in `CONTRIBUTING.md` → Prioridad y esfuerzo; epics get neither field.
+
+| Field | Field id | Option ids |
+| --- | --- | --- |
+| `Priority` | `IFSS_kgDOAtzvIg` | Urgent `IFSSO_kgDOBQMSKg`, High `IFSSO_kgDOBQMSKw`, Medium `IFSSO_kgDOBQMSLA`, Low `IFSSO_kgDOBQMSLQ` |
+| `Effort` | `IFSS_kgDOAtzvJQ` | High `IFSSO_kgDOBQMSLg`, Medium `IFSSO_kgDOBQMSLw`, Low `IFSSO_kgDOBQMSMA` |
+
+Check the result with `gh issue view <n> --json labels,assignees,milestone`, `gh api repos/{owner}/{repo}/issues/<n> --jq '.type.name'` and, for the fields, `gh api graphql -f query='{ repository(owner: "grupo-14-UMA", name: "urbanpulse-incident-manager") { issue(number: <n>) { issueFieldValues(first: 5) { nodes { ... on IssueFieldSingleSelectValue { name field { ... on IssueFieldCommon { name } } } } } } } }'`.
 
 ## Conventions
 

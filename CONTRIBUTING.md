@@ -46,7 +46,7 @@ El tablero del equipo es [Urban Pulse tasks](https://github.com/orgs/grupo-14-UM
 | `In review` | GitHub la mueve al abrir una PR enlazada con `Closes #<n>`. |
 | `Done` | GitHub la mueve al cerrar la issue o fusionar la PR enlazada. |
 
-La vista **Mi trabajo** es un tablero por estado, filtrado por `assignee:@me -is:blocked`: muestra las issues asignadas a quien la consulta y que ya se pueden empezar. Incluye las etiquetas y las PR enlazadas. La vista **Pendiente** es una tabla global de issues abiertas, agrupadas por milestone, con responsable, estado, etiquetas, milestone e issue padre.
+La vista **Mi trabajo** es un tablero por estado, filtrado por `assignee:@me -is:blocked`: muestra las issues asignadas a quien la consulta y que ya se pueden empezar. Incluye las etiquetas, la prioridad, el esfuerzo y las PR enlazadas. La vista **Pendiente** es una tabla global de issues abiertas, agrupadas por milestone, con responsable, estado, prioridad, esfuerzo, etiquetas, milestone e issue padre. Las dos vistas se ordenan por prioridad (de `Urgent` a `Low`) y, a igual prioridad, por esfuerzo (de `Low` a `High`): arriba queda lo más urgente y más sencillo.
 
 Al reabrir una issue, vuelve automáticamente a `Todo`. Las issues cerradas hace más de 14 días se archivan automáticamente; archivar las oculta del tablero, pero no las elimina. Las sub-issues se añaden al tablero automáticamente.
 
@@ -85,14 +85,15 @@ Todo issue, lo cree una persona o un agente, sale con todo esto:
 - [ ] **Plantilla** de `.github/ISSUE_TEMPLATE/`: `feature_request.md` para `feat:`, `bug_report.md` para `fix:` y `task.md` para el resto.
 - [ ] **Tipo** (*issue type*) según el prefijo: `fix:` → `Bug`, `feat:` → `Feature`, cualquier otro → `Task`. La plantilla lo pone sola.
 - [ ] **Estado**: `✅ ready` si está especificado con criterios de aceptación; `🔍 triage` si hay que evaluarlo en equipo.
-- [ ] **Prioridad**: una etiqueta `priority: …`.
+- [ ] **Prioridad**: el campo `Priority` (ver [Prioridad y esfuerzo](#prioridad-y-esfuerzo)).
+- [ ] **Esfuerzo**: el campo `Effort`.
 - [ ] **Área**: una etiqueta `area: …`, la del área responsable del issue.
 - [ ] **Assignee**: el dueño de esa área (ver [Áreas de desarrollo](#áreas-de-desarrollo)).
 - [ ] **Milestone** de la entrega actual.
 - [ ] **Sub-issue** del epic de la entrega.
 - [ ] **Dependencias**: los issues que tienen que cerrarse antes, como *blocked by*.
 
-Los epic llevan `🗺️ epic` en vez de área y prioridad. Los comandos `gh` de cada paso están en [docs/agents/issue-tracker.md](docs/agents/issue-tracker.md).
+Los epic llevan `🗺️ epic` y no llevan área, prioridad ni esfuerzo. Los comandos `gh` de cada paso están en [docs/agents/issue-tracker.md](docs/agents/issue-tracker.md).
 
 ## Etiquetas
 
@@ -102,9 +103,6 @@ Los epic llevan `🗺️ epic` en vez de área y prioridad. Los comandos `gh` de
 | `✅ ready` | Especificado y listo para empezar |
 | `❓ question` | Falta información |
 | `🚫 wontfix` | No se va a hacer |
-| `priority: 🔴 high` | Necesario para la entrega actual, va primero |
-| `priority: 🟡 medium` | Necesario para la entrega actual, no bloquea |
-| `priority: 🟢 low` | Deseable |
 | `area: ⚙️ core` | Área Core & Security |
 | `area: 🗄️ data` | Área Data & Performance |
 | `area: 📱 mobile` | Área App móvil |
@@ -112,11 +110,32 @@ Los epic llevan `🗺️ epic` en vez de área y prioridad. Los comandos `gh` de
 | `area: 🔧 repo` | Configuración del repositorio, CI y releases |
 | `🗺️ epic` | Issue de una entrega que agrupa sub-issues |
 
-Cada familia tiene su color, y una etiqueta nueva sigue el de la suya: prioridad en semáforo (rojo, amarillo, verde), áreas en tonos pastel distintos entre sí y sin rojo, amarillo ni verde, estados en grises y `🗺️ epic` en negro. El tipo de issue no es una etiqueta: es el *issue type*.
+Cada familia tiene su color, y una etiqueta nueva sigue el de la suya: áreas en tonos pastel distintos entre sí, estados en grises y `🗺️ epic` en negro. El tipo de issue no es una etiqueta: es el *issue type*. La prioridad y el esfuerzo tampoco: son campos del issue.
 
 Cada issue lleva una sola etiqueta `area: …`, la del área dueña, aunque toque otras carpetas. Los epic no llevan etiqueta de área.
 
 Los issues de cada entrega se agrupan en un milestone (por ejemplo "Entrega 1"). El orden entre issues se marca con las dependencias nativas de GitHub (*blocked by*).
+
+## Prioridad y esfuerzo
+
+La prioridad y el esfuerzo son los campos de issue `Priority` y `Effort` de la organización, no etiquetas. Se ponen en la barra lateral del issue; desde la terminal, con los comandos de [docs/agents/issue-tracker.md](docs/agents/issue-tracker.md).
+
+| `Priority` | Significado |
+| --- | --- |
+| `Urgent` | Bloquea la entrega actual: `main` roto, un plazo de días o algo que frena a otros |
+| `High` | Necesario para la entrega actual, va primero |
+| `Medium` | Necesario para la entrega actual, no bloquea |
+| `Low` | Deseable |
+
+El esfuerzo mide la complejidad del issue, no el tiempo que lleva:
+
+| `Effort` | Significado |
+| --- | --- |
+| `Low` | Cambio acotado en un solo sitio, sin decisiones de diseño |
+| `Medium` | Varias piezas o capas, o una decisión de diseño acotada |
+| `High` | Cruza áreas o tiene incertidumbre (migraciones, rendimiento, integraciones nuevas); conviene partirlo o discutirlo antes de empezar |
+
+Los campos `Start date` y `Target date` no se usan: las fechas las marcan los milestones.
 
 ## Antes de pedir revisión
 
