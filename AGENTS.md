@@ -27,11 +27,11 @@ If a concern is deferred, propose a follow-up issue (title and body) and create 
 
 ### Issue tracker
 
-Issues live in GitHub Issues (`gh` CLI). See `docs/agents/issue-tracker.md`.
+Issues live in GitHub Issues (`gh` CLI). See `docs/agents/issue-tracker.md`. Every new issue needs its type, labels, assignee, milestone, parent epic and dependencies: follow the checklist in `CONTRIBUTING.md` → "Crear un issue".
 
 ### Triage labels
 
-Generic labels: `triage`, `question`, `ready`, `wontfix`. See `docs/agents/triage-labels.md`.
+Labels: `🔍 triage`, `❓ question`, `✅ ready`, `🚫 wontfix`. Label names include emojis: copy them exactly. See `docs/agents/triage-labels.md`.
 
 ### Domain docs
 
