@@ -35,6 +35,21 @@ El dueño de un área desarrolla los issues con su etiqueta, revisa los PR que t
 
 Los PR se fusionan con *Squash and merge* y la rama se borra después del merge.
 
+## Tablero del proyecto
+
+El tablero del equipo es [Urban Pulse tasks](https://github.com/orgs/grupo-14-UMA/projects/2). Solo contiene issues; las PR enlazadas aparecen dentro de su issue.
+
+| Estado | Cómo llega una issue |
+| --- | --- |
+| `Todo` | Se añade automáticamente al tablero. |
+| `In progress` | La persona que empieza el trabajo mueve la issue aquí. Es el único cambio manual de estado. |
+| `In review` | GitHub la mueve al abrir una PR enlazada con `Closes #<n>`. |
+| `Done` | GitHub la mueve al cerrar la issue o fusionar la PR enlazada. |
+
+La vista **Mi trabajo** es un tablero por estado, filtrado por `assignee:@me -is:blocked`: muestra las issues asignadas a quien la consulta y que ya se pueden empezar. Incluye las etiquetas y las PR enlazadas. La vista **Pendiente** es una tabla global de issues abiertas, agrupadas por milestone, con responsable, estado, etiquetas, milestone e issue padre.
+
+Al reabrir una issue, vuelve automáticamente a `Todo`. Las issues cerradas hace más de 14 días se archivan automáticamente; archivar las oculta del tablero, pero no las elimina. Las sub-issues se añaden al tablero automáticamente.
+
 ## Convención de commits
 
 Formato `<tipo>: <descripción>`, en imperativo, en minúsculas y sin punto final.

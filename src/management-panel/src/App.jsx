@@ -1,7 +1,10 @@
 import { useState } from 'react';
-import { Link, NavLink, Route, Routes, useLocation } from 'react-router-dom';
+import { Link, NavLink, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 
+import { AuthProvider, useAuth } from './auth/AuthContext.jsx';
+import ProtectedRoute from './auth/ProtectedRoute.jsx';
 import { checkApiConnection, getApiBaseUrl } from './api.js';
+import LoginPage from './pages/LoginPage.jsx';
 import MapPage from './pages/MapPage.jsx';
 import PlaceholderPage from './pages/PlaceholderPage.jsx';
 
@@ -17,20 +20,18 @@ function pageTitle(pathname) {
   return 'Mapa de incidencias';
 }
 
-export default function App() {
+function ManagementLayout() {
   const location = useLocation();
+  const { session, logout } = useAuth();
   const [apiStatus, setApiStatus] = useState({ kind: 'idle', label: 'Comprobar API' });
 
   async function handleCheckApi() {
     setApiStatus({ kind: 'checking', label: 'Comprobando…' });
     try {
-      const response = await checkApiConnection();
-      setApiStatus({
-        kind: 'reachable',
-        label: response.status === 404 ? 'Backend accesible · ruta no encontrada' : `Respuesta HTTP ${response.status}`,
-      });
+      await checkApiConnection();
+      setApiStatus({ kind: 'reachable', label: 'API accesible' });
     } catch {
-      setApiStatus({ kind: 'error', label: 'Sin conexión o CORS bloqueado' });
+      setApiStatus({ kind: 'error', label: 'No se pudo conectar con la API' });
     }
   }
 
@@ -60,7 +61,10 @@ export default function App() {
 
         <div className="sidebar-bottom">
           <span className="city-pin" aria-hidden="true">●</span>
-          <div><strong>Málaga</strong><small>Panel municipal</small></div>
+          <div className="sidebar-user"><strong>{session.user.name}</strong><small>Operador · Málaga</small></div>
+          <button aria-label="Cerrar sesión" className="logout-button" onClick={logout} title="Cerrar sesión" type="button">
+            ↪
+          </button>
         </div>
       </aside>
 
@@ -80,19 +84,36 @@ export default function App() {
           </div>
         </header>
 
-        <Routes>
-          <Route element={<MapPage />} path="/" />
-          <Route
-            element={<PlaceholderPage description="Aquí aparecerá el listado filtrable de incidencias." title="Listado de incidencias" />}
-            path="/incidents"
-          />
-          <Route
-            element={<PlaceholderPage description="Aquí se consultará y gestionará cada incidencia." title="Detalle de incidencia" />}
-            path="/incidents/:incidentId"
-          />
-          <Route element={<PlaceholderPage description="La página que buscas no existe." title="Página no encontrada" />} path="*" />
-        </Routes>
+        <Outlet />
       </main>
     </div>
   );
+}
+
+function PanelRoutes() {
+  return (
+    <AuthProvider>
+      <Routes>
+        <Route element={<LoginPage />} path="/login" />
+        <Route element={<ProtectedRoute />}>
+          <Route element={<ManagementLayout />}>
+            <Route element={<MapPage />} path="/" />
+            <Route
+              element={<PlaceholderPage description="Aquí aparecerá el listado filtrable de incidencias." title="Listado de incidencias" />}
+              path="/incidents"
+            />
+            <Route
+              element={<PlaceholderPage description="Aquí se consultará y gestionará cada incidencia." title="Detalle de incidencia" />}
+              path="/incidents/:incidentId"
+            />
+            <Route element={<PlaceholderPage description="La página que buscas no existe." title="Página no encontrada" />} path="*" />
+          </Route>
+        </Route>
+      </Routes>
+    </AuthProvider>
+  );
+}
+
+export default function App() {
+  return <PanelRoutes />;
 }
