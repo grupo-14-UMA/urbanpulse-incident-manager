@@ -4,7 +4,7 @@ Este documento describe la arquitectura de UrbanPulse siguiendo el modelo C4. Di
 
 ## Visión general
 
-UrbanPulse es una plataforma para registrar, gestionar y analizar incidencias urbanas en Málaga. Tiene dos clientes: una aplicación móvil React Native con Expo para el ciudadano y el técnico, y un panel de gestión web con React para el operador, el administrador y el analista. Ambos están diseñados para usar un backend monolítico modular con Java 21 y Spring Boot 4, y PostgreSQL con PostGIS. Docker Compose proporciona el entorno local para el backend y la base de datos. La aplicación móvil consume la API para mostrar incidencias, consultar sus detalles y registrar nuevas incidencias. El panel web ofrece una estructura inicial con navegación y un mapa base de Málaga; sus pantallas todavía no consumen la API.
+UrbanPulse es una plataforma para registrar, gestionar y analizar incidencias urbanas en Málaga. Tiene dos clientes: una aplicación móvil React Native con Expo para el ciudadano y el técnico, y un panel de gestión web con React para el operador, el administrador y el analista. Ambos están diseñados para usar un backend monolítico modular con Java 21 y Spring Boot 4, y PostgreSQL con PostGIS. Docker Compose proporciona el entorno local para el backend y la base de datos. La aplicación móvil consume la API para mostrar incidencias, consultar sus detalles y registrar nuevas incidencias. El panel web ofrece un mapa de Málaga con clusters, filtros por categoría y estado, carga simulada por área visible y un detalle de solo lectura para cada incidencia; el mapa aún no consume la API.
 
 ## Nivel 1: Contexto del sistema
 
