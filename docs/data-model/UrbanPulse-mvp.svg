@@ -11,7 +11,7 @@
     .band { fill: #e6effa; }
   </style>
   <text x="42" y="55" class="title">UrbanPulse · esquema persistido MVP</text>
-  <text x="44" y="88" class="sub">Flyway V1 · PostgreSQL + PostGIS</text>
+  <text x="44" y="88" class="sub">Flyway V1–V2 · PostgreSQL + PostGIS</text>
   <rect x="95" y="135" width="570" height="430" rx="8" class="box"/>
   <path d="M103 135h554a8 8 0 0 1 8 8v42H95v-42a8 8 0 0 1 8-8" class="band"/>
   <text x="118" y="169" class="head">Incident</text>
@@ -21,8 +21,8 @@
   <text x="120" y="340" class="row">category_id · INTEGER · FK · nullable</text>
   <text x="120" y="380" class="row">location · geometry(Point, 4326) · NOT NULL</text>
   <text x="120" y="420" class="row">status_id · INTEGER · default 1 (REPORTED)</text>
-  <text x="120" y="460" class="row">created_at · TIMESTAMP</text>
-  <text x="120" y="500" class="row">updated_at · TIMESTAMP</text>
+  <text x="120" y="460" class="row">created_at · TIMESTAMPTZ · default now()</text>
+  <text x="120" y="500" class="row">updated_at · TIMESTAMPTZ · default now()</text>
   <rect x="830" y="220" width="300" height="220" rx="8" class="box"/>
   <path d="M838 220h284a8 8 0 0 1 8 8v40H830v-40a8 8 0 0 1 8-8" class="band"/>
   <text x="850" y="253" class="head">Category</text>

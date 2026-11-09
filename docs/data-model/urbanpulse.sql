@@ -33,7 +33,7 @@ CREATE TABLE "UrbanContext" (
   "type_context_id" integer,
   "source" varchar,
   "json" JSONB,
-  "observed_at" timestamp
+  "observed_at" timestamptz
 );
 
 CREATE TABLE "ContextType" (
@@ -57,8 +57,8 @@ CREATE TABLE "Incident" (
   "reporter_id" integer,
   "urban_asset_id" integer,
   "urban_context_id" integer,
-  "created_at" timestamp NOT NULL,
-  "updated_at" timestamp NOT NULL
+  "created_at" timestamptz NOT NULL,
+  "updated_at" timestamptz NOT NULL
 );
 
 COMMENT ON COLUMN "Incident"."status_id" IS
@@ -74,7 +74,7 @@ CREATE TABLE "Attachment" (
   "incident_id" integer,
   "file_url" varchar,
   "file_type" varchar,
-  "created_at" timestamp
+  "created_at" timestamptz
 );
 
 CREATE TABLE "FileType" (
@@ -88,7 +88,7 @@ CREATE TABLE "Assignment" (
   "assigned_user_id" integer,
   "department_id" varchar,
   "team_id" varchar,
-  "assigned_at" timestamp
+  "assigned_at" timestamptz
 );
 
 CREATE TABLE "Team" (
@@ -111,14 +111,14 @@ CREATE TABLE "StatusChange" (
   "previous_status" varchar,
   "new_status" varchar,
   "updates" varchar,
-  "changed_at" timestamp
+  "changed_at" timestamptz
 );
 
 CREATE TABLE "ExternalObservation" (
   "id" integer PRIMARY KEY,
   "incident_id" integer,
-  "observed_at" timestamp,
-  "ingested_at" timestamp,
+  "observed_at" timestamptz,
+  "ingested_at" timestamptz,
   "unit" varchar,
   "quality" varchar
 );
@@ -128,7 +128,7 @@ CREATE TABLE "Notification" (
   "user_id" integer,
   "incident_id" integer,
   "description" varchar,
-  "sent_at" timestamp
+  "sent_at" timestamptz
 );
 
 CREATE TABLE "KnowledgeDocument" (
@@ -136,7 +136,7 @@ CREATE TABLE "KnowledgeDocument" (
   "title" varchar,
   "content" text,
   "version" varchar,
-  "created_at" timestamp
+  "created_at" timestamptz
 );
 
 ALTER TABLE "Incident" ADD FOREIGN KEY ("reporter_id") REFERENCES "User" ("id") DEFERRABLE INITIALLY IMMEDIATE;
