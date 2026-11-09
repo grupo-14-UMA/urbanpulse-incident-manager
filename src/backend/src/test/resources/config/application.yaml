@@ -1,0 +1,8 @@
+# Test-only overrides of the main application.yaml.
+urbanpulse:
+  security:
+    jwt-secret: test-only-jwt-secret-not-for-any-deployment
+
+spring:
+  flyway:
+    locations: classpath:db/migration,classpath:db/dev-seed

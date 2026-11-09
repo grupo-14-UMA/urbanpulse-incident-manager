@@ -19,6 +19,7 @@ import es.uma.urbanpulse.incident.api.IncidentMapResponse;
 import es.uma.urbanpulse.incident.api.IncidentNotFoundException;
 import es.uma.urbanpulse.incident.api.IncidentResponse;
 import es.uma.urbanpulse.incident.api.InvalidCategoryException;
+import es.uma.urbanpulse.user.UserRepository;
 
 @Service
 public class IncidentService {
@@ -31,14 +32,18 @@ public class IncidentService {
 
 	private final IncidentRepository incidentRepository;
 	private final CategoryRepository categoryRepository;
+	private final UserRepository userRepository;
 
-	public IncidentService(IncidentRepository incidentRepository, CategoryRepository categoryRepository) {
+	public IncidentService(IncidentRepository incidentRepository, CategoryRepository categoryRepository,
+			UserRepository userRepository) {
 		this.incidentRepository = incidentRepository;
 		this.categoryRepository = categoryRepository;
+		this.userRepository = userRepository;
 	}
 
+	/** Registers an incident reported by the given citizen, taken from the token. */
 	@Transactional
-	public IncidentResponse create(CreateIncidentRequest request) {
+	public IncidentResponse create(CreateIncidentRequest request, Integer reporterId) {
 		Category category = request.categoryId() == null
 				? null
 				: categoryRepository.findById(request.categoryId())
@@ -50,7 +55,8 @@ public class IncidentService {
 				request.title().trim(),
 				request.description().trim(),
 				category,
-				location);
+				location,
+				userRepository.getReferenceById(reporterId));
 
 		return toResponse(incidentRepository.save(incident));
 	}

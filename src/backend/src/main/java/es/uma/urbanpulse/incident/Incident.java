@@ -1,12 +1,14 @@
 package es.uma.urbanpulse.incident;
 
 import java.time.Clock;
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 
 import org.locationtech.jts.geom.Point;
 
 import es.uma.urbanpulse.category.Category;
+import es.uma.urbanpulse.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
@@ -25,7 +27,7 @@ import jakarta.persistence.Table;
 @Table(name = "\"Incident\"")
 public class Incident {
 
-	private static final Clock UTC_CLOCK = Clock.systemUTC();
+	private static final Clock CLOCK = Clock.systemUTC();
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -42,6 +44,11 @@ public class Incident {
 	@JoinColumn(name = "category_id", foreignKey = @ForeignKey(name = "fk_incident_category"))
 	private Category category;
 
+	/** Null only for incidents stored before authentication existed. */
+	@ManyToOne(fetch = FetchType.LAZY, optional = true)
+	@JoinColumn(name = "reporter_id", updatable = false, foreignKey = @ForeignKey(name = "fk_incident_reporter"))
+	private User reporter;
+
 	@Column(name = "location", nullable = false, columnDefinition = "geometry(Point, 4326)")
 	private Point location;
 
@@ -49,17 +56,18 @@ public class Incident {
 	@Column(name = "status_id", nullable = false)
 	private IncidentStatus status = IncidentStatus.REPORTED;
 
-	@Column(name = "created_at", nullable = false, updatable = false, columnDefinition = "timestamp")
-	private LocalDateTime createdAt;
+	@Column(name = "created_at", nullable = false, updatable = false, columnDefinition = "timestamptz")
+	private Instant createdAt;
 
-	@Column(name = "updated_at", nullable = false, columnDefinition = "timestamp")
-	private LocalDateTime updatedAt;
+	@Column(name = "updated_at", nullable = false, columnDefinition = "timestamptz")
+	private Instant updatedAt;
 
 	protected Incident() {
 	}
 
-	public Incident(String title, String description, Category category, Point location) {
+	public Incident(String title, String description, Category category, Point location, User reporter) {
 		this.title = title;
+		this.reporter = Objects.requireNonNull(reporter, "reporter must not be null");
 		this.description = description;
 		this.category = category;
 		this.location = toWgs84(location);
@@ -67,14 +75,14 @@ public class Incident {
 
 	@PrePersist
 	void onCreate() {
-		LocalDateTime now = LocalDateTime.now(UTC_CLOCK);
+		Instant now = now();
 		this.createdAt = now;
 		this.updatedAt = now;
 	}
 
 	@PreUpdate
 	void onUpdate() {
-		this.updatedAt = LocalDateTime.now(UTC_CLOCK);
+		this.updatedAt = now();
 	}
 
 	public Integer getId() {
@@ -105,6 +113,10 @@ public class Incident {
 		this.category = category;
 	}
 
+	public User getReporter() {
+		return reporter;
+	}
+
 	public Point getLocation() {
 		return location;
 	}
@@ -121,12 +133,16 @@ public class Incident {
 		this.status = Objects.requireNonNull(status, "status must not be null");
 	}
 
-	public LocalDateTime getCreatedAt() {
+	public Instant getCreatedAt() {
 		return createdAt;
 	}
 
-	public LocalDateTime getUpdatedAt() {
+	public Instant getUpdatedAt() {
 		return updatedAt;
+	}
+
+	private static Instant now() {
+		return Instant.now(CLOCK).truncatedTo(ChronoUnit.MILLIS);
 	}
 
 	private static Point toWgs84(Point location) {

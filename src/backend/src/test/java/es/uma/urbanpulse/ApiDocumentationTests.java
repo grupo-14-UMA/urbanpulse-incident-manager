@@ -27,6 +27,20 @@ class ApiDocumentationTests {
 	}
 
 	@Test
+	void documentsTheBearerTokenAndThePublicAuthOperations() {
+		this.client.get()
+			.uri("/v3/api-docs")
+			.exchange()
+			.expectStatus()
+			.isOk()
+			.expectBody()
+			.jsonPath("$.components.securitySchemes.bearerAuth.scheme").isEqualTo("bearer")
+			.jsonPath("$.security[0].bearerAuth").exists()
+			.jsonPath("$.paths['/api/auth/login'].post.security").isEmpty()
+			.jsonPath("$.paths['/api/auth/register'].post.security").isEmpty();
+	}
+
+	@Test
 	void servesSwaggerUi() {
 		URI swaggerUiPage = this.client.get()
 			.uri("/swagger-ui.html")

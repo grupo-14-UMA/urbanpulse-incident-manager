@@ -31,8 +31,9 @@ Variables de `.env`:
 | `POSTGRES_PASSWORD` | Contraseña de la base de datos (compartida con la imagen de Postgres) | `urbanpulse` |
 | `SERVER_PORT` | Puerto HTTP del backend | `8080` |
 | `MANAGEMENT_PANEL_ORIGIN` | Origen web permitido por CORS para el panel | `http://localhost:5173` |
+| `JWT_SECRET` | Secreto que firma los tokens de acceso, de al menos 32 bytes. Obligatorio | Valor solo para desarrollo en `.env.example` y Docker Compose |
 
-El fichero `.env` no se versiona. `./mvnw spring-boot:run` no lo lee: fuera de Docker, el backend usa estos valores por defecto o las variables de entorno de la shell.
+El fichero `.env` no se versiona. `./mvnw spring-boot:run` no lo lee: fuera de Docker, el backend usa estos valores por defecto o las variables de entorno de la shell. `JWT_SECRET` no tiene valor por defecto en la aplicación: sin él el backend no arranca. Un despliegue real usa un secreto propio y aleatorio, por ejemplo el resultado de `openssl rand -base64 48`.
 
 ## Base de datos y backend
 
@@ -48,24 +49,37 @@ Para ejecutar el backend fuera de Docker con la base de datos en Docker:
 ```bash
 docker compose up -d db
 cd src/backend
+export JWT_SECRET=dev-only-jwt-secret-change-me-in-any-deployment
+export SPRING_FLYWAY_LOCATIONS=classpath:db/migration,classpath:db/dev-seed   # cuentas de desarrollo
 ./mvnw spring-boot:run
 ```
 
 - Swagger UI: `http://localhost:8080/swagger-ui.html`
 - Documento OpenAPI: `http://localhost:8080/v3/api-docs`
 
-Flyway aplica al arrancar el backend las migraciones de `src/backend/src/main/resources/db/migration/`. La migración inicial activa PostGIS, crea las tablas `Incident` y `Category` y carga estas categorías: alumbrado, limpieza, mobiliario urbano, tráfico y semáforos, arbolado y otros. La ubicación se almacena como `geometry(Point, 4326)`; `status_id = 1` representa el estado inicial `REPORTED` hasta que se añada la tabla `Status`.
+Flyway aplica al arrancar el backend las migraciones de `src/backend/src/main/resources/db/migration/`. La migración inicial activa PostGIS, crea las tablas `Incident` y `Category` y carga estas categorías: alumbrado, limpieza, mobiliario urbano, tráfico y semáforos, arbolado y otros. Otra crea `User` y `Role`, carga los roles `CITIZEN`, `OPERATOR` y `TECHNICIAN` y añade a `Incident` el ciudadano que la registró. La ubicación se almacena como `geometry(Point, 4326)`; `status_id = 1` representa el estado inicial `REPORTED` hasta que se añada la tabla `Status`. Las fechas `created_at` y `updated_at` son `timestamptz` con valor por defecto `now()`, así que también las filas insertadas directamente en la base de datos quedan en un instante inequívoco.
 
-La API REST permite crear y consultar incidencias, cargar las del área visible del mapa y listar categorías:
+La API REST permite registrarse e iniciar sesión, crear y consultar incidencias, cargar las incidencias del área visible del mapa, listar categorías y listar técnicos. Las rutas, quién puede usar cada una y el formato de la respuesta de autenticación están en la [arquitectura](architecture.md#api). La consulta del mapa requiere `west`, `south`, `east` y `north` en WGS 84; devuelve como máximo 500 incidencias `REPORTED` y `truncated: true` cuando hay más. Los datos inválidos producen HTTP 400 con un mensaje en español; una incidencia inexistente produce HTTP 404. Las operaciones se documentan en Swagger UI.
 
-| Método | Ruta | Uso |
+### Autenticación y cuentas de desarrollo
+
+Todas las rutas de `/api/**` salvo el registro y el inicio de sesión necesitan el token en la cabecera `Authorization: Bearer <token>`. Sin token válido responden 401; si el rol no tiene permiso, 403. Un ciudadano crea su cuenta con `POST /api/auth/register`. En Swagger UI, inicia sesión con `POST /api/auth/login`, copia `token` y pégalo en «Authorize».
+
+Docker Compose y las pruebas activan además la ubicación de Flyway `db/dev-seed`, que crea estas cuentas de personal. Todas tienen la contraseña `urbanpulse-dev`:
+
+| Email | Nombre | Rol |
 | --- | --- | --- |
-| `POST` | `/api/incidents` | Crear una incidencia con título, descripción, latitud, longitud y `categoryId` opcional. |
-| `GET` | `/api/incidents?west=…&south=…&east=…&north=…` | Consultar hasta 500 incidencias `REPORTED` dentro de los límites WGS 84; los cuatro límites son obligatorios y el rectángulo debe tener área positiva. |
-| `GET` | `/api/incidents/{id}` | Consultar una incidencia por identificador. |
-| `GET` | `/api/categories` | Consultar las categorías disponibles. |
+| `operador@urbanpulse.test` | Olga Operadora | Operador |
+| `tecnico1@urbanpulse.test` | Lucía Martín | Técnico |
+| `tecnico2@urbanpulse.test` | Javier Ruiz | Técnico |
 
-El POST responde con la incidencia creada, incluidos `id`, coordenadas, categoría, `status: "REPORTED"` y `createdAt`. La etiqueta para el ciudadano es «Registrada». La consulta espacial usa `ST_Intersects` y el índice GiST de `Incident.location`; las coordenadas del rectángulo respetan el orden longitud oeste, latitud sur, longitud este y latitud norte. La respuesta del mapa tiene la forma `{ "incidents": [...], "truncated": false }`; incluye como máximo 500 elementos y devuelve `truncated: true` si encontró más, para que las aplicaciones pidan al usuario que amplíe el zoom. En el MVP solo se conoce el estado `REPORTED`; la consulta permite únicamente ese estado, por lo que estados rechazados o aún no modelados no se publican en el mapa. Los datos inválidos producen HTTP 400 con un mensaje en español; una incidencia inexistente produce HTTP 404. Las operaciones se documentan en Swagger UI. La API no requiere autenticación en esta entrega.
+Un despliegue real no activa `db/dev-seed`, así que estas cuentas no existen en él; allí las cuentas de personal se crean a mano.
+
+```bash
+curl -s -X POST http://localhost:8080/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"operador@urbanpulse.test","password":"urbanpulse-dev"}'
+```
 
 ## Aplicación móvil
 
@@ -78,9 +92,13 @@ cp .env.example .env    # y edita la IP, ver más abajo
 npx expo start
 ```
 
-Escanea el código QR con Expo Go (en iPhone, con la cámara). El móvil y el portátil deben estar en la misma red. La app abre un mapa de OpenStreetMap (teselas de `tile.openstreetmap.de`) centrado en Málaga y solicita solo las incidencias que caben en el área visible. Cuando termina de moverse o ampliarse el mapa, espera brevemente antes de consultar el nuevo rectángulo; al tocar un marcador aparece un resumen y al tocarlo se abre el detalle. El botón «Nueva incidencia» abre el formulario para registrar una; la primera vez pide permiso de ubicación.
+Escanea el código QR con Expo Go (en iPhone, con la cámara). El móvil y el portátil deben estar en la misma red. Tras iniciar sesión, la app abre un mapa de OpenStreetMap (teselas de `tile.openstreetmap.de`) centrado en Málaga y solicita solo las incidencias del área visible. Al terminar un movimiento o cambio de zoom, espera brevemente y consulta el nuevo rectángulo; si hay más de 500 resultados, indica que acerques el mapa. Al tocar un marcador aparece un resumen y al tocarlo se abre el detalle. El botón «Nueva incidencia» abre el formulario para registrar una; la primera vez pide permiso de ubicación.
 
 La app consume el backend para cargar las incidencias y categorías, consultar el detalle y registrar incidencias. Arranca Docker Compose antes de iniciar Expo y configura `EXPO_PUBLIC_API_URL` en `src/frontend/.env` con una dirección alcanzable desde el móvil. Si el backend no está disponible, la app muestra un mensaje de error; el detalle y las categorías del formulario permiten reintentar la carga.
+
+Al abrirla, la aplicación muestra el inicio de sesión. Desde «Crear cuenta» se registra un ciudadano y se entra directamente al mapa. También se pueden usar las cuentas de desarrollo indicadas arriba: un técnico ve «Mis trabajos» (aún sin asignaciones) y un operador recibe el aviso de que debe usar el panel de gestión desde un ordenador. El botón «Cerrar sesión» borra la sesión del teléfono.
+
+El token y los datos básicos del usuario se guardan con el almacenamiento seguro del dispositivo. Cada reapertura intenta renovarlo con `POST /api/auth/refresh`; si ya no es válido, se borra y se muestra «Tu sesión ha caducado. Vuelve a iniciar sesión.». La aplicación nunca escribe tokens, contraseñas ni datos personales en la consola. Las incidencias pertenecientes al ciudadano todavía no tienen una ruta de consulta en la API: el mapa muestra las incidencias disponibles para cualquier usuario autenticado, por lo que «Mis incidencias» queda pendiente de un endpoint futuro.
 
 En redes que aíslan a los dispositivos entre sí, como eduroam, el móvil no llega al portátil y Expo Go muestra «Something went wrong». En ese caso arranca con túnel (la primera vez pide instalar `@expo/ngrok`) o conecta el portátil al punto de acceso del móvil:
 
@@ -115,9 +133,9 @@ cp .env.example .env
 npm run dev
 ```
 
-En Windows PowerShell, usa `Copy-Item .env.example .env` en lugar de `cp`. Vite muestra la dirección local al arrancar (por defecto `http://localhost:5173`). La página inicial muestra el mapa de OpenStreetMap centrado en Málaga y carga las incidencias del área visible desde el backend cuando termina cada movimiento o cambio de zoom; las rutas de listado y detalle son marcadores de posición para trabajo futuro.
+En Windows PowerShell, usa `Copy-Item .env.example .env` en lugar de `cp`. Vite muestra la dirección local al arrancar (por defecto `http://localhost:5173`). La página inicial muestra el mapa de OpenStreetMap centrado en Málaga, con cuatro incidencias de muestra. Las rutas de listado y detalle son marcadores de posición para trabajo futuro.
 
-`VITE_API_URL` en `src/management-panel/.env` configura la URL base del backend y por defecto apunta a `http://localhost:8080`. El botón «Probar» comprueba la conexión con la API de categorías. El mapa carga y refresca las incidencias de su área visible; las rutas de listado y detalle todavía no gestionan incidencias.
+`VITE_API_URL` en `src/management-panel/.env` configura la URL base del backend y por defecto apunta a `http://localhost:8080`. El mapa carga las incidencias del área visible después de cada movimiento o cambio de zoom. El panel aún no inicia sesión (#70), así que el backend rechaza esas peticiones con 401 hasta que se integre la autenticación; las rutas de listado y detalle todavía son pantallas de estructura.
 
 El backend permite peticiones del origen indicado por `MANAGEMENT_PANEL_ORIGIN` solo en `/api/**`. El valor por defecto, `http://localhost:5173`, coincide con el servidor de desarrollo de Vite. Si cambias el puerto del panel, actualiza la variable en el `.env` de la raíz y recrea el backend:
 
@@ -144,4 +162,4 @@ cd src/backend
 ./mvnw verify    # compilación, pruebas y comprobaciones configuradas
 ```
 
-Las pruebas arrancan la aplicación contra un contenedor `postgis/postgis` con Testcontainers, así que solo necesitan Docker en marcha, no una base de datos local.
+Las pruebas arrancan la aplicación contra un contenedor `postgis/postgis` con Testcontainers, así que solo necesitan Docker en marcha, no una base de datos local. `src/backend/src/test/resources/config/application.yaml` les da su propio `JWT_SECRET` y activa las cuentas de desarrollo.

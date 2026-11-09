@@ -1,5 +1,8 @@
 package es.uma.urbanpulse.incident;
 
+import static es.uma.urbanpulse.TestAccounts.OPERATOR_EMAIL;
+import static es.uma.urbanpulse.TestAccounts.bearer;
+import static es.uma.urbanpulse.TestAccounts.login;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
@@ -15,6 +18,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.client.RestTestClient;
 
 import es.uma.urbanpulse.PostgisContainerConfiguration;
+import es.uma.urbanpulse.auth.AuthResponse;
 import es.uma.urbanpulse.incident.api.IncidentMapResponse;
 import es.uma.urbanpulse.incident.api.IncidentResponse;
 
@@ -35,9 +39,13 @@ class IncidentMapQueryTests {
 	@Autowired
 	private JdbcTemplate jdbcTemplate;
 
+	private String authorization;
+
 	@BeforeEach
 	void clearIncidents() {
 		jdbcTemplate.update("DELETE FROM \"Incident\"");
+		AuthResponse operator = login(this.client, OPERATOR_EMAIL);
+		this.authorization = bearer(operator);
 	}
 
 	@Test
@@ -58,6 +66,7 @@ class IncidentMapQueryTests {
 	void requiresBoundsInsteadOfReturningAnUnboundedList() {
 		client.get()
 				.uri("/api/incidents")
+				.header("Authorization", this.authorization)
 				.exchange()
 				.expectStatus()
 				.isBadRequest();
@@ -102,6 +111,7 @@ class IncidentMapQueryTests {
 	private IncidentMapResponse loadMapResponse() {
 		return client.get()
 				.uri(MAP_BOUNDS)
+				.header("Authorization", this.authorization)
 				.exchange()
 				.expectStatus()
 				.isOk()
