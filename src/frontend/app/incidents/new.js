@@ -181,7 +181,6 @@ function NewIncidentForm() {
     return (
       <View style={styles.centered} accessibilityLiveRegion="polite">
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.centeredMessage}>Cargando categorías…</Text>
       </View>
     );
   }
