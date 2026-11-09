@@ -27,6 +27,8 @@ El backend emite y valida sus propios JWT con Spring Security y el soporte de se
 - **Sin estado**: no hay sesiones en el servidor. Cerrar sesión consiste en que el cliente descarte el token.
 - **Duración y renovación deslizante**: el token dura 7 días. `POST /api/auth/refresh` cambia un token todavía válido por otro nuevo de 7 días, con el rol actual del usuario. Los clientes lo renuevan al arrancar, así que el usuario solo vuelve a iniciar sesión tras 7 días sin usar el cliente.
 - **Contraseñas**: BCrypt, con una sal aleatoria por contraseña. Se normalizan a Unicode NFC y nunca se recortan espacios. Al crearlas deben tener al menos 8 caracteres y como mucho 72 bytes en UTF-8, el límite de BCrypt (las letras con tilde y la ñ ocupan dos), y no pueden estar formadas solo por espacios. No hay reglas de composición, según NIST SP 800-63B. El inicio de sesión no aplica estas reglas: solo compara, así que cambiarlas nunca bloquea una cuenta existente. Una contraseña de más de 72 bytes recibe el mismo 401 que una incorrecta, porque BCrypt ignora lo que pasa de ese límite y aceptaría una contraseña más larga que empiece como la correcta.
+- **Email**: se le quitan los espacios del principio y del final, también los Unicode como el de no separación, y se guarda en minúsculas, así que se compara sin distinguir mayúsculas y minúsculas.
+- **Logs**: las contraseñas, los hashes y los tokens nunca aparecen en respuestas ni en logs.
 
 ## Consecuencias
 
