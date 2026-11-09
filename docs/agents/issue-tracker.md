@@ -37,7 +37,7 @@ Issue field and option ids (org-level, the same for every repo in `grupo-14-UMA`
 | Field | Field id | Option ids |
 | --- | --- | --- |
 | `Priority` | `IFSS_kgDOAtzvIg` | Urgent `IFSSO_kgDOBQMSKg`, High `IFSSO_kgDOBQMSKw`, Medium `IFSSO_kgDOBQMSLA`, Low `IFSSO_kgDOBQMSLQ` |
-| `Effort` | `IFSS_kgDOAtzvJQ` | High `IFSSO_kgDOBQMSLg`, Medium `IFSSO_kgDOBQMSLw`, Low `IFSSO_kgDOBQMSMA` |
+| `Effort` | `IFSS_kgDOAtzvJQ` | Complex `IFSSO_kgDOBQMSLg`, Moderate `IFSSO_kgDOBQMSLw`, Simple `IFSSO_kgDOBQMSMA` |
 
 Check the result with `gh issue view <n> --json labels,assignees,milestone`, `gh api repos/{owner}/{repo}/issues/<n> --jq '.type.name'` and, for the fields, `gh api graphql -f query='{ repository(owner: "grupo-14-UMA", name: "urbanpulse-incident-manager") { issue(number: <n>) { issueFieldValues(first: 5) { nodes { ... on IssueFieldSingleSelectValue { name field { ... on IssueFieldCommon { name } } } } } } } }'`.
 

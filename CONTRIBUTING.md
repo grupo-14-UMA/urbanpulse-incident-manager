@@ -46,7 +46,7 @@ El tablero del equipo es [Urban Pulse tasks](https://github.com/orgs/grupo-14-UM
 | `In review` | GitHub la mueve al abrir una PR enlazada con `Closes #<n>`. |
 | `Done` | GitHub la mueve al cerrar la issue o fusionar la PR enlazada. |
 
-La vista **Mi trabajo** es un tablero por estado, filtrado por `assignee:@me -is:blocked`: muestra las issues asignadas a quien la consulta y que ya se pueden empezar. Incluye las etiquetas, la prioridad, el esfuerzo y las PR enlazadas. La vista **Pendiente** es una tabla global de issues abiertas, agrupadas por milestone, con responsable, estado, prioridad, esfuerzo, etiquetas, milestone e issue padre. Las dos vistas se ordenan por prioridad (de `Urgent` a `Low`) y, a igual prioridad, por esfuerzo (de `Low` a `High`): arriba queda lo más urgente y más sencillo.
+La vista **Mi trabajo** es un tablero por estado, filtrado por `assignee:@me -is:blocked`: muestra las issues asignadas a quien la consulta y que ya se pueden empezar. Incluye las etiquetas, la prioridad, el esfuerzo y las PR enlazadas. La vista **Pendiente** es una tabla global de issues abiertas, agrupadas por milestone, con responsable, estado, prioridad, esfuerzo, etiquetas, milestone e issue padre. Las dos vistas se ordenan por prioridad (de `Urgent` a `Low`) y, a igual prioridad, por esfuerzo (de `Simple` a `Complex`): arriba queda lo más urgente y más sencillo.
 
 Al reabrir una issue, vuelve automáticamente a `Todo`. Las issues cerradas hace más de 14 días se archivan automáticamente; archivar las oculta del tablero, pero no las elimina. Las sub-issues se añaden al tablero automáticamente.
 
@@ -110,7 +110,7 @@ Los epic llevan `🗺️ epic` y no llevan área, prioridad ni esfuerzo. Los com
 | `area: 🔧 repo` | Configuración del repositorio, CI y releases |
 | `🗺️ epic` | Issue de una entrega que agrupa sub-issues |
 
-Cada familia tiene su color, y una etiqueta nueva sigue el de la suya: áreas en tonos pastel distintos entre sí, estados en grises y `🗺️ epic` en negro. El tipo de issue no es una etiqueta: es el *issue type*. La prioridad y el esfuerzo tampoco: son campos del issue.
+Cada familia tiene su color, y una etiqueta nueva sigue el de la suya: áreas en tonos pastel distintos entre sí, estados en grises y `🗺️ epic` en negro. El tipo de issue no es una etiqueta: es el *issue type*. La prioridad y el esfuerzo tampoco: son campos del issue, con colores que no repiten los del tipo de issue: `Priority` en semáforo (rosa, rojo, amarillo, verde) y `Effort` en gris, naranja y morado.
 
 Cada issue lleva una sola etiqueta `area: …`, la del área dueña, aunque toque otras carpetas. Los epic no llevan etiqueta de área.
 
@@ -131,9 +131,9 @@ El esfuerzo mide la complejidad del issue, no el tiempo que lleva:
 
 | `Effort` | Significado |
 | --- | --- |
-| `Low` | Cambio acotado en un solo sitio, sin decisiones de diseño |
-| `Medium` | Varias piezas o capas, o una decisión de diseño acotada |
-| `High` | Cruza áreas o tiene incertidumbre (migraciones, rendimiento, integraciones nuevas); conviene partirlo o discutirlo antes de empezar |
+| `Simple` | Cambio acotado en un solo sitio, sin decisiones de diseño |
+| `Moderate` | Varias piezas o capas, o una decisión de diseño acotada |
+| `Complex` | Cruza áreas o tiene incertidumbre (migraciones, rendimiento, integraciones nuevas); conviene partirlo o discutirlo antes de empezar |
 
 Los campos `Start date` y `Target date` no se usan: las fechas las marcan los milestones.
 
