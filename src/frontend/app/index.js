@@ -1,5 +1,5 @@
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,6 +10,7 @@ import { MALAGA_REGION, OSM_MAP_PROPS, OsmAttribution, OsmTiles } from '../src/m
 import { COLORS } from '../src/theme';
 import { AuthenticationScreen } from '../src/AuthenticationScreen';
 import { useAuth } from '../src/AuthContext';
+import { useLoad } from '../src/useLoad';
 
 // Distance from the bottom safe area to the "+ Nueva incidencia" button.
 const BUTTON_BOTTOM = 32;
@@ -46,34 +47,14 @@ function CitizenMapScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { signOut } = useAuth();
-  const [incidents, setIncidents] = useState([]);
-  const [loadError, setLoadError] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
-  // Bumped on every load and on blur, so only the latest load while focused applies.
-  const loadIdRef = useRef(0);
+  const { data: incidents = [], error: loadError, reload } = useLoad(getIncidents);
 
   // Going back from a pushed screen does not remount the map, so load on every focus.
   useFocusEffect(
     useCallback(() => {
-      const loadId = ++loadIdRef.current;
-      getIncidents()
-        .then((result) => {
-          if (loadId !== loadIdRef.current) {
-            return;
-          }
-          setIncidents(result);
-          setLoadError(null);
-        })
-        .catch((error) => {
-          // Keep the markers already shown; they are only possibly out of date.
-          if (loadId === loadIdRef.current) {
-            setLoadError(error?.message || 'No se pudieron cargar las incidencias.');
-          }
-        });
-      return () => {
-        loadIdRef.current++;
-      };
-    }, []),
+      reload();
+    }, [reload]),
   );
 
   // Derived from the latest load, so the card shows current data and disappears
@@ -108,8 +89,11 @@ function CitizenMapScreen() {
         <Text style={styles.signOutButtonText}>Cerrar sesión</Text>
       </Pressable>
       {loadError && (
-        <View style={styles.notice} pointerEvents="none" accessibilityLiveRegion="polite">
-          <Text style={styles.noticeText}>{loadError}</Text>
+        <View style={styles.notice} accessibilityLiveRegion="polite">
+          <Text style={styles.noticeText}>{loadError.message}</Text>
+          <Pressable onPress={reload} accessibilityRole="button">
+            <Text style={styles.retryText}>Reintentar</Text>
+          </Pressable>
         </View>
       )}
       {selectedIncident && (
@@ -190,6 +174,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: COLORS.error,
     fontSize: 14,
+  },
+  retryText: {
+    marginTop: 6,
+    textAlign: 'center',
+    color: COLORS.primary,
+    fontWeight: '600',
   },
   card: {
     position: 'absolute',

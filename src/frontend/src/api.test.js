@@ -47,12 +47,48 @@ describe('mobile API client', () => {
   });
 
   test('maps a network failure to the connection error', async () => {
-    global.fetch.mockRejectedValueOnce(new Error('socket closed'));
+    jest.useFakeTimers();
+    jest.spyOn(Math, 'random').mockReturnValue(0.5);
+    global.fetch
+      .mockRejectedValueOnce(new Error('socket closed'))
+      .mockRejectedValueOnce(new Error('socket closed'))
+      .mockRejectedValueOnce(new Error('socket closed'));
     const { getCategories } = require('./api');
+    const request = getCategories();
 
-    await expect(getCategories()).rejects.toMatchObject({
+    await jest.advanceTimersByTimeAsync(1500);
+    await jest.advanceTimersByTimeAsync(4500);
+    await expect(request).rejects.toMatchObject({
       message: 'No se pudo conectar con UrbanPulse. Comprueba tu conexión e inténtalo de nuevo.',
     });
+    Math.random.mockRestore();
+  });
+
+  test('retries transient GET failures with bounded backoff', async () => {
+    jest.useFakeTimers();
+    jest.spyOn(Math, 'random').mockReturnValue(0.5);
+    global.fetch
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce({ ok: true, status: 200, text: async () => '[]' });
+    const { getCategories } = require('./api');
+    const request = getCategories();
+
+    await jest.advanceTimersByTimeAsync(1500);
+    await jest.advanceTimersByTimeAsync(4500);
+    await expect(request).resolves.toEqual([]);
+    expect(global.fetch).toHaveBeenCalledTimes(3);
+    Math.random.mockRestore();
+  });
+
+  test('does not retry writes after a transient failure', async () => {
+    global.fetch.mockRejectedValueOnce(new Error('offline'));
+    const { createIncident } = require('./api');
+
+    await expect(
+      createIncident({ title: 'Farola', description: 'Fundida', latitude: 36.72, longitude: -4.42 }),
+    ).rejects.toMatchObject({ kind: 'connection' });
+    expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
   test('aborts a request that exceeds the timeout', async () => {

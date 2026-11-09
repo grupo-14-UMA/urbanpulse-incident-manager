@@ -25,6 +25,7 @@ import {
 import { COLORS } from '../../src/theme';
 import { useAuth } from '../../src/AuthContext';
 import { isValid, validateIncident } from '../../src/validateIncident';
+import { useLoad } from '../../src/useLoad';
 
 // Some phones never return a fix indoors; stop waiting and let the citizen tap.
 const POSITION_TIMEOUT_MS = 10000;
@@ -77,36 +78,13 @@ function NewIncidentForm() {
   const [categoryId, setCategoryId] = useState(null);
   const [location, setLocation] = useState(null);
 
-  const [categories, setCategories] = useState([]);
-  // 'loading' | 'loaded' | 'error'
-  const [categoriesState, setCategoriesState] = useState('loading');
-  const [categoriesError, setCategoriesError] = useState(null);
-  const [categoriesAttempt, setCategoriesAttempt] = useState(0);
+  const { status: categoriesState, data: categories = [], error: categoriesError, reload: reloadCategories } = useLoad(getCategories);
   const [locating, setLocating] = useState(true);
+  const [locationError, setLocationError] = useState(null);
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
   const [sending, setSending] = useState(false);
   const [submitError, setSubmitError] = useState(null);
-
-  useEffect(() => {
-    let active = true;
-    getCategories()
-      .then((result) => {
-        if (active) {
-          setCategories(result);
-          setCategoriesState('loaded');
-        }
-      })
-      .catch((error) => {
-        if (active) {
-          setCategoriesError(error?.message || 'No se pudieron cargar las categorías.');
-          setCategoriesState('error');
-        }
-      });
-    return () => {
-      active = false;
-    };
-  }, [categoriesAttempt]);
 
   useEffect(() => {
     let active = true;
@@ -118,8 +96,10 @@ function NewIncidentForm() {
         }
         setLocating(false);
         if (!coordinate || placedByHandRef.current) {
+          if (!coordinate) setLocationError('No se pudo obtener tu ubicación. Toca el mapa para marcarla.');
           return;
         }
+        setLocationError(null);
         setLocation(coordinate);
         const region = { ...coordinate, latitudeDelta: STREET_DELTA, longitudeDelta: STREET_DELTA };
         // Before the map is ready animateToRegion is ignored, so leave it for onMapReady.
@@ -252,18 +232,15 @@ function NewIncidentForm() {
       {categoriesState === 'loading' && (
         <Text style={styles.categoryStatus}>Cargando categorías…</Text>
       )}
-      {categoriesState === 'error' && (
+      {categoriesError && (
         <>
-          <Text style={styles.errorText}>{categoriesError}</Text>
+          <Text style={styles.errorText}>{categoriesError?.message}</Text>
           <Pressable
             style={({ pressed }) => [
               styles.retryButton,
               pressed && styles.retryButtonPressed,
             ]}
-            onPress={() => {
-              setCategoriesState('loading');
-              setCategoriesAttempt((attempt) => attempt + 1);
-            }}
+            onPress={reloadCategories}
             accessibilityRole="button"
           >
             <Text style={styles.retryButtonText}>Reintentar</Text>
@@ -275,6 +252,7 @@ function NewIncidentForm() {
       )}
 
       <Text style={styles.label}>Localización</Text>
+      {locationError && <Text style={styles.errorText}>{locationError}</Text>}
       <View
         style={[styles.mapContainer, errors.location && styles.mapContainerError]}
         // Freeze the form while a finger is on the map, so the gesture moves the map.
