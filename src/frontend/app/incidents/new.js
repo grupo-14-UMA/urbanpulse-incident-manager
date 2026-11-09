@@ -177,6 +177,25 @@ function NewIncidentForm() {
     setCategoryId((current) => (current === id ? null : id));
   }
 
+  if (categoriesError && categories.length === 0) {
+    return (
+      <View style={styles.centered} accessibilityLiveRegion="polite">
+        <Text style={styles.centeredMessage}>{categoriesError.message}</Text>
+        <Pressable
+          style={({ pressed }) => [
+            styles.retryButton,
+            styles.centeredRetryButton,
+            pressed && styles.retryButtonPressed,
+          ]}
+          onPress={reloadCategories}
+          accessibilityRole="button"
+        >
+          <Text style={styles.retryButtonText}>Reintentar</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   return (
     <ScrollView
       style={styles.screen}
@@ -231,21 +250,6 @@ function NewIncidentForm() {
       </View>
       {categoriesState === 'loading' && (
         <Text style={styles.categoryStatus}>Cargando categorías…</Text>
-      )}
-      {categoriesError && (
-        <>
-          <Text style={styles.errorText}>{categoriesError?.message}</Text>
-          <Pressable
-            style={({ pressed }) => [
-              styles.retryButton,
-              pressed && styles.retryButtonPressed,
-            ]}
-            onPress={reloadCategories}
-            accessibilityRole="button"
-          >
-            <Text style={styles.retryButtonText}>Reintentar</Text>
-          </Pressable>
-        </>
       )}
       {categoriesState === 'loaded' && categories.length === 0 && (
         <Text style={styles.categoryStatus}>No hay categorías disponibles.</Text>
@@ -322,6 +326,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: COLORS.surface,
   },
+  centeredMessage: {
+    paddingHorizontal: 24,
+    fontSize: 16,
+    color: COLORS.text,
+    textAlign: 'center',
+  },
   content: {
     padding: 16,
   },
@@ -372,6 +382,9 @@ const styles = StyleSheet.create({
   },
   retryButtonPressed: {
     backgroundColor: COLORS.primaryPressed,
+  },
+  centeredRetryButton: {
+    alignSelf: 'center',
   },
   retryButtonText: {
     color: COLORS.onPrimary,
