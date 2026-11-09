@@ -16,6 +16,8 @@ public record LoginRequest(
 		String password) {
 
 	public LoginRequest {
+		// Trimmed before validation: mobile keyboards often add a space after the email.
+		email = email == null ? null : email.trim();
 		password = Passwords.normalize(password);
 	}
 

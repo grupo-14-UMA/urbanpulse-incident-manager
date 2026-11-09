@@ -87,6 +87,18 @@ class AuthApiTests {
 	}
 
 	@Test
+	void spacesAroundTheEmailAreIgnored() {
+		String email = uniqueEmail();
+
+		register("Ana García", " " + email + " ", "contraseña-segura")
+			.expectStatus()
+			.isCreated()
+			.expectBody()
+			.jsonPath("$.user.email").isEqualTo(email);
+		login(email + " ", "contraseña-segura").expectStatus().isOk();
+	}
+
+	@Test
 	void citizenLogsInWithTheEmailInAnyCase() {
 		String email = uniqueEmail();
 		register("Ana García", email, "contraseña-segura").expectStatus().isCreated();
