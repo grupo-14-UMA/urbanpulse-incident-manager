@@ -1,5 +1,15 @@
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { login, register } from './api';
 import { useAuth } from './AuthContext';
@@ -32,6 +42,7 @@ export function AuthenticationScreen({ initialNotice }) {
   const [errors, setErrors] = useState({});
   const [submitError, setSubmitError] = useState(initialNotice ?? null);
   const [sending, setSending] = useState(false);
+  const [passwordVisible, setPasswordVisible] = useState(false);
 
   const isRegistration = mode === 'register';
 
@@ -44,6 +55,7 @@ export function AuthenticationScreen({ initialNotice }) {
   async function submit() {
     const values = { name, email, password };
     const validationErrors = isRegistration ? validateRegistration(values) : validateLogin(values);
+    setSubmitError(null);
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
@@ -58,16 +70,29 @@ export function AuthenticationScreen({ initialNotice }) {
         : await login({ email, password });
       await completeAuthentication(response);
     } catch (error) {
-      setErrors(fieldErrors(error));
-      setSubmitError(error?.message || 'No se pudo completar la solicitud. Inténtalo de nuevo.');
+      const responseFieldErrors = fieldErrors(error);
+      setErrors(responseFieldErrors);
+      setSubmitError(
+        Object.keys(responseFieldErrors).length > 0
+          ? null
+          : error?.message || 'No se pudo completar la solicitud. Inténtalo de nuevo.',
+      );
     } finally {
       setSending(false);
     }
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <View style={styles.card}>
+    <KeyboardAvoidingView
+      style={styles.keyboardAvoidingView}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
+      >
+        <View style={styles.card}>
         <Text style={styles.title}>{isRegistration ? 'Crear cuenta' : 'Iniciar sesión'}</Text>
         <Text style={styles.subtitle}>
           {isRegistration ? 'Crea una cuenta para registrar incidencias.' : 'Accede para consultar y registrar incidencias.'}
@@ -92,9 +117,13 @@ export function AuthenticationScreen({ initialNotice }) {
           onChangeText={setPassword}
           error={errors.password}
           editable={!sending}
-          secureTextEntry
+          secureTextEntry={!passwordVisible}
           autoCapitalize="none"
           autoComplete={isRegistration ? 'new-password' : 'current-password'}
+          rightAction={{
+            label: passwordVisible ? 'Ocultar contraseña' : 'Mostrar contraseña',
+            onPress: () => setPasswordVisible((visible) => !visible),
+          }}
         />
 
         {submitError && <Text style={styles.submitError}>{submitError}</Text>}
@@ -110,30 +139,52 @@ export function AuthenticationScreen({ initialNotice }) {
         <Pressable onPress={switchMode} disabled={sending} accessibilityRole="button">
           <Text style={styles.switchText}>{isRegistration ? 'Ya tengo una cuenta' : 'Crear cuenta'}</Text>
         </Pressable>
-      </View>
-    </ScrollView>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
-function Field({ label, error, ...inputProps }) {
+function Field({ label, error, rightAction, ...inputProps }) {
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>
-      <TextInput style={[styles.input, error && styles.inputError]} placeholder={label} {...inputProps} />
+      <View style={[styles.inputRow, error && styles.inputError]}>
+        <TextInput
+          style={styles.input}
+          placeholder={label}
+          placeholderTextColor={COLORS.textMuted}
+          {...inputProps}
+        />
+        {rightAction && (
+          <Pressable
+            style={styles.passwordVisibilityButton}
+            onPress={rightAction.onPress}
+            accessibilityRole="button"
+            accessibilityLabel={rightAction.label}
+          >
+            <Text style={styles.passwordVisibilityIcon}>👁</Text>
+          </Pressable>
+        )}
+      </View>
       {error && <Text style={styles.error}>{error}</Text>}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, justifyContent: 'center', padding: 20, backgroundColor: COLORS.surface },
+  keyboardAvoidingView: { flex: 1, backgroundColor: COLORS.surface },
+  container: { flexGrow: 1, justifyContent: 'center', padding: 20, paddingBottom: 36 },
   card: { width: '100%', maxWidth: 420, alignSelf: 'center' },
   title: { color: COLORS.text, fontSize: 28, fontWeight: '700', textAlign: 'center' },
   subtitle: { marginTop: 10, color: COLORS.textMuted, fontSize: 16, lineHeight: 22, textAlign: 'center' },
   field: { marginTop: 20 },
   label: { marginBottom: 6, color: COLORS.text, fontSize: 15, fontWeight: '600' },
-  input: { borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 11, color: COLORS.text, fontSize: 16 },
+  inputRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: COLORS.border, borderRadius: 8 },
+  input: { flex: 1, paddingHorizontal: 12, paddingVertical: 11, color: COLORS.text, fontSize: 16 },
   inputError: { borderColor: COLORS.error },
+  passwordVisibilityButton: { paddingHorizontal: 12, paddingVertical: 10 },
+  passwordVisibilityIcon: { fontSize: 19 },
   error: { marginTop: 5, color: COLORS.error, fontSize: 13 },
   submitError: { marginTop: 18, color: COLORS.error, fontSize: 14, lineHeight: 20, textAlign: 'center' },
   submitButton: { marginTop: 24, borderRadius: 8, paddingVertical: 13, alignItems: 'center', backgroundColor: COLORS.primary },
