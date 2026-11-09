@@ -1,5 +1,5 @@
 import * as Location from 'expo-location';
-import { useNavigation, useRouter } from 'expo-router';
+import { Redirect, useNavigation, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -23,6 +23,7 @@ import {
   STREET_DELTA,
 } from '../../src/map';
 import { COLORS } from '../../src/theme';
+import { useAuth } from '../../src/AuthContext';
 import { isValid, validateIncident } from '../../src/validateIncident';
 
 // Some phones never return a fix indoors; stop waiting and let the citizen tap.
@@ -48,6 +49,19 @@ async function getCurrentCoordinate() {
 }
 
 export default function NewIncidentScreen() {
+  const { status, session } = useAuth();
+
+  if (status === 'restoring') {
+    return <View style={styles.centered}><ActivityIndicator size="large" color={COLORS.primary} /></View>;
+  }
+  if (status !== 'signedIn' || session.user.role !== 'CITIZEN') {
+    return <Redirect href="/" />;
+  }
+
+  return <NewIncidentForm />;
+}
+
+function NewIncidentForm() {
   const router = useRouter();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -322,6 +336,12 @@ export default function NewIncidentScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
+    backgroundColor: COLORS.surface,
+  },
+  centered: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: COLORS.surface,
   },
   content: {
