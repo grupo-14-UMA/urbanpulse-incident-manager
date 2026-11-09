@@ -152,6 +152,21 @@ cd src/frontend
 npx expo lint
 ```
 
+### Pruebas de la aplicación móvil
+
+El cliente móvil usa Jest con `jest-expo`. Las pruebas del cliente HTTP están en `src/frontend/src/api.test.js` y simulan `fetch`, por lo que no necesitan el backend ni un dispositivo.
+
+```bash
+cd src/frontend
+npm test
+```
+
+Para ejecutar Jest continuamente mientras se editan las pruebas:
+
+```bash
+npm test -- --watch
+```
+
 La versión web de la aplicación móvil Expo no funciona porque `react-native-maps` no la soporta; el panel web es un proyecto Vite independiente.
 
 ## Pruebas
