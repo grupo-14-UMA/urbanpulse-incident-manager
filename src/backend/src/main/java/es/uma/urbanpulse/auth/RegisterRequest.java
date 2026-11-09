@@ -21,4 +21,9 @@ public record RegisterRequest(
 		@Password
 		@Schema(description = "Entre 8 y 72 caracteres.", example = "contraseña-segura")
 		String password) {
+
+	public RegisterRequest {
+		password = Passwords.normalize(password);
+	}
+
 }

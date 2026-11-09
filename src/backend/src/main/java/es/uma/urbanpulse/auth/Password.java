@@ -7,7 +7,6 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
-import java.nio.charset.StandardCharsets;
 
 import jakarta.validation.Constraint;
 import jakarta.validation.ConstraintValidator;
@@ -15,8 +14,9 @@ import jakarta.validation.ConstraintValidatorContext;
 import jakarta.validation.Payload;
 
 /**
- * A new password: between 8 and 72 characters, with no composition rules (NIST 800-63B). 72 is
- * BCrypt's limit in bytes, so a password with multi-byte characters must also fit in 72 bytes.
+ * A new password: at least 8 characters and at most BCrypt's 72 bytes, not made only of spaces, with no
+ * composition rules (NIST 800-63B). It is checked once normalized (see {@link Passwords#normalize}). Login
+ * never applies these rules, so a change here never locks out an existing account.
  */
 @Target({ FIELD, PARAMETER, RECORD_COMPONENT })
 @Retention(RUNTIME)
@@ -25,7 +25,7 @@ public @interface Password {
 
 	int MIN_LENGTH = 8;
 
-	int MAX_BYTES = 72;
+	String ONLY_SPACES_MESSAGE = "La contraseña no puede estar formada solo por espacios.";
 
 	String message() default "La contraseña debe tener entre 8 y 72 caracteres. Las letras con tilde y la ñ cuentan como dos.";
 
@@ -37,9 +37,22 @@ public @interface Password {
 
 		@Override
 		public boolean isValid(String password, ConstraintValidatorContext context) {
-			return password != null
-					&& password.codePointCount(0, password.length()) >= MIN_LENGTH
-					&& password.getBytes(StandardCharsets.UTF_8).length <= MAX_BYTES;
+			if (password == null
+					|| password.codePointCount(0, password.length()) < MIN_LENGTH
+					|| Passwords.exceedsBcryptLimit(password)) {
+				return false;
+			}
+			if (isOnlySpaces(password)) {
+				context.disableDefaultConstraintViolation();
+				context.buildConstraintViolationWithTemplate(ONLY_SPACES_MESSAGE).addConstraintViolation();
+				return false;
+			}
+			return true;
+		}
+
+		/** {@link String#isBlank()} misses no-break spaces, so Unicode space separators count too. */
+		private static boolean isOnlySpaces(String password) {
+			return password.codePoints().allMatch(c -> Character.isWhitespace(c) || Character.isSpaceChar(c));
 		}
 
 	}

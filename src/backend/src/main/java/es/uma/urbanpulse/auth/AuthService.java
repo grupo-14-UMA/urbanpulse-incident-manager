@@ -53,11 +53,13 @@ public class AuthService {
 	public AuthResponse login(LoginRequest request) {
 		String email = User.normalizeEmail(request.email());
 		User user = userRepository.findByEmail(email).orElse(null);
-		String hash = user == null ? unknownUserHash : user.getPasswordHash();
+		// BCrypt only reads the first 72 bytes, so a longer password could match one that starts like it.
+		boolean tooLong = Passwords.exceedsBcryptLimit(request.password());
+		String hash = user == null || tooLong ? unknownUserHash : user.getPasswordHash();
 		boolean matches = passwordEncoder.matches(request.password(), hash);
-		if (user == null || !matches) {
+		if (user == null || tooLong || !matches) {
 			log.warn("Login failed: email={}, reason={}", EmailMask.mask(email),
-					user == null ? "unknown email" : "wrong password");
+					user == null ? "unknown email" : tooLong ? "password too long" : "wrong password");
 			throw new InvalidCredentialsException();
 		}
 		return authResponse(user);

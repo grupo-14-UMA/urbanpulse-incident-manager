@@ -76,6 +76,17 @@ class AuthApiTests {
 	}
 
 	@Test
+	void signUpIsRejectedWhenThePasswordIsOnlySpaces() {
+		register("Ana García", uniqueEmail(), " ".repeat(8))
+			.expectStatus()
+			.isBadRequest()
+			.expectBody()
+			.jsonPath("$.errors.password").isEqualTo("La contraseña no puede estar formada solo por espacios.");
+		// A no-break space and a tab are whitespace too.
+		register("Ana García", uniqueEmail(), " \t".repeat(4)).expectStatus().isBadRequest();
+	}
+
+	@Test
 	void citizenLogsInWithTheEmailInAnyCase() {
 		String email = uniqueEmail();
 		register("Ana García", email, "contraseña-segura").expectStatus().isCreated();
@@ -105,6 +116,48 @@ class AuthApiTests {
 			.expectBody()
 			.jsonPath("$.message").isEqualTo("El email o la contraseña no son correctos.");
 		login(email, "x".repeat(100)).expectStatus().isUnauthorized();
+	}
+
+	@Test
+	void loginComparesThePasswordExactlyAsTyped() {
+		String email = uniqueEmail();
+		register("Ana García", email, "  contraseña-segura  ").expectStatus().isCreated();
+
+		login(email, "  contraseña-segura  ").expectStatus().isOk();
+		login(email, "contraseña-segura").expectStatus().isUnauthorized();
+		login(email, " ".repeat(8))
+			.expectStatus()
+			.isUnauthorized()
+			.expectBody()
+			.jsonPath("$.message").isEqualTo("El email o la contraseña no son correctos.");
+	}
+
+	@Test
+	void passwordMatchesWhetherTheKeyboardSendsTheAccentComposedOrDecomposed() {
+		String composed = "contraseña-segura";
+		String decomposed = "contraseña-segura";
+		String signedUpComposed = uniqueEmail();
+		String signedUpDecomposed = uniqueEmail();
+		register("Ana García", signedUpComposed, composed).expectStatus().isCreated();
+		register("Ana García", signedUpDecomposed, decomposed).expectStatus().isCreated();
+
+		login(signedUpComposed, decomposed).expectStatus().isOk();
+		login(signedUpDecomposed, composed).expectStatus().isOk();
+	}
+
+	@Test
+	void loginRejectsALongerPasswordThatStartsLikeTheRightOne() {
+		String email = uniqueEmail();
+		// Exactly BCrypt's 72 bytes: the ñ takes two.
+		String password = "ñ" + "a".repeat(70);
+		register("Ana García", email, password).expectStatus().isCreated();
+
+		login(email, password).expectStatus().isOk();
+		login(email, password + "-y-algo-más")
+			.expectStatus()
+			.isUnauthorized()
+			.expectBody()
+			.jsonPath("$.message").isEqualTo("El email o la contraseña no son correctos.");
 	}
 
 	@Test
