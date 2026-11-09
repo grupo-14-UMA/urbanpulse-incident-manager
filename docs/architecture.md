@@ -122,7 +122,7 @@ La API REST expone estas rutas. La columna «Acceso» indica quién puede usarla
 | `POST` | `/api/auth/refresh` | Autenticado | Cambiar un token todavía válido por otro nuevo de 7 días. |
 | `GET` | `/api/users/me` | Autenticado | Consultar el usuario actual (identificador, nombre, email y rol). |
 | `GET` | `/api/technicians?limit=` | Operador | Listar los técnicos por nombre. `limit` vale 50 por defecto y como máximo 200. |
-| `POST` | `/api/incidents` | Ciudadano | Crear una incidencia con título, descripción, latitud, longitud y categoría opcional. El ciudadano que la registra se toma del token. Devuelve la incidencia creada, con estado `REPORTED` (etiqueta visible: «Registrada»). |
+| `POST` | `/api/incidents` | Ciudadano | Crear una incidencia con título, descripción, latitud, longitud y categoría opcional. El ciudadano que la registra se toma del token. Devuelve la incidencia creada, con estado `REPORTED` (etiqueta visible: «Registrada») y fecha de registro `createdAt` en UTC con milisegundos (`2026-11-07T10:15:30.123Z`); los `GET` devuelven el mismo valor. |
 | `GET` | `/api/incidents` | Autenticado | Listar todas las incidencias. La paginación queda para una siguiente entrega. |
 | `GET` | `/api/incidents/{id}` | Autenticado | Consultar el detalle de una incidencia; devuelve 404 si no existe. |
 | `GET` | `/api/categories` | Autenticado | Listar categorías disponibles. |

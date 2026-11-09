@@ -79,7 +79,7 @@ Un despliegue real no activa `db/dev-seed`, así que estas cuentas no existen en
 curl -s -X POST http://localhost:8080/api/auth/login \
   -H 'Content-Type: application/json' \
   -d '{"email":"operador@urbanpulse.test","password":"urbanpulse-dev"}'
-``` Las fechas `created_at` y `updated_at` son `timestamptz` con valor por defecto `now()`, así que también las filas insertadas directamente en la base de datos quedan en un instante inequívoco.
+```
 
 ## Aplicación móvil
 
