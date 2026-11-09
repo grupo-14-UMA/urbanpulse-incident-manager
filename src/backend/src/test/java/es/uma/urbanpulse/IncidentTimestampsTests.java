@@ -1,5 +1,7 @@
 package es.uma.urbanpulse;
 
+import static es.uma.urbanpulse.TestAccounts.bearer;
+import static es.uma.urbanpulse.TestAccounts.newCitizen;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
@@ -28,8 +30,11 @@ class IncidentTimestampsTests {
 
 	@Test
 	void createdAtIsTheSameUtcInstantWithMillisOnEveryEndpoint() {
+		String authorization = bearer(newCitizen(this.client));
+
 		Map<String, Object> created = this.client.post()
 			.uri("/api/incidents")
+			.header("Authorization", authorization)
 			.contentType(MediaType.APPLICATION_JSON)
 			.body(Map.of("title", "Farola fundida", "description", "Lleva varias noches apagada.", "latitude",
 					36.7196, "longitude", -4.4216))
@@ -46,6 +51,7 @@ class IncidentTimestampsTests {
 
 		Map<String, Object> found = this.client.get()
 			.uri("/api/incidents/{id}", created.get("id"))
+			.header("Authorization", authorization)
 			.exchange()
 			.expectStatus()
 			.isOk()
@@ -58,6 +64,7 @@ class IncidentTimestampsTests {
 
 		List<Map<String, Object>> listed = this.client.get()
 			.uri("/api/incidents")
+			.header("Authorization", authorization)
 			.exchange()
 			.expectStatus()
 			.isOk()

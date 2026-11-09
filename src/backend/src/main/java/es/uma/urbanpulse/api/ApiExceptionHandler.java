@@ -10,12 +10,18 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 
+import es.uma.urbanpulse.auth.EmailAlreadyRegisteredException;
+import es.uma.urbanpulse.auth.InvalidCredentialsException;
+import es.uma.urbanpulse.auth.InvalidSessionException;
 import es.uma.urbanpulse.incident.api.IncidentNotFoundException;
 import es.uma.urbanpulse.incident.api.InvalidCategoryException;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+
+	private static final String INVALID_REQUEST_MESSAGE = "La solicitud contiene datos no válidos.";
 
 	@ExceptionHandler(MethodArgumentNotValidException.class)
 	public ResponseEntity<ApiErrorResponse> handleValidation(MethodArgumentNotValidException exception) {
@@ -23,7 +29,17 @@ public class ApiExceptionHandler {
 		exception.getBindingResult().getFieldErrors().forEach(error ->
 				errors.putIfAbsent(error.getField(), error.getDefaultMessage()));
 		return ResponseEntity.badRequest()
-				.body(new ApiErrorResponse("La solicitud contiene datos no válidos.", errors));
+				.body(new ApiErrorResponse(INVALID_REQUEST_MESSAGE, errors));
+	}
+
+	@ExceptionHandler(HandlerMethodValidationException.class)
+	public ResponseEntity<ApiErrorResponse> handleParameterValidation(HandlerMethodValidationException exception) {
+		Map<String, String> errors = new LinkedHashMap<>();
+		exception.getParameterValidationResults().forEach(result -> result.getResolvableErrors()
+				.forEach(error -> errors.putIfAbsent(
+						result.getMethodParameter().getParameterName(), error.getDefaultMessage())));
+		return ResponseEntity.badRequest()
+				.body(new ApiErrorResponse(INVALID_REQUEST_MESSAGE, errors));
 	}
 
 	@ExceptionHandler(InvalidCategoryException.class)
@@ -35,6 +51,18 @@ public class ApiExceptionHandler {
 	@ExceptionHandler(IncidentNotFoundException.class)
 	public ResponseEntity<ApiErrorResponse> handleIncidentNotFound(IncidentNotFoundException exception) {
 		return ResponseEntity.status(HttpStatus.NOT_FOUND)
+				.body(new ApiErrorResponse(exception.getMessage(), Map.of()));
+	}
+
+	@ExceptionHandler(EmailAlreadyRegisteredException.class)
+	public ResponseEntity<ApiErrorResponse> handleEmailAlreadyRegistered(EmailAlreadyRegisteredException exception) {
+		return ResponseEntity.status(HttpStatus.CONFLICT)
+				.body(new ApiErrorResponse(exception.getMessage(), Map.of()));
+	}
+
+	@ExceptionHandler({ InvalidCredentialsException.class, InvalidSessionException.class })
+	public ResponseEntity<ApiErrorResponse> handleUnauthorized(RuntimeException exception) {
+		return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
 				.body(new ApiErrorResponse(exception.getMessage(), Map.of()));
 	}
 

@@ -2,7 +2,7 @@
 status: accepted
 ---
 
-# ADR-0016: Guardar y exponer los instantes en UTC con zona explícita
+# ADR-0017: Guardar y exponer los instantes en UTC con zona explícita
 
 ## Contexto
 

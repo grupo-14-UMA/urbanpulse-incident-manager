@@ -8,6 +8,7 @@ Plataforma cloud para comunicar, gestionar y analizar incidencias urbanas en Má
 - [x] Mapa de Málaga con las incidencias registradas.
 - [x] Detalle de una incidencia: título, descripción, categoría, estado y fecha.
 - [x] Registro de incidencias con ubicación (GPS o seleccionada en el mapa) y categoría opcional.
+- [x] Cuentas de usuario con roles (ciudadano, operador y técnico) y autenticación con token en la API.
 - [ ] Documentación interactiva de la API (Swagger UI).
 
 ## Tecnologías
@@ -16,6 +17,7 @@ Plataforma cloud para comunicar, gestionar y analizar incidencias urbanas en Má
 | --- | --- | --- |
 | Java 21 + Spring Boot 4 | Backend y API REST | [ADR-0013](docs/adr/0013-spring-boot-4-para-backend.md) |
 | PostgreSQL + PostGIS | Persistencia relacional y geoespacial | [ADR-0001](docs/adr/0001-postgresql-como-base-de-datos.md), [ADR-0007](docs/adr/0007-postgis-para-datos-geoespaciales.md) |
+| Spring Security + JWT | Autenticación y permisos por rol en la API | [ADR-0016](docs/adr/0016-autenticacion-con-jwt-propio.md) |
 | Hibernate Spatial | Mapeo JPA de geometrías PostGIS | [ADR-0007](docs/adr/0007-postgis-para-datos-geoespaciales.md) |
 | Flyway | Migraciones del esquema de base de datos | [ADR-0013](docs/adr/0013-spring-boot-4-para-backend.md) |
 | springdoc-openapi | Documentación de la API y Swagger UI | [#9](https://github.com/grupo-14-UMA/urbanpulse-incident-manager/issues/9) |
@@ -49,6 +51,7 @@ docs/           Documentación: arquitectura, desarrollo, despliegue, ADRs, requ
 
 - [Arquitectura](docs/architecture.md)
 - [Guía de desarrollo](docs/development.md)
+- [Gestión de errores](docs/error-handling.md)
 - [Guía de despliegue](docs/deployment.md)
 - [Decisiones de arquitectura (ADRs)](docs/adr/)
 - [Requisitos](docs/requirements.md)
@@ -57,11 +60,11 @@ docs/           Documentación: arquitectura, desarrollo, despliegue, ADRs, requ
 
 ## Equipo
 
-| Miembro | Rol |
-| --- | --- |
-| Alfonso ([@alraro](https://github.com/alraro)) | Team Leader y Product Owner |
-| Andrea ([@apr2004](https://github.com/apr2004)) | Reviewer |
-| María ([@mmartinmaria](https://github.com/mmartinmaria)) | Tester |
-| Daniel ([@daniiroblees](https://github.com/daniiroblees)) | Maintainer |
+| Miembro | Rol | Área de desarrollo |
+| --- | --- | --- |
+| Alfonso ([@alraro](https://github.com/alraro)) | Team Leader y Product Owner | Core & Security Engineer |
+| Andrea ([@apr2004](https://github.com/apr2004)) | Reviewer | Data & Performance Engineer |
+| María ([@mmartinmaria](https://github.com/mmartinmaria)) | Tester | Mobile Engineer |
+| Daniel ([@daniiroblees](https://github.com/daniiroblees)) | Maintainer | Ops Panel Engineer |
 
 Proyecto de la asignatura: Desarrollo Software en Plataforma en la Nube, Universidad de Málaga.

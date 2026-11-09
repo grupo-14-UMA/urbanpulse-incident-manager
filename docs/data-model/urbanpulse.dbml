@@ -1,10 +1,11 @@
 Table User {
   id integer [primary key]
   nif varchar
-  name varchar
-  email varchar
+  name varchar(100) [not null]
+  email varchar(254) [not null, unique, note: 'Stored in lower case.']
+  password_hash varchar(60) [not null, note: 'BCrypt hash.']
   phone integer
-  role_id integer
+  role_id integer [not null]
 }
 
 Table Role {
@@ -57,7 +58,7 @@ Table Incident {
   location geometry(Point, 4326) [not null]
   priority varchar
   status_id integer [not null, note: '1 = REPORTED in the MVP; Status table is used when lifecycle management is implemented.']
-  user_id integer 
+  reporter_id integer [note: 'Citizen who reported it. Null only for incidents stored before authentication.']
   urban_asset_id integer 
   urban_context_id integer 
   created_at timestamptz [not null]
@@ -143,7 +144,7 @@ Table KnowledgeDocument {
 }
 
 // Relaciones entre entidades
-Ref: Incident.user_id > User.id
+Ref: Incident.reporter_id > User.id
 Ref: Incident.urban_asset_id > UrbanAsset.id
 Ref: Incident.urban_context_id > UrbanContext.id
 Ref: Incident.status_id > Status.id

@@ -1,10 +1,14 @@
 # Reviews are requested automatically when a pull request is opened.
-# For each file only the last matching line applies, so the Reviewer is repeated on every line.
+# For each file only the last matching line applies, so the Reviewer and the Tester are repeated on every line.
+# Code folders go first so the more specific lines below override them.
 
-*                        @apr2004
-/.github/                @apr2004 @daniiroblees
-/docker-compose.yml      @apr2004 @daniiroblees
-**/Dockerfile            @apr2004 @daniiroblees
-/src/backend/src/test/   @apr2004 @mmartinmaria
-/docs/adr/               @apr2004 @alraro
-/docs/requirements.md    @apr2004 @alraro
+*                         @apr2004 @mmartinmaria
+/src/backend/             @apr2004 @mmartinmaria @alraro
+/src/frontend/            @apr2004 @mmartinmaria
+/src/management-panel/    @apr2004 @mmartinmaria @daniiroblees
+/.github/                 @apr2004 @mmartinmaria @daniiroblees
+/docker-compose.yml       @apr2004 @mmartinmaria @daniiroblees
+**/Dockerfile             @apr2004 @mmartinmaria @daniiroblees
+/src/backend/src/test/    @apr2004 @mmartinmaria @alraro
+/docs/adr/                @apr2004 @mmartinmaria @alraro
+/docs/requirements.md     @apr2004 @mmartinmaria @alraro

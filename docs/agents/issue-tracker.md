@@ -2,6 +2,30 @@
 
 Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all operations.
 
+## Creating an issue
+
+Every issue follows the checklist in [`CONTRIBUTING.md` → Crear un issue](../../CONTRIBUTING.md#crear-un-issue): Conventional Commits title, template, issue type, `✅ ready` or `🔍 triage`, `priority: …`, `area: …`, assignee (the area owner), milestone, sub-issue of the delivery epic and *blocked by* dependencies. Copy label names exactly from `gh label list` (they include emojis). Look up the area owner in `CONTRIBUTING.md` → Áreas de desarrollo, and the current milestone with `gh api repos/{owner}/{repo}/milestones --jq '.[] | select(.state=="open") | .title'`.
+
+```bash
+# 1. Create it with labels, assignee and milestone
+gh issue create --title "feat: …" --body-file body.md \
+  --label "✅ ready" --label "priority: 🟡 medium" --label "area: 📱 mobile" \
+  --assignee <owner> --milestone "Entrega 2"
+
+# 2. Issue type: Bug, Feature or Task
+gh api --method PATCH repos/{owner}/{repo}/issues/<n> -f type=Feature
+
+# 3. Sub-issue of the delivery epic (database id, not #number)
+gh api --method POST repos/{owner}/{repo}/issues/<epic>/sub_issues \
+  -F sub_issue_id=$(gh api repos/{owner}/{repo}/issues/<n> --jq .id)
+
+# 4. Blocked by: one call per blocker
+gh api --method POST repos/{owner}/{repo}/issues/<n>/dependencies/blocked_by \
+  -F issue_id=$(gh api repos/{owner}/{repo}/issues/<blocker> --jq .id)
+```
+
+Check the result with `gh issue view <n> --json labels,assignees,milestone` and `gh api repos/{owner}/{repo}/issues/<n> --jq '.type.name'`.
+
 ## Conventions
 
 - **Create an issue**: `gh issue create --title "..." --body "..."`. Use a heredoc for multi-line bodies.

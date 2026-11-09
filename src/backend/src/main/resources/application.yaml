@@ -16,3 +16,6 @@ server:
 urbanpulse:
   cors:
     management-panel-origin: ${MANAGEMENT_PANEL_ORIGIN:http://localhost:5173}
+  security:
+    # Required, at least 32 bytes. No default on purpose: the backend does not start without it.
+    jwt-secret: ${JWT_SECRET:}
