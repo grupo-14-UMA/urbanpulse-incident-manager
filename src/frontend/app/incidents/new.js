@@ -177,6 +177,15 @@ function NewIncidentForm() {
     setCategoryId((current) => (current === id ? null : id));
   }
 
+  if (categoriesState === 'loading' && categories.length === 0) {
+    return (
+      <View style={styles.centered} accessibilityLiveRegion="polite">
+        <ActivityIndicator size="large" color={COLORS.primary} />
+        <Text style={styles.centeredMessage}>Cargando categorías…</Text>
+      </View>
+    );
+  }
+
   if (categoriesError && categories.length === 0) {
     return (
       <View style={styles.centered} accessibilityLiveRegion="polite">
