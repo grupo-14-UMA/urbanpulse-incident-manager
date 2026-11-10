@@ -12,8 +12,8 @@ blocked() {
   cat >&2 <<'EOF'
 Blocked: issues are created only through the create-issue skill
 (.claude/skills/create-issue/SKILL.md), whose script validates and fills every field.
-Use `create-issue.sh create` or `create-issue.sh promote <n>`. Editing, commenting on
-and closing existing issues stays allowed.
+Use `create-issue.sh create` (also epics) and `create-issue.sh update <n>` for checklist
+fields. Commenting on, closing and labelling existing issues stays allowed.
 EOF
   exit 2
 }
