@@ -27,15 +27,19 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-urbanpulse}
       MANAGEMENT_PANEL_ORIGIN: ${MANAGEMENT_PANEL_ORIGIN:-http://localhost:5173}
       SERVER_PORT: 8080
+      PHOTOS_DIR: /var/lib/urbanpulse/photos
       # Development-only secret. A real deployment sets its own JWT_SECRET.
       JWT_SECRET: ${JWT_SECRET:-dev-only-jwt-secret-change-me-in-any-deployment}
       # Adds the seeded staff accounts (development only, never in a real deployment).
       SPRING_FLYWAY_LOCATIONS: classpath:db/migration,classpath:db/dev-seed
     ports:
       - "${SERVER_PORT:-8080}:8080"
+    volumes:
+      - incident_photos:/var/lib/urbanpulse/photos
     depends_on:
       db:
         condition: service_healthy
 
 volumes:
   postgres_data:
+  incident_photos:

@@ -1,6 +1,7 @@
 package es.uma.urbanpulse.incident.api;
 
 import java.time.Instant;
+import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 
@@ -24,5 +25,25 @@ public record IncidentResponse(
 				format = "date-time",
 				example = "2026-11-07T10:15:30.123Z")
 		@JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSX", timezone = "UTC")
-		Instant createdAt) {
+		Instant createdAt,
+		@Schema(description = "Fotografías adjuntas a la incidencia (incluidas al consultar su detalle).")
+		List<IncidentPhotoResponse> photos) {
+
+	public IncidentResponse {
+		photos = photos == null ? List.of() : List.copyOf(photos);
+	}
+
+	public IncidentResponse(
+			Integer id,
+			String title,
+			String description,
+			double latitude,
+			double longitude,
+			Integer categoryId,
+			String categoryName,
+			IncidentStatus status,
+			Instant createdAt) {
+		this(id, title, description, latitude, longitude, categoryId, categoryName, status, createdAt, List.of());
+	}
+
 }
