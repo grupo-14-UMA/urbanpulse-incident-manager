@@ -30,3 +30,9 @@ type: Bug
 ## Environment
 
 <!-- Include the operating system, browser, application version, and relevant dependencies. -->
+
+## Acceptance criteria
+
+<!-- What can be seen or measured from outside once it is fixed, including the quality attributes that apply. -->
+
+- [ ] Following the steps to reproduce gives the expected result.
