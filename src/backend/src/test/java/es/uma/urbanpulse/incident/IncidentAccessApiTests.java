@@ -28,6 +28,9 @@ import es.uma.urbanpulse.incident.api.IncidentResponse;
 @Import(PostgisContainerConfiguration.class)
 class IncidentAccessApiTests {
 
+	private static final String MAP_BOUNDS =
+			"/api/incidents?west=-4.45&south=36.68&east=-4.38&north=36.77";
+
 	private static final Map<String, Object> NEW_INCIDENT = Map.of(
 			"title", "Farola fundida",
 			"description", "La farola lleva varias noches sin encenderse.",
@@ -107,10 +110,10 @@ class IncidentAccessApiTests {
 	}
 
 	@Test
-	void everyRoleListsIncidentsAndCategories() {
+	void everyRoleLoadsMapIncidentsAndCategories() {
 		for (AuthResponse user : new AuthResponse[] { newCitizen(this.client), login(this.client, OPERATOR_EMAIL),
 				login(this.client, TECHNICIAN_EMAIL) }) {
-			this.client.get().uri("/api/incidents").header("Authorization", bearer(user)).exchange()
+			this.client.get().uri(MAP_BOUNDS).header("Authorization", bearer(user)).exchange()
 				.expectStatus().isOk();
 			this.client.get().uri("/api/categories").header("Authorization", bearer(user)).exchange()
 				.expectStatus().isOk();

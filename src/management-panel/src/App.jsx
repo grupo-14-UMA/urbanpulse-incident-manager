@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from './auth/AuthContext.jsx';
 import ProtectedRoute from './auth/ProtectedRoute.jsx';
 import { checkApiConnection, getApiBaseUrl } from './api.js';
 import IncidentListPage from './pages/IncidentListPage.jsx';
+import IncidentDetailPage from './pages/IncidentDetailPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import MapPage from './pages/MapPage.jsx';
 import PlaceholderPage from './pages/PlaceholderPage.jsx';
@@ -12,7 +13,6 @@ import PlaceholderPage from './pages/PlaceholderPage.jsx';
 const navigation = [
   { label: 'Mapa', to: '/', icon: '⌖', end: true },
   { label: 'Incidencias', to: '/incidents', icon: '▤' },
-  { label: 'Detalle', to: '/incidents/demo', icon: '≡' },
 ];
 
 function pageTitle(pathname) {
@@ -101,7 +101,7 @@ function PanelRoutes() {
             <Route element={<MapPage />} path="/" />
             <Route element={<IncidentListPage />} path="/incidents" />
             <Route
-              element={<PlaceholderPage description="Aquí se consultará y gestionará cada incidencia." title="Detalle de incidencia" />}
+              element={<IncidentDetailPage />}
               path="/incidents/:incidentId"
             />
             <Route element={<PlaceholderPage description="La página que buscas no existe." title="Página no encontrada" />} path="*" />
