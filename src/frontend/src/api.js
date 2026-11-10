@@ -2,6 +2,9 @@ import { API_URL } from './config';
 
 const BASE_URL = typeof API_URL === 'string' ? API_URL.trim().replace(/\/+$/, '') : '';
 const REQUEST_TIMEOUT_MS = 10000;
+const RETRY_ATTEMPTS = 3;
+const RETRY_DELAYS_MS = [1000, 3000];
+const RETRY_BUDGET_MS = 15000;
 const CONNECTION_ERROR =
   'No se pudo conectar con UrbanPulse. Comprueba tu conexión e inténtalo de nuevo.';
 const SERVER_ERROR = 'Algo ha fallado en UrbanPulse. Inténtalo de nuevo en unos minutos.';
@@ -10,19 +13,20 @@ let accessToken = null;
 let unauthorizedHandler = null;
 
 class ApiError extends Error {
-  constructor(message, { status, payload, cause } = {}) {
+  constructor(message, { kind = 'unexpected', status, payload, cause } = {}) {
     super(message);
     this.name = 'ApiError';
+    this.kind = kind;
     this.status = status;
     this.payload = payload;
     this.cause = cause;
   }
 }
 
-function logFailure(method, path, status, startedAt, type) {
+function logFailure(method, path, status, startedAt, kind, attempt) {
   const statusLabel = status ?? 'sin respuesta';
   const durationMs = Date.now() - startedAt;
-  console.warn('[api] ' + method + ' ' + path + ' -> ' + statusLabel + ' (' + durationMs + ' ms, ' + type + ')');
+  console.warn('[api] ' + method + ' ' + path + ' -> ' + statusLabel + ' (' + durationMs + ' ms, ' + kind + ', intento ' + attempt + ')');
 }
 
 function getResponseErrorMessage(payload, status) {
@@ -40,23 +44,33 @@ function getResponseErrorMessage(payload, status) {
 function errorForResponse(payload, status, preserveUnauthorizedMessage) {
   if (status === 401) {
     if (preserveUnauthorizedMessage) {
-      return new ApiError(getResponseErrorMessage(payload, status), { status, payload });
+      return new ApiError(getResponseErrorMessage(payload, status), { kind: 'unauthorized', status, payload });
     }
-    return new ApiError('Tu sesión ha caducado. Vuelve a iniciar sesión.', { status, payload });
+    return new ApiError('Tu sesión ha caducado. Vuelve a iniciar sesión.', { kind: 'unauthorized', status, payload });
   }
   if (status === 403) {
-    return new ApiError('No tienes permiso para hacer esto.', { status, payload });
+    return new ApiError('No tienes permiso para hacer esto.', { kind: 'forbidden', status, payload });
   }
   if (status >= 500) {
-    return new ApiError(SERVER_ERROR, { status, payload });
+    return new ApiError(SERVER_ERROR, { kind: 'server', status, payload });
   }
   if (status === 404) {
-    return new ApiError(getResponseErrorMessage(payload, status), { status, payload });
+    return new ApiError(getResponseErrorMessage(payload, status) || 'Esta incidencia no existe.', { kind: 'notFound', status, payload });
   }
   return new ApiError(getResponseErrorMessage(payload, status) || 'Revisa los datos e inténtalo de nuevo.', {
+    kind: 'invalid',
     status,
     payload,
   });
+}
+
+function isRetryable(error) {
+  return error?.kind === 'connection' || (error?.kind === 'server' && [502, 503, 504].includes(error.status));
+}
+
+function retryDelay(attempt) {
+  const baseDelay = RETRY_DELAYS_MS[attempt - 1];
+  return baseDelay * (0.5 + Math.random());
 }
 
 export function setAccessToken(token) {
@@ -67,7 +81,7 @@ export function setUnauthorizedHandler(handler) {
   unauthorizedHandler = typeof handler === 'function' ? handler : null;
 }
 
-async function request(
+async function requestOnce(
   path,
   {
     method = 'GET',
@@ -78,9 +92,12 @@ async function request(
     handleUnauthorized = true,
     preserveUnauthorizedMessage = false,
   } = {},
+  attempt,
 ) {
   if (!BASE_URL) {
-    throw new ApiError(CONNECTION_ERROR);
+    const error = new ApiError(CONNECTION_ERROR, { kind: 'connection' });
+    logFailure(method, path, undefined, Date.now(), error.kind, attempt);
+    throw error;
   }
 
   const startedAt = Date.now();
@@ -119,9 +136,8 @@ async function request(
     if (requestSignal?.aborted && !timedOut) {
       throw cause;
     }
-    const message = CONNECTION_ERROR;
-    const error = new ApiError(message, { cause });
-    logFailure(method, path, undefined, startedAt, timedOut ? 'timeout' : 'network');
+    const error = new ApiError(CONNECTION_ERROR, { kind: 'connection', cause });
+    logFailure(method, path, undefined, startedAt, 'connection', attempt);
     throw error;
   } finally {
     clearTimeout(timeout);
@@ -137,7 +153,7 @@ async function request(
         const error = new ApiError(SERVER_ERROR, {
           status: response.status,
         });
-        logFailure(method, path, response.status, startedAt, 'unexpected-response');
+        logFailure(method, path, response.status, startedAt, 'unexpected', attempt);
         throw error;
       }
     }
@@ -145,7 +161,7 @@ async function request(
 
   if (!response.ok) {
     const error = errorForResponse(payload, response.status, preserveUnauthorizedMessage);
-    logFailure(method, path, response.status, startedAt, 'http-' + response.status);
+    logFailure(method, path, response.status, startedAt, error.kind, attempt);
     if (response.status === 401 && handleUnauthorized && unauthorizedHandler) {
       void unauthorizedHandler();
     }
@@ -153,6 +169,28 @@ async function request(
   }
 
   return payload;
+}
+
+async function request(path, options = {}) {
+  const method = options.method ?? 'GET';
+  if (!BASE_URL) {
+    return requestOnce(path, options, 1);
+  }
+  const startedAt = Date.now();
+  let attempt = 1;
+  while (true) {
+    try {
+      return await requestOnce(path, options, attempt);
+    } catch (error) {
+      const canRetry = method === 'GET' && attempt < RETRY_ATTEMPTS && isRetryable(error);
+      const delay = canRetry ? retryDelay(attempt) : 0;
+      if (!canRetry || options.signal?.aborted || Date.now() - startedAt + delay >= RETRY_BUDGET_MS) {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      attempt += 1;
+    }
+  }
 }
 
 export async function register({ name, email, password }) {
@@ -175,28 +213,28 @@ export async function refresh() {
 
 function validateCreatedAt(createdAt) {
   if (typeof createdAt !== 'string' || Number.isNaN(new Date(createdAt).getTime())) {
-    throw new ApiError(INVALID_CREATED_AT_ERROR);
+    throw new ApiError(INVALID_CREATED_AT_ERROR, { kind: 'unexpected' });
   }
 }
 
 function expectIncident(incident) {
   if (!incident || typeof incident !== 'object' || Array.isArray(incident)) {
-    throw new ApiError('El backend devolvió una incidencia no válida.');
+    throw new ApiError(SERVER_ERROR, { kind: 'unexpected' });
   }
 
   validateCreatedAt(incident.createdAt);
   return incident;
 }
 
-function expectArray(payload, resource) {
+function expectArray(payload) {
   if (!Array.isArray(payload)) {
-    throw new ApiError('El backend devolvió una lista de ' + resource + ' no válida.');
+    throw new ApiError(SERVER_ERROR, { kind: 'unexpected' });
   }
   return payload;
 }
 
 export async function getCategories() {
-  return expectArray(await request('/api/categories'), 'categorías');
+  return expectArray(await request('/api/categories'));
 }
 
 export async function getIncidentsWithinBounds(bounds, { signal } = {}) {
@@ -276,7 +314,7 @@ export async function uploadIncidentPhoto(incidentId, photo) {
   );
   const uploaded = Array.isArray(payload) ? payload[0] : null;
   if (!uploaded || typeof uploaded !== 'object' || typeof uploaded.url !== 'string') {
-    throw new ApiError('El backend devolvió una foto adjunta no válida.');
+    throw new ApiError(SERVER_ERROR, { kind: 'unexpected' });
   }
   return uploaded;
 }

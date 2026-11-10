@@ -1,5 +1,4 @@
 import { Redirect, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -18,6 +17,7 @@ import { categoryLabel, statusLabel } from '../../src/labels';
 import { OSM_MAP_PROPS, OsmAttribution, OsmTiles, STREET_DELTA } from '../../src/map';
 import { COLORS } from '../../src/theme';
 import { useAuth } from '../../src/AuthContext';
+import { useLoad } from '../../src/useLoad';
 
 export default function IncidentDetailScreen() {
   const { status, session } = useAuth();
@@ -35,33 +35,7 @@ export default function IncidentDetailScreen() {
 
 function IncidentDetailContent({ id }) {
   const insets = useSafeAreaInsets();
-  // 'loading' | 'loaded' | 'notFound' | 'error'
-  const [state, setState] = useState('loading');
-  const [incident, setIncident] = useState(null);
-  const [errorMessage, setErrorMessage] = useState(null);
-  const [attempt, setAttempt] = useState(0);
-
-  // Loaded by id, not passed through navigation, so it follows GET /api/incidents/{id}
-  // and works after a deep link or a reload.
-  useEffect(() => {
-    let active = true;
-    getIncident(id)
-      .then((result) => {
-        if (active) {
-          setIncident(result);
-          setState('loaded');
-        }
-      })
-      .catch((error) => {
-        if (active) {
-          setState(error?.status === 404 ? 'notFound' : 'error');
-          setErrorMessage(error?.message || 'Algo ha fallado en UrbanPulse. Inténtalo de nuevo en unos minutos.');
-        }
-      });
-    return () => {
-      active = false;
-    };
-  }, [id, attempt]);
+  const { status: state, data: incident, error, reload } = useLoad(() => getIncident(id));
 
   if (state === 'loading') {
     return (
@@ -82,13 +56,10 @@ function IncidentDetailContent({ id }) {
   if (state === 'error') {
     return (
       <View style={styles.centered}>
-        <Text style={styles.message}>{errorMessage}</Text>
+        <Text style={styles.message}>{error?.message}</Text>
         <Pressable
           style={({ pressed }) => [styles.retryButton, pressed && styles.retryButtonPressed]}
-          onPress={() => {
-            setState('loading');
-            setAttempt((n) => n + 1);
-          }}
+          onPress={reload}
           accessibilityRole="button"
         >
           <Text style={styles.retryButtonText}>Reintentar</Text>
@@ -106,6 +77,14 @@ function IncidentDetailContent({ id }) {
       contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
       contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'automatic' : undefined}
     >
+      {error && (
+        <View style={styles.notice}>
+          <Text style={styles.noticeText}>{error.message}</Text>
+          <Pressable onPress={reload} accessibilityRole="button">
+            <Text style={styles.retryButtonText}>Reintentar</Text>
+          </Pressable>
+        </View>
+      )}
       <Text style={styles.title}>{incident.title}</Text>
 
       <Text style={styles.label}>Descripción</Text>
@@ -183,6 +162,16 @@ const styles = StyleSheet.create({
   message: {
     fontSize: 16,
     color: COLORS.text,
+    textAlign: 'center',
+  },
+  notice: {
+    marginBottom: 12,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: COLORS.errorSoft,
+  },
+  noticeText: {
+    color: COLORS.error,
     textAlign: 'center',
   },
   retryButton: {

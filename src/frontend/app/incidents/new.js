@@ -34,6 +34,7 @@ import {
 import { COLORS } from '../../src/theme';
 import { useAuth } from '../../src/AuthContext';
 import { isValid, validateIncident } from '../../src/validateIncident';
+import { useLoad } from '../../src/useLoad';
 
 // Some phones never return a fix indoors; stop waiting and let the citizen tap.
 const POSITION_TIMEOUT_MS = 10000;
@@ -89,36 +90,13 @@ function NewIncidentForm() {
   const [photoMessage, setPhotoMessage] = useState(null);
   const [createdIncident, setCreatedIncident] = useState(null);
 
-  const [categories, setCategories] = useState([]);
-  // 'loading' | 'loaded' | 'error'
-  const [categoriesState, setCategoriesState] = useState('loading');
-  const [categoriesError, setCategoriesError] = useState(null);
-  const [categoriesAttempt, setCategoriesAttempt] = useState(0);
+  const { status: categoriesState, data: categories = [], error: categoriesError, reload: reloadCategories } = useLoad(getCategories);
   const [locating, setLocating] = useState(true);
+  const [locationError, setLocationError] = useState(null);
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
   const [sending, setSending] = useState(false);
   const [submitError, setSubmitError] = useState(null);
-
-  useEffect(() => {
-    let active = true;
-    getCategories()
-      .then((result) => {
-        if (active) {
-          setCategories(result);
-          setCategoriesState('loaded');
-        }
-      })
-      .catch((error) => {
-        if (active) {
-          setCategoriesError(error?.message || 'No se pudieron cargar las categorías.');
-          setCategoriesState('error');
-        }
-      });
-    return () => {
-      active = false;
-    };
-  }, [categoriesAttempt]);
 
   useEffect(() => {
     let active = true;
@@ -130,8 +108,10 @@ function NewIncidentForm() {
         }
         setLocating(false);
         if (!coordinate || placedByHandRef.current) {
+          if (!coordinate) setLocationError('No se pudo obtener tu ubicación. Toca el mapa para marcarla.');
           return;
         }
+        setLocationError(null);
         setLocation(coordinate);
         const region = { ...coordinate, latitudeDelta: STREET_DELTA, longitudeDelta: STREET_DELTA };
         // Before the map is ready animateToRegion is ignored, so leave it for onMapReady.
@@ -256,6 +236,33 @@ function NewIncidentForm() {
     setCategoryId((current) => (current === id ? null : id));
   }
 
+  if (categoriesState === 'loading' && categories.length === 0) {
+    return (
+      <View style={styles.centered} accessibilityLiveRegion="polite">
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
+
+  if (categoriesError && categories.length === 0) {
+    return (
+      <View style={styles.centered} accessibilityLiveRegion="polite">
+        <Text style={styles.centeredMessage}>{categoriesError.message}</Text>
+        <Pressable
+          style={({ pressed }) => [
+            styles.retryButton,
+            styles.centeredRetryButton,
+            pressed && styles.retryButtonPressed,
+          ]}
+          onPress={reloadCategories}
+          accessibilityRole="button"
+        >
+          <Text style={styles.retryButtonText}>Reintentar</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   return (
     <ScrollView
       style={styles.screen}
@@ -311,29 +318,12 @@ function NewIncidentForm() {
       {categoriesState === 'loading' && (
         <Text style={styles.categoryStatus}>Cargando categorías…</Text>
       )}
-      {categoriesState === 'error' && (
-        <>
-          <Text style={styles.errorText}>{categoriesError}</Text>
-          <Pressable
-            style={({ pressed }) => [
-              styles.retryButton,
-              pressed && styles.retryButtonPressed,
-            ]}
-            onPress={() => {
-              setCategoriesState('loading');
-              setCategoriesAttempt((attempt) => attempt + 1);
-            }}
-            accessibilityRole="button"
-          >
-            <Text style={styles.retryButtonText}>Reintentar</Text>
-          </Pressable>
-        </>
-      )}
       {categoriesState === 'loaded' && categories.length === 0 && (
         <Text style={styles.categoryStatus}>No hay categorías disponibles.</Text>
       )}
 
       <Text style={styles.label}>Localización</Text>
+      {locationError && <Text style={styles.errorText}>{locationError}</Text>}
       <View
         style={[styles.mapContainer, errors.location && styles.mapContainerError]}
         // Freeze the form while a finger is on the map, so the gesture moves the map.
@@ -487,6 +477,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: COLORS.surface,
   },
+  centeredMessage: {
+    paddingHorizontal: 24,
+    fontSize: 16,
+    color: COLORS.text,
+    textAlign: 'center',
+  },
   content: {
     padding: 16,
   },
@@ -537,6 +533,9 @@ const styles = StyleSheet.create({
   },
   retryButtonPressed: {
     backgroundColor: COLORS.primaryPressed,
+  },
+  centeredRetryButton: {
+    alignSelf: 'center',
   },
   retryButtonText: {
     color: COLORS.onPrimary,

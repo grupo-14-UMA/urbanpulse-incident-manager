@@ -47,17 +47,54 @@ describe('mobile API client', () => {
   });
 
   test('maps a network failure to the connection error', async () => {
-    global.fetch.mockRejectedValueOnce(new Error('socket closed'));
+    jest.useFakeTimers();
+    jest.spyOn(Math, 'random').mockReturnValue(0.5);
+    global.fetch
+      .mockRejectedValueOnce(new Error('socket closed'))
+      .mockRejectedValueOnce(new Error('socket closed'))
+      .mockRejectedValueOnce(new Error('socket closed'));
     const { getCategories } = require('./api');
-
-    await expect(getCategories()).rejects.toMatchObject({
+    const request = getCategories();
+    const rejection = expect(request).rejects.toMatchObject({
       message: 'No se pudo conectar con UrbanPulse. Comprueba tu conexión e inténtalo de nuevo.',
     });
+
+    await jest.advanceTimersByTimeAsync(1000);
+    await jest.advanceTimersByTimeAsync(3000);
+    await rejection;
+    Math.random.mockRestore();
+  });
+
+  test('retries transient GET failures with bounded backoff', async () => {
+    jest.useFakeTimers();
+    jest.spyOn(Math, 'random').mockReturnValue(0.5);
+    global.fetch
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce({ ok: true, status: 200, text: async () => '[]' });
+    const { getCategories } = require('./api');
+    const request = getCategories();
+
+    await jest.advanceTimersByTimeAsync(1500);
+    await jest.advanceTimersByTimeAsync(4500);
+    await expect(request).resolves.toEqual([]);
+    expect(global.fetch).toHaveBeenCalledTimes(3);
+    Math.random.mockRestore();
+  });
+
+  test('does not retry writes after a transient failure', async () => {
+    global.fetch.mockRejectedValueOnce(new Error('offline'));
+    const { createIncident } = require('./api');
+
+    await expect(
+      createIncident({ title: 'Farola', description: 'Fundida', latitude: 36.72, longitude: -4.42 }),
+    ).rejects.toMatchObject({ kind: 'connection' });
+    expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
   test('aborts a request that exceeds the timeout', async () => {
     jest.useFakeTimers();
-    global.fetch.mockImplementationOnce((_url, { signal }) =>
+    global.fetch.mockImplementation((_url, { signal }) =>
       new Promise((_resolve, reject) => {
         signal.addEventListener('abort', () => reject(new Error('aborted')));
       }),
@@ -68,7 +105,9 @@ describe('mobile API client', () => {
       message: 'No se pudo conectar con UrbanPulse. Comprueba tu conexión e inténtalo de nuevo.',
     });
 
-    await jest.advanceTimersByTimeAsync(10000);
+    // The first timeout is retried once after 1 s; the 15 s budget prevents
+    // starting a third attempt after the second timeout.
+    await jest.advanceTimersByTimeAsync(22000);
     await rejection;
   });
 
