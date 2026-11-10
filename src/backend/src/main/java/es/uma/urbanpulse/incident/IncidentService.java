@@ -114,7 +114,7 @@ public class IncidentService {
 			Integer incidentId,
 			List<MultipartFile> files,
 			TokenSubject caller) {
-		Incident incident = incidentRepository.findById(incidentId)
+		Incident incident = incidentRepository.findByIdForUpdate(incidentId)
 				.orElseThrow(() -> new IncidentNotFoundException(incidentId));
 		verifyUploadPermission(incident, caller);
 
@@ -181,16 +181,11 @@ public class IncidentService {
 	}
 
 	private static void verifyUploadPermission(Incident incident, TokenSubject caller) {
-		if (caller.role() == Role.CITIZEN) {
-			if (incident.getReporter() == null || !incident.getReporter().getId().equals(caller.userId())) {
-				throw new AccessDeniedException("Citizen is not the reporter of incident " + incident.getId());
-			}
-			return;
+		if (caller.role() != Role.CITIZEN
+				|| incident.getReporter() == null
+				|| !incident.getReporter().getId().equals(caller.userId())) {
+			throw new AccessDeniedException("User is not the reporting citizen of incident " + incident.getId());
 		}
-		if (caller.role() == Role.TECHNICIAN) {
-			return;
-		}
-		throw new AccessDeniedException("Role " + caller.role() + " cannot upload incident photos");
 	}
 
 	private static byte[] readBytes(MultipartFile file) {

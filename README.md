@@ -24,7 +24,7 @@ Plataforma cloud para comunicar, gestionar y analizar incidencias urbanas en Má
 | React Native + Expo | Aplicación móvil | [ADR-0003](docs/adr/0003-react-native-con-expo-para-frontend.md) |
 | React + Vite + Leaflet | Panel de gestión web | [ADR-0014](docs/adr/0014-aplicacion-movil-y-panel-de-gestion-web.md), [ADR-0015](docs/adr/0015-react-vite-y-leaflet-para-panel-de-gestion.md) |
 | react-native-maps + OpenStreetMap | Mapa de incidencias en la aplicación móvil | [ADR-0004](docs/adr/0004-openstreetmap-como-fuente-de-mapas.md), [ADR-0005](docs/adr/0005-react-native-maps-como-renderizador.md) |
-| Docker Compose | Entorno local | [ADR-0012](docs/adr/0012-docker-compose-para-desarrollo-local.md) |
+| Docker Compose | Entorno local y volumen de fotografías | [ADR-0012](docs/adr/0012-docker-compose-para-desarrollo-local.md), [ADR-0018](docs/adr/0018-almacenamiento-de-fotos-en-volumen-detras-de-interfaz.md) |
 
 ## Puesta en marcha rápida
 

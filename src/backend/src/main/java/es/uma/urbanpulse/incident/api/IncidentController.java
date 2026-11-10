@@ -119,8 +119,8 @@ public class IncidentController {
 
 	@PostMapping(path = "/{id}/photos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	@Operation(
-			summary = "Adjuntar fotografías a una incidencia",
-			description = "Permite adjuntar hasta 3 fotografías en total (JPEG, PNG o WebP, máximo 5 MB cada una).")
+			summary = "Adjuntar fotografías a una incidencia (ciudadano autor)",
+			description = "Permite al ciudadano que registró la incidencia adjuntar hasta 3 fotografías en total (JPEG, PNG o WebP, máximo 5 MB cada una).")
 	@ApiResponses({
 			@ApiResponse(responseCode = "201", description = "Fotografías almacenadas."),
 			@ApiResponse(

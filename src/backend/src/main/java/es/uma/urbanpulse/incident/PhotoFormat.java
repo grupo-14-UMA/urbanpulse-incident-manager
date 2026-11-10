@@ -82,15 +82,13 @@ enum PhotoFormat {
 		if (content.length > MAX_PHOTO_SIZE_BYTES) {
 			throw new InvalidIncidentPhotoException(MAX_SIZE_MESSAGE);
 		}
-		PhotoFormat byHeader = detectByHeader(content);
-		if (byHeader == null) {
+		if (declaredContentType == null || declaredContentType.isBlank()) {
 			throw new InvalidIncidentPhotoException(UNSUPPORTED_TYPE_MESSAGE);
 		}
-		if (declaredContentType != null && !declaredContentType.isBlank()) {
-			String normalized = normalizeContentType(declaredContentType);
-			if (!normalized.equals("application/octet-stream") && !normalized.equals(byHeader.mediaType)) {
-				throw new InvalidIncidentPhotoException(UNSUPPORTED_TYPE_MESSAGE);
-			}
+		String normalized = normalizeContentType(declaredContentType);
+		PhotoFormat byHeader = detectByHeader(content);
+		if (byHeader == null || !normalized.equals(byHeader.mediaType)) {
+			throw new InvalidIncidentPhotoException(UNSUPPORTED_TYPE_MESSAGE);
 		}
 		return byHeader;
 	}

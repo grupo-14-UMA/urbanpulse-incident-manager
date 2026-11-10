@@ -10,8 +10,15 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -114,33 +121,20 @@ class IncidentPhotoApiTests {
 	}
 
 	@Test
-	void technicianCanAttachResolutionPhoto() {
-		AuthResponse citizen = newCitizen(this.client);
-		IncidentResponse incident = createIncident(citizen);
-		AuthResponse technician = login(this.client, TECHNICIAN_EMAIL);
-
-		MultiValueMap<String, Object> multipart = new LinkedMultiValueMap<>();
-		multipart.add("photos", filePart("reparacion.jpg", MediaType.IMAGE_JPEG, SAMPLE_JPEG));
-
-		this.client.post()
-				.uri("/api/incidents/{id}/photos", incident.id())
-				.header("Authorization", bearer(technician))
-				.contentType(MediaType.MULTIPART_FORM_DATA)
-				.body(multipart)
-				.exchange()
-				.expectStatus()
-				.isCreated();
-	}
-
-	@Test
-	void rejectsWrongFileTypesAndDisguisedFiles() {
+	void rejectsWrongFileTypesDisguisedFilesAndMissingOrMismatchedMimeTypes() {
 		AuthResponse citizen = newCitizen(this.client);
 		IncidentResponse incident = createIncident(citizen);
 		byte[] textBytes = "not-an-image".getBytes(StandardCharsets.UTF_8);
 
-		for (MediaType declaredType : List.of(MediaType.TEXT_PLAIN, MediaType.IMAGE_JPEG)) {
+		List<HttpEntity<ByteArrayResource>> invalidParts = List.of(
+				filePart("archivo.txt", MediaType.TEXT_PLAIN, textBytes),
+				filePart("falso.jpg", MediaType.IMAGE_JPEG, textBytes),
+				filePart("binario.bin", MediaType.APPLICATION_OCTET_STREAM, SAMPLE_JPEG),
+				filePart("incoherente.png", MediaType.IMAGE_PNG, SAMPLE_JPEG));
+
+		for (HttpEntity<ByteArrayResource> part : invalidParts) {
 			MultiValueMap<String, Object> multipart = new LinkedMultiValueMap<>();
-			multipart.add("photos", filePart("archivo.txt", declaredType, textBytes));
+			multipart.add("photos", part);
 
 			this.client.post()
 					.uri("/api/incidents/{id}/photos", incident.id())
@@ -153,6 +147,11 @@ class IncidentPhotoApiTests {
 					.expectBody()
 					.jsonPath("$.message").isEqualTo("Solo se permiten fotografías en formato JPEG, PNG o WebP.");
 		}
+
+		assertThatThrownBy(() -> PhotoFormat.validate(null, SAMPLE_JPEG))
+				.hasMessage("Solo se permiten fotografías en formato JPEG, PNG o WebP.");
+		assertThatThrownBy(() -> PhotoFormat.validate("   ", SAMPLE_JPEG))
+				.hasMessage("Solo se permiten fotografías en formato JPEG, PNG o WebP.");
 	}
 
 	@Test
@@ -214,13 +213,77 @@ class IncidentPhotoApiTests {
 	}
 
 	@Test
-	void forbidsOtherCitizensAndOperatorsFromUploadingPhotos() {
+	void enforcesThreePhotoLimitUnderConcurrentUploads() throws Exception {
+		AuthResponse citizen = newCitizen(this.client);
+		IncidentResponse incident = createIncident(citizen);
+
+		int threadCount = 5;
+		ExecutorService pool = Executors.newFixedThreadPool(threadCount);
+		CountDownLatch ready = new CountDownLatch(threadCount);
+		CountDownLatch start = new CountDownLatch(1);
+		List<Callable<Integer>> tasks = new ArrayList<>(threadCount);
+
+		for (int i = 0; i < threadCount; i++) {
+			int index = i;
+			tasks.add(() -> {
+				MultiValueMap<String, Object> multipart = new LinkedMultiValueMap<>();
+				multipart.add("photos", filePart("concurrent-" + index + ".jpg", MediaType.IMAGE_JPEG, SAMPLE_JPEG));
+				ready.countDown();
+				start.await(5, TimeUnit.SECONDS);
+				return this.client.post()
+						.uri("/api/incidents/{id}/photos", incident.id())
+						.header("Authorization", bearer(citizen))
+						.contentType(MediaType.MULTIPART_FORM_DATA)
+						.body(multipart)
+						.exchange()
+						.returnResult()
+						.getStatus()
+						.value();
+			});
+		}
+
+		try {
+			List<Future<Integer>> futures = new ArrayList<>(threadCount);
+			for (Callable<Integer> task : tasks) {
+				futures.add(pool.submit(task));
+			}
+			assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+			start.countDown();
+
+			List<Integer> statuses = new ArrayList<>(threadCount);
+			for (Future<Integer> future : futures) {
+				statuses.add(future.get(10, TimeUnit.SECONDS));
+			}
+
+			assertThat(statuses).containsExactlyInAnyOrder(201, 201, 201, 400, 400);
+		}
+		finally {
+			pool.shutdownNow();
+		}
+
+		IncidentResponse detail = this.client.get()
+				.uri("/api/incidents/{id}", incident.id())
+				.header("Authorization", bearer(citizen))
+				.exchange()
+				.expectStatus()
+				.isOk()
+				.expectBody(IncidentResponse.class)
+				.returnResult()
+				.getResponseBody();
+
+		assertThat(detail).isNotNull();
+		assertThat(detail.photos()).hasSize(3);
+	}
+
+	@Test
+	void forbidsOtherCitizensOperatorsAndTechniciansFromUploadingPhotos() {
 		AuthResponse reporter = newCitizen(this.client);
 		AuthResponse otherCitizen = newCitizen(this.client);
 		AuthResponse operator = login(this.client, OPERATOR_EMAIL);
+		AuthResponse technician = login(this.client, TECHNICIAN_EMAIL);
 		IncidentResponse incident = createIncident(reporter);
 
-		for (AuthResponse unauthorized : List.of(otherCitizen, operator)) {
+		for (AuthResponse unauthorized : List.of(otherCitizen, operator, technician)) {
 			MultiValueMap<String, Object> multipart = new LinkedMultiValueMap<>();
 			multipart.add("photos", filePart("foto.jpg", MediaType.IMAGE_JPEG, SAMPLE_JPEG));
 
