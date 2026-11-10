@@ -50,13 +50,14 @@ function ManagementLayout() {
         <nav className="primary-nav" aria-label="Navegación principal">
           {navigation.map((item) => (
             <NavLink
+              aria-label={item.label}
               className={({ isActive }) => `nav-link${isActive ? ' nav-link-active' : ''}`}
               end={item.end}
               key={item.to}
               to={item.to}
             >
               <span className="nav-icon" aria-hidden="true">{item.icon}</span>
-              {item.label}
+              <span className="nav-label">{item.label}</span>
               {item.label === 'Mapa' && <span className="active-indicator" />}
             </NavLink>
           ))}
@@ -85,7 +86,7 @@ function ManagementLayout() {
                 onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
                 type="button"
               >
-                {sidebarCollapsed ? 'Mostrar menú' : 'Ocultar menú'}
+                {sidebarCollapsed ? 'Expandir menú' : 'Reducir menú'}
               </button>
             )}
             <div className={`api-address api-${apiStatus.kind}`} title="Configura esta URL con VITE_API_URL">

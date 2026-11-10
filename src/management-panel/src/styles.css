@@ -29,8 +29,18 @@ a { color: inherit; text-decoration: none; }
   color: #eaf1fa;
   background: #142236;
 }
-.app-shell.sidebar-collapsed .sidebar { display: none; }
-.app-shell.sidebar-collapsed .main-content { margin-left: 0; }
+.app-shell.sidebar-collapsed .sidebar { width: 72px; align-items: center; padding-right: 10px; padding-left: 10px; }
+.app-shell.sidebar-collapsed .main-content { margin-left: 72px; }
+.app-shell.sidebar-collapsed .brand { padding-right: 0; padding-left: 0; }
+.app-shell.sidebar-collapsed .brand-name,
+.app-shell.sidebar-collapsed .workspace-label,
+.app-shell.sidebar-collapsed .nav-label,
+.app-shell.sidebar-collapsed .sidebar-user,
+.app-shell.sidebar-collapsed .city-pin { display: none; }
+.app-shell.sidebar-collapsed .primary-nav { width: 100%; }
+.app-shell.sidebar-collapsed .nav-link { justify-content: center; padding: 0; }
+.app-shell.sidebar-collapsed .nav-icon { width: auto; }
+.app-shell.sidebar-collapsed .sidebar-bottom { justify-content: center; padding-right: 0; padding-left: 0; }
 .brand { display: flex; align-items: center; gap: 11px; padding: 2px 8px; }
 .brand-mark {
   display: grid;
@@ -241,6 +251,9 @@ h1 { margin-bottom: 0; margin-top: 7px; color: #19293c; font-family: 'Manrope', 
 .sidebar-user strong, .sidebar-user small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .logout-button { display: grid; width: 32px; height: 32px; flex: 0 0 auto; place-items: center; border: 1px solid #33465d; border-radius: 8px; color: #dbe6f0; background: transparent; cursor: pointer; font-size: 17px; }
 .logout-button:hover { color: #8be2c1; background: #1d3049; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; clip-path: inset(50%); }
+.incident-detail-button { display: inline-flex; min-height: 30px; align-items: center; padding: 0 9px; border: 1px solid #cfe9dd; border-radius: 7px; color: #278968; background: #f5fcf8; font-size: 10px; font-weight: 700; }
+.incident-detail-button:hover, .incident-detail-button:focus-visible { border-color: #83d4b4; background: #eaf8f1; }
 
 @media (max-width: 760px) {
   .sidebar { position: static; width: 100%; padding: 14px 16px 11px; }
@@ -252,6 +265,8 @@ h1 { margin-bottom: 0; margin-top: 7px; color: #19293c; font-family: 'Manrope', 
   .active-indicator { display: none; }
   .sidebar-bottom { margin-top: 8px; padding: 9px 3px 0; border-top: 1px solid #2a3a4f; }
   .main-content { min-height: calc(100vh - 104px); margin-left: 0; padding: 0 16px 20px; }
+  .app-shell.sidebar-collapsed .sidebar { display: none; }
+  .app-shell.sidebar-collapsed .main-content { margin-left: 0; }
   .topbar { min-height: 91px; }
   .api-address { gap: 6px; }
   .api-label { display: none; }

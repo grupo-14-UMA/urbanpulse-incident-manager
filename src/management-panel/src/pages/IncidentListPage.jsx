@@ -193,6 +193,7 @@ export default function IncidentListPage() {
                   <th scope="col">Estado</th>
                   <th scope="col">Prioridad</th>
                   <th scope="col">Fecha de registro</th>
+                  <th scope="col"><span className="visually-hidden">Acciones</span></th>
                 </tr>
               </thead>
               <tbody aria-busy={loading}>
@@ -211,6 +212,11 @@ export default function IncidentListPage() {
                     <td><span className={`incident-status status-${incident.status.toLowerCase()}`}>{STATUS_LABELS[incident.status]}</span></td>
                     <td><span className={`incident-priority priority-${incident.priority.toLowerCase()}`}><i />{PRIORITY_LABELS[incident.priority]}</span></td>
                     <td>{formatDate(incident.createdAt)}</td>
+                    <td>
+                      <Link className="incident-detail-button" to={`/incidents/${incident.id}`}>
+                        Ver detalle
+                      </Link>
+                    </td>
                   </tr>
                 ))}
               </tbody>
