@@ -12,8 +12,14 @@ import PlaceholderPage from './pages/PlaceholderPage.jsx';
 
 const navigation = [
   { label: 'Mapa', to: '/', icon: '⌖', end: true },
-  { label: 'Incidencias', to: '/incidents', icon: '▤' },
+  { label: 'Incidencias', to: '/incidents', icon: '▤', end: true },
 ];
+
+function isNavigationActive(item, pathname) {
+  return item.end
+    ? pathname === item.to
+    : pathname === item.to || pathname.startsWith(`${item.to}/`);
+}
 
 function pageTitle(pathname) {
   if (pathname.startsWith('/incidents/')) return 'Detalle de incidencia';
@@ -65,6 +71,14 @@ function ManagementLayout() {
               className={({ isActive }) => `nav-link${isActive ? ' nav-link-active' : ''}`}
               end={item.end}
               key={item.to}
+              onClick={(event) => {
+                if (isNavigationActive(item, location.pathname)) {
+                  event.preventDefault();
+                  setSidebarCollapsed((collapsed) => !collapsed);
+                } else {
+                  setSidebarCollapsed(false);
+                }
+              }}
               to={item.to}
             >
               <span className="nav-icon" aria-hidden="true">{item.icon}</span>
