@@ -30,6 +30,10 @@ type: Task
 
 <!-- Optional. What this issue does not cover. -->
 
+## Proposal
+
+<!-- Optional. A first idea of how it could be done. Not binding: the implementer may discard it. -->
+
 ## Technical constraints
 
 <!-- Optional. Only constraints already decided (an ADR, an existing convention). The rest is up to the implementer. -->
