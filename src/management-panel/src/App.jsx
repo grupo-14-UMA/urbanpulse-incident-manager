@@ -26,7 +26,6 @@ function ManagementLayout() {
   const { session, logout } = useAuth();
   const [apiStatus, setApiStatus] = useState({ kind: 'idle', label: 'Comprobar API' });
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const isIncidentDetail = /^\/incidents\/[^/]+$/.test(location.pathname);
 
   async function handleCheckApi() {
     setApiStatus({ kind: 'checking', label: 'Comprobando…' });
@@ -39,12 +38,24 @@ function ManagementLayout() {
   }
 
   return (
-    <div className={`app-shell${isIncidentDetail && sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
+    <div className={`app-shell${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
       <aside className="sidebar">
-        <Link className="brand" to="/" aria-label="UrbanPulse, inicio">
-          <span className="brand-mark" aria-hidden="true">U</span>
-          <span className="brand-name">urban<span>pulse</span></span>
-        </Link>
+        <div className="sidebar-header">
+          <Link className="brand" to="/" aria-label="UrbanPulse, inicio">
+            <span className="brand-mark" aria-hidden="true">U</span>
+            <span className="brand-name">urban<span>pulse</span></span>
+          </Link>
+          <button
+            aria-label={sidebarCollapsed ? 'Desplegar barra lateral' : 'Plegar barra lateral'}
+            aria-expanded={!sidebarCollapsed}
+            className="sidebar-collapse-toggle"
+            onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
+            title={sidebarCollapsed ? 'Desplegar barra lateral' : 'Plegar barra lateral'}
+            type="button"
+          >
+            <span aria-hidden="true">{sidebarCollapsed ? '›' : '‹'}</span>
+          </button>
+        </div>
 
         <div className="workspace-label">ESPACIO DE TRABAJO</div>
         <nav className="primary-nav" aria-label="Navegación principal">
@@ -79,16 +90,6 @@ function ManagementLayout() {
             <h1>{pageTitle(location.pathname)}</h1>
           </div>
           <div className="topbar-actions">
-            {isIncidentDetail && (
-              <button
-                aria-expanded={!sidebarCollapsed}
-                className="sidebar-toggle"
-                onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
-                type="button"
-              >
-                {sidebarCollapsed ? 'Expandir menú' : 'Reducir menú'}
-              </button>
-            )}
             <div className={`api-address api-${apiStatus.kind}`} title="Configura esta URL con VITE_API_URL">
               <span className="api-dot" />
               <span className="api-label">{apiStatus.label}</span>
