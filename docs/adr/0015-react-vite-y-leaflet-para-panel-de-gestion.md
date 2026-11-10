@@ -18,7 +18,7 @@ El panel de gestión es el cliente web del operador, el administrador y el anali
 
 Desarrollar el panel de gestión como un proyecto web independiente con React y Vite, en JavaScript como la aplicación móvil, y usar `react-leaflet` para el mapa, con las teselas raster de OpenStreetMap.
 
-Para que el mapa siga siendo rápido con muchas incidencias, se agruparán los marcadores (`leaflet.markercluster`) y se cargarán solo las incidencias del área visible.
+Para que el mapa siga siendo rápido con muchas incidencias, se cargarán solo las del área visible. La API limita cada respuesta a 500 incidencias y avisa cuando hay más; la agrupación de marcadores (`leaflet.markercluster`) sigue pendiente.
 
 ## Consecuencias
 
@@ -27,5 +27,5 @@ Para que el mapa siga siendo rápido con muchas incidencias, se agruparán los m
 - \+ El panel se compila a ficheros estáticos, que pueden servirse aparte del backend.
 - \+ La aplicación móvil no carga con las pantallas ni las dependencias del panel.
 - − No se comparte código de interfaz con la aplicación móvil; solo se comparte la API.
-- − Leaflet dibuja los marcadores en el DOM, así que sin agrupación ni carga por área visible se degrada con miles de incidencias. MapLibre GL rinde mejor con muchos elementos, pero necesita teselas o estilos vectoriales y es más complejo.
+- − Leaflet dibuja los marcadores en el DOM; si el área visible contiene muchos puntos, la falta de agrupación puede degradar el mapa. MapLibre GL rinde mejor con muchos elementos, pero necesita teselas o estilos vectoriales y es más complejo.
 - − Expo web habría permitido un solo proyecto, pero con dos renderizadores de mapa y con las rutas de gestión dentro de la aplicación móvil.

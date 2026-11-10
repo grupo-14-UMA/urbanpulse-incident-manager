@@ -88,11 +88,13 @@ h1 { margin-bottom: 0; margin-top: 7px; color: #19293c; font-family: 'Manrope', 
 .map-toolbar { display: flex; min-height: 58px; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 15px; }
 .map-toolbar h2, .placeholder-page h2 { margin: 5px 0 0; color: #1b2b3f; font-family: 'Manrope', sans-serif; font-size: 16px; font-weight: 700; letter-spacing: -0.35px; }
 .map-badges { display: flex; align-items: center; gap: 9px; }
-.sample-count { padding: 8px 10px; border: 1px solid #cfece0; border-radius: 7px; color: #32886b; background: #ecfaf4; font-size: 10px; font-weight: 700; }
+.map-count { padding: 8px 10px; border: 1px solid #cfece0; border-radius: 7px; color: #32886b; background: #ecfaf4; font-size: 10px; font-weight: 700; }
 .map-city { display: inline-flex; align-items: center; gap: 7px; padding: 8px 11px; border: 1px solid #e4eaf1; border-radius: 7px; color: #5e7085; background: #fff; font-size: 11px; font-weight: 600; }
 .map-city span { color: #35a983; font-size: 15px; }
 .map-frame { position: relative; height: calc(100vh - 210px); min-height: 420px; overflow: hidden; border: 1px solid #dfe6ef; border-radius: 12px; background: #e9eff2; box-shadow: 0 12px 32px rgb(26 47 73 / 7%); }
 .city-map { width: 100%; height: 100%; }
+.map-load-error { position: absolute; z-index: 500; top: 12px; left: 50%; max-width: min(90%, 520px); padding: 10px 14px; transform: translateX(-50%); border-radius: 8px; color: #8b3333; background: #fff0f0; box-shadow: 0 3px 14px rgb(26 47 73 / 14%); font-size: 12px; text-align: center; }
+.map-limit-notice { position: absolute; z-index: 500; top: 12px; left: 50%; max-width: min(90%, 520px); padding: 10px 14px; transform: translateX(-50%); border-radius: 8px; color: #24547a; background: #eef7ff; box-shadow: 0 3px 14px rgb(26 47 73 / 14%); font-size: 12px; text-align: center; }
 .incident-popup { min-width: 205px; padding: 2px 1px; }
 .incident-popup h3 { margin: 6px 0; color: #1b2b3f; font-family: 'Manrope', sans-serif; font-size: 13px; line-height: 1.35; }
 .incident-popup p { margin: 0 0 8px; color: #68788b; font-size: 11px; line-height: 1.45; }
@@ -165,7 +167,7 @@ h1 { margin-bottom: 0; margin-top: 7px; color: #19293c; font-family: 'Manrope', 
   .map-page { padding-top: 18px; }
   .map-toolbar h2 { font-size: 14px; }
   .map-badges { gap: 5px; }
-  .sample-count { padding: 7px 7px; font-size: 8px; }
+  .map-count { padding: 7px 7px; font-size: 8px; }
   .map-city { padding: 7px 8px; font-size: 9px; }
   .map-frame { height: calc(100vh - 245px); min-height: 360px; }
   .login-card, .auth-message-card { padding: 29px 23px; }

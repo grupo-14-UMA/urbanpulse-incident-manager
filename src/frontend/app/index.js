@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { getIncidents } from '../src/api';
+import { getIncidentsWithinBounds } from '../src/api';
 import { IncidentCard } from '../src/IncidentCard';
 import { MALAGA_REGION, OSM_MAP_PROPS, OsmAttribution, OsmTiles } from '../src/map';
 import { COLORS } from '../src/theme';
@@ -47,44 +47,101 @@ function CitizenMapScreen() {
   const router = useRouter();
   const { signOut } = useAuth();
   const [incidents, setIncidents] = useState([]);
+  const [mapTruncated, setMapTruncated] = useState(false);
   const [loadError, setLoadError] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
-  // Bumped on every load and on blur, so only the latest load while focused applies.
+  const mapRef = useRef(null);
+  const mapReadyRef = useRef(false);
+  const focusedRef = useRef(false);
+  const regionTimeoutRef = useRef(null);
+  const requestControllerRef = useRef(null);
+  // Bumped when the viewport changes and on blur, so stale responses are ignored.
   const loadIdRef = useRef(0);
+
+  const loadVisibleIncidents = useCallback(async () => {
+    const map = mapRef.current;
+    if (!map || !mapReadyRef.current || !focusedRef.current) {
+      return;
+    }
+
+    requestControllerRef.current?.abort();
+    const controller = new AbortController();
+    requestControllerRef.current = controller;
+    const loadId = ++loadIdRef.current;
+
+    try {
+      const { northEast, southWest } = await map.getMapBoundaries();
+      if (loadId !== loadIdRef.current || controller.signal.aborted) {
+        return;
+      }
+
+      const result = await getIncidentsWithinBounds(
+        {
+          west: southWest.longitude,
+          south: southWest.latitude,
+          east: northEast.longitude,
+          north: northEast.latitude,
+        },
+        { signal: controller.signal },
+      );
+      if (loadId === loadIdRef.current && !controller.signal.aborted) {
+        setIncidents(result.incidents);
+        setMapTruncated(result.truncated);
+        setLoadError(null);
+      }
+    } catch (error) {
+      if (loadId === loadIdRef.current && !controller.signal.aborted) {
+        setLoadError(error?.message || 'No se pudieron cargar las incidencias.');
+      }
+    }
+  }, []);
+
+  const scheduleVisibleLoad = useCallback(() => {
+    if (!focusedRef.current || !mapReadyRef.current) {
+      return;
+    }
+    clearTimeout(regionTimeoutRef.current);
+    requestControllerRef.current?.abort();
+    loadIdRef.current++;
+    regionTimeoutRef.current = setTimeout(loadVisibleIncidents, 250);
+  }, [loadVisibleIncidents]);
+
+  const handleMapReady = useCallback(() => {
+    mapReadyRef.current = true;
+    if (focusedRef.current) {
+      scheduleVisibleLoad();
+    }
+  }, [scheduleVisibleLoad]);
 
   // Going back from a pushed screen does not remount the map, so load on every focus.
   useFocusEffect(
     useCallback(() => {
-      const loadId = ++loadIdRef.current;
-      getIncidents()
-        .then((result) => {
-          if (loadId !== loadIdRef.current) {
-            return;
-          }
-          setIncidents(result);
-          setLoadError(null);
-        })
-        .catch((error) => {
-          // Keep the markers already shown; they are only possibly out of date.
-          if (loadId === loadIdRef.current) {
-            setLoadError(error?.message || 'No se pudieron cargar las incidencias.');
-          }
-        });
+      focusedRef.current = true;
+      if (mapReadyRef.current) {
+        loadVisibleIncidents();
+      }
       return () => {
+        focusedRef.current = false;
         loadIdRef.current++;
+        requestControllerRef.current?.abort();
+        clearTimeout(regionTimeoutRef.current);
       };
-    }, []),
+    }, [loadVisibleIncidents]),
   );
 
   // Derived from the latest load, so the card shows current data and disappears
   // if the incident is no longer there.
   const selectedIncident = incidents.find((incident) => incident.id === selectedId) ?? null;
+  const notice = loadError || (mapTruncated ? 'Acerca el mapa para ver más incidencias de esta zona.' : null);
 
   return (
     <View style={styles.container}>
       <MapView
+        ref={mapRef}
         style={StyleSheet.absoluteFill}
         initialRegion={MALAGA_REGION}
+        onMapReady={handleMapReady}
+        onRegionChangeComplete={scheduleVisibleLoad}
         onPress={() => setSelectedId(null)}
         {...OSM_MAP_PROPS}
       >
@@ -107,9 +164,19 @@ function CitizenMapScreen() {
       >
         <Text style={styles.signOutButtonText}>Cerrar sesión</Text>
       </Pressable>
-      {loadError && (
-        <View style={styles.notice} pointerEvents="none" accessibilityLiveRegion="polite">
-          <Text style={styles.noticeText}>{loadError}</Text>
+      {notice && (
+        <View
+          style={[
+            styles.notice,
+            { top: insets.top + 58 },
+            loadError ? styles.noticeError : styles.noticeInfo,
+          ]}
+          pointerEvents="none"
+          accessibilityLiveRegion="polite"
+        >
+          <Text style={[styles.noticeText, loadError ? styles.noticeErrorText : styles.noticeInfoText]}>
+            {notice}
+          </Text>
         </View>
       )}
       {selectedIncident && (
@@ -183,13 +250,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 8,
-    backgroundColor: COLORS.errorSoft,
     elevation: 2,
   },
   noticeText: {
     textAlign: 'center',
-    color: COLORS.error,
     fontSize: 14,
+  },
+  noticeError: {
+    backgroundColor: COLORS.errorSoft,
+  },
+  noticeErrorText: {
+    color: COLORS.error,
+  },
+  noticeInfo: {
+    backgroundColor: '#eef7ff',
+  },
+  noticeInfoText: {
+    color: '#24547a',
   },
   card: {
     position: 'absolute',

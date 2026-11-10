@@ -4,7 +4,7 @@ import static es.uma.urbanpulse.TestAccounts.bearer;
 import static es.uma.urbanpulse.TestAccounts.newCitizen;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.List;
+import java.time.Instant;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
@@ -17,6 +17,9 @@ import org.springframework.context.annotation.Import;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.client.RestTestClient;
+
+import es.uma.urbanpulse.incident.api.IncidentMapResponse;
+import es.uma.urbanpulse.incident.api.IncidentResponse;
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @AutoConfigureRestTestClient
@@ -62,21 +65,20 @@ class IncidentTimestampsTests {
 
 		assertThat(found.get("createdAt")).isEqualTo(createdAt);
 
-		List<Map<String, Object>> listed = this.client.get()
-			.uri("/api/incidents")
+		IncidentMapResponse listed = this.client.get()
+			.uri("/api/incidents?west=-4.5&south=36.6&east=-4.3&north=36.8")
 			.header("Authorization", authorization)
 			.exchange()
 			.expectStatus()
 			.isOk()
-			.expectBody(new ParameterizedTypeReference<List<Map<String, Object>>>() {
-			})
+			.expectBody(IncidentMapResponse.class)
 			.returnResult()
 			.getResponseBody();
 
-		assertThat(listed).filteredOn((incident) -> incident.get("id").equals(created.get("id")))
+		assertThat(listed.incidents()).filteredOn((incident) -> incident.id().equals(created.get("id")))
 			.singleElement()
-			.extracting((incident) -> incident.get("createdAt"))
-			.isEqualTo(createdAt);
+			.extracting(IncidentResponse::createdAt)
+			.isEqualTo(Instant.parse(createdAt.toString()));
 	}
 
 }
