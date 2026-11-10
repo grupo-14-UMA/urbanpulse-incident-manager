@@ -5,8 +5,8 @@ Plataforma cloud para comunicar, gestionar y analizar incidencias urbanas en Má
 ## Características principales
 
 - [x] Mapas móvil y web con consultas limitadas al área visible (máximo 500 incidencias); el panel requiere una cuenta con rol Operador.
-- [x] Detalle de una incidencia: título, descripción, categoría, estado y fecha.
-- [x] Registro de incidencias con ubicación (GPS o seleccionada en el mapa) y categoría opcional.
+- [x] Detalle de una incidencia: título, descripción, categoría, estado, fecha y fotos adjuntas.
+- [x] Registro de incidencias con ubicación (GPS o seleccionada en el mapa), categoría opcional y hasta 3 fotos desde la cámara o la galería.
 - [x] Cuentas de usuario con roles (ciudadano, operador y técnico) y autenticación con token en la API.
 - [ ] Documentación interactiva de la API (Swagger UI).
 

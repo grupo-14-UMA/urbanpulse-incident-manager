@@ -20,7 +20,7 @@ Política común de UrbanPulse ante una petición o un recurso que falla: qué v
 | Sin permiso | HTTP 403 | «No tienes permiso para hacer esto.» | No | No |
 | Otro error del cliente | Otro código 4xx | Igual que los datos no válidos. | No | No |
 | Respuesta inesperada | Cuerpo que no es JSON, campo obligatorio ausente o con un formato no válido | El mismo texto que un error del servidor. | No | Sí |
-| Recurso del dispositivo | Permiso de ubicación denegado, GPS sin señal | Un aviso que no bloquea la pantalla y ofrece la alternativa. | No | No |
+| Recurso del dispositivo | Permiso de ubicación, cámara o galería denegado, GPS sin señal | Un aviso que no bloquea la pantalla y ofrece la alternativa (por ejemplo tocar el mapa o enviar la incidencia sin fotos). | No | No |
 
 El cliente clasifica el error en un único sitio, su capa de acceso a la API, y las pantallas solo reciben el tipo y el texto para el usuario. Una pantalla puede sustituir el texto de un tipo por otro más concreto (como en el 404), pero no mostrar el diagnóstico técnico.
 

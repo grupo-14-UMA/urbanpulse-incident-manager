@@ -92,7 +92,7 @@ cp .env.example .env    # y edita la IP, ver más abajo
 npx expo start
 ```
 
-Escanea el código QR con Expo Go (en iPhone, con la cámara). El móvil y el portátil deben estar en la misma red. Tras iniciar sesión, la app abre un mapa de OpenStreetMap (teselas de `tile.openstreetmap.de`) centrado en Málaga y solicita solo las incidencias del área visible. Al terminar un movimiento o cambio de zoom, espera brevemente y consulta el nuevo rectángulo; si hay más de 500 resultados, indica que acerques el mapa. Al tocar un marcador aparece un resumen y al tocarlo se abre el detalle. El botón «Nueva incidencia» abre el formulario para registrar una; la primera vez pide permiso de ubicación.
+Escanea el código QR con Expo Go (en iPhone, con la cámara). El móvil y el portátil deben estar en la misma red. Tras iniciar sesión, la app abre un mapa de OpenStreetMap (teselas de `tile.openstreetmap.de`) centrado en Málaga y solicita solo las incidencias del área visible. Al terminar un movimiento o cambio de zoom, espera brevemente y consulta el nuevo rectángulo; si hay más de 500 resultados, indica que acerques el mapa. Al tocar un marcador aparece un resumen y al tocarlo se abre el detalle, que muestra también las fotos adjuntas. El botón «Nueva incidencia» abre el formulario para registrar una con ubicación y hasta 3 fotos desde la cámara o la galería (con vista previa y opción de quitarlas antes de enviar); la primera vez pide los permisos de ubicación, cámara o galería según la opción elegida, y permite registrar la incidencia sin fotos si se deniegan. Si falla la subida de una foto tras crear la incidencia, la incidencia no se pierde: la pantalla muestra el mensaje de error del backend y permite quitar o cambiar la foto con error, reintentar las pendientes o continuar sin añadir más fotos.
 
 La app consume el backend para cargar las incidencias y categorías, consultar el detalle y registrar incidencias. Arranca Docker Compose antes de iniciar Expo y configura `EXPO_PUBLIC_API_URL` en `src/frontend/.env` con una dirección alcanzable desde el móvil. Si el backend no está disponible, la app muestra un mensaje de error; el detalle y las categorías del formulario permiten reintentar la carga.
 
@@ -156,7 +156,7 @@ npx expo lint
 
 ### Pruebas de la aplicación móvil
 
-El cliente móvil usa Jest con `jest-expo`. Las pruebas del cliente HTTP están en `src/frontend/src/api.test.js` y simulan `fetch`, por lo que no necesitan el backend ni un dispositivo.
+El cliente móvil usa Jest con `jest-expo`. Las pruebas del cliente HTTP y de la subida de fotos están en `src/frontend/src/api.test.js` y `src/frontend/src/incidentPhotos.test.js`, y simulan `fetch` y el selector de imágenes, por lo que no necesitan el backend ni un dispositivo.
 
 ```bash
 cd src/frontend
