@@ -69,7 +69,14 @@ export function setUnauthorizedHandler(handler) {
 
 async function request(
   path,
-  { method = 'GET', body, authenticated = true, handleUnauthorized = true, preserveUnauthorizedMessage = false } = {},
+  {
+    method = 'GET',
+    body,
+    signal: requestSignal,
+    authenticated = true,
+    handleUnauthorized = true,
+    preserveUnauthorizedMessage = false,
+  } = {},
 ) {
   if (!BASE_URL) {
     throw new ApiError(CONNECTION_ERROR);
@@ -80,8 +87,18 @@ async function request(
   let responseText;
   const controller = new AbortController();
   let timeout;
+  let timedOut = false;
+  const abortFromRequest = () => controller.abort();
   try {
-    timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    if (requestSignal?.aborted) {
+      controller.abort();
+    } else {
+      requestSignal?.addEventListener('abort', abortFromRequest, { once: true });
+    }
+    timeout = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, REQUEST_TIMEOUT_MS);
     response = await fetch(BASE_URL + path, {
       method,
       headers: {
@@ -94,11 +111,16 @@ async function request(
     });
     responseText = await response.text();
   } catch (cause) {
-    const error = new ApiError(CONNECTION_ERROR, { cause });
-    logFailure(method, path, undefined, startedAt, controller.signal.aborted ? 'timeout' : 'network');
+    if (requestSignal?.aborted && !timedOut) {
+      throw cause;
+    }
+    const message = CONNECTION_ERROR;
+    const error = new ApiError(message, { cause });
+    logFailure(method, path, undefined, startedAt, timedOut ? 'timeout' : 'network');
     throw error;
   } finally {
     clearTimeout(timeout);
+    requestSignal?.removeEventListener('abort', abortFromRequest);
   }
 
   let payload = null;
@@ -172,8 +194,23 @@ export async function getCategories() {
   return expectArray(await request('/api/categories'), 'categorías');
 }
 
-export async function getIncidents() {
-  return expectArray(await request('/api/incidents'), 'incidencias').map(expectIncident);
+export async function getIncidentsWithinBounds(bounds, { signal } = {}) {
+  const query = [
+    ['west', bounds.west],
+    ['south', bounds.south],
+    ['east', bounds.east],
+    ['north', bounds.north],
+  ]
+    .map(([name, value]) => `${name}=${encodeURIComponent(String(value))}`)
+    .join('&');
+  const payload = await request(`/api/incidents?${query}`, { signal });
+  if (!payload || !Array.isArray(payload.incidents) || typeof payload.truncated !== 'boolean') {
+    throw new ApiError('El backend devolvió un resultado de mapa no válido.');
+  }
+  return {
+    incidents: payload.incidents.map(expectIncident),
+    truncated: payload.truncated,
+  };
 }
 
 export async function getIncident(id) {

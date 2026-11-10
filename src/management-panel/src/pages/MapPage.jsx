@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import L from 'leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
 
-import { loadMockIncidents, MOCK_CATEGORIES, MOCK_STATUSES } from '../mock/incidents.js';
+import { getIncidentsWithinBounds } from '../api.js';
 
 import 'leaflet/dist/leaflet.css';
 import 'react-leaflet-cluster/dist/assets/MarkerCluster.css';
@@ -29,12 +29,12 @@ const PRIORITY_LABELS = {
 };
 
 const CATEGORY_LABELS = {
-  'alumbrado': 'Alumbrado',
-  'limpieza': 'Limpieza',
+  alumbrado: 'Alumbrado',
+  limpieza: 'Limpieza',
   'mobiliario urbano': 'Mobiliario urbano',
   'tráfico y semáforos': 'Tráfico y semáforos',
-  'arbolado': 'Arbolado',
-  'otros': 'Otros',
+  arbolado: 'Arbolado',
+  otros: 'Otros',
 };
 
 const STATUS_COLORS = {
@@ -46,32 +46,45 @@ const STATUS_COLORS = {
   REJECTED: '#cf5962',
 };
 
-function markerIcon(status) {
+function markerIcon(status = 'REPORTED') {
+  const normalizedStatus = STATUS_LABELS[status] ? status : 'REPORTED';
+
   return L.divIcon({
-    className: `incident-marker incident-marker-${status.toLowerCase()}`,
+    className: `incident-marker incident-marker-${normalizedStatus.toLowerCase()}`,
     html: '<span></span>',
     iconSize: [22, 22],
     iconAnchor: [11, 11],
   });
 }
 
-function VisibleBoundsWatcher({ onBoundsChange }) {
+function ViewportIncidentLoader({ onBoundsChange }) {
   const map = useMap();
 
   useEffect(() => {
-    function updateBounds() {
-      const bounds = map.getBounds();
-      onBoundsChange({
-        north: bounds.getNorth(),
-        south: bounds.getSouth(),
-        east: bounds.getEast(),
-        west: bounds.getWest(),
-      });
-    }
+    let timeout;
 
-    updateBounds();
-    map.on('moveend', updateBounds);
-    return () => map.off('moveend', updateBounds);
+    const scheduleLoad = () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        const bounds = map.getBounds();
+        onBoundsChange({
+          west: bounds.getWest(),
+          south: bounds.getSouth(),
+          east: bounds.getEast(),
+          north: bounds.getNorth(),
+        });
+      }, 200);
+    };
+
+    scheduleLoad();
+    map.on('moveend', scheduleLoad);
+    map.on('zoomend', scheduleLoad);
+
+    return () => {
+      clearTimeout(timeout);
+      map.off('moveend', scheduleLoad);
+      map.off('zoomend', scheduleLoad);
+    };
   }, [map, onBoundsChange]);
 
   return null;
@@ -86,35 +99,42 @@ function formatDate(date) {
 }
 
 export default function MapPage() {
-  const [bounds, setBounds] = useState(null);
-  const [category, setCategory] = useState('');
-  const [status, setStatus] = useState('');
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(false);
-  const [reloadKey, setReloadKey] = useState(0);
+  const [mapTruncated, setMapTruncated] = useState(false);
+  const [loadError, setLoadError] = useState(null);
+  const requestControllerRef = useRef(null);
 
-  const handleBoundsChange = useCallback((nextBounds) => setBounds(nextBounds), []);
+  const loadVisibleIncidents = useCallback(async (bounds) => {
+    requestControllerRef.current?.abort();
 
-  useEffect(() => {
-    if (!bounds) return undefined;
+    const controller = new AbortController();
+    requestControllerRef.current = controller;
 
-    let active = true;
     setLoading(true);
-    setError(false);
-    loadMockIncidents({ bounds, category, status })
-      .then((results) => {
-        if (active) setIncidents(results);
-      })
-      .catch(() => {
-        if (active) setError(true);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
+    setLoadError(null);
+
+    try {
+      const result = await getIncidentsWithinBounds(bounds, {
+        signal: controller.signal,
       });
 
-    return () => { active = false; };
-  }, [bounds, category, status, reloadKey]);
+      if (!controller.signal.aborted) {
+        setIncidents(result.incidents);
+        setMapTruncated(result.truncated);
+      }
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        setLoadError(error?.message || 'No se pudieron cargar las incidencias.');
+      }
+    } finally {
+      if (!controller.signal.aborted) {
+        setLoading(false);
+      }
+    }
+  }, []);
+
+  useEffect(() => () => requestControllerRef.current?.abort(), []);
 
   return (
     <section className="map-page" aria-label="Mapa de Málaga">
@@ -123,82 +143,110 @@ export default function MapPage() {
           <span className="section-kicker">VISTA GENERAL</span>
           <h2>Incidencias en la ciudad</h2>
         </div>
+
         <div className="map-badges">
-          <span className="sample-count" aria-live="polite">
-            {loading ? 'Actualizando mapa…' : `${incidents.length} en el área visible`}
+          <span className="map-count" aria-live="polite">
+            {loading
+              ? 'Actualizando mapa…'
+              : `${incidents.length}${mapTruncated ? '+' : ''} ${
+                  incidents.length === 1 ? 'incidencia' : 'incidencias'
+                } en el área visible`}
           </span>
-          <span className="map-city"><span aria-hidden="true">⌖</span> Málaga, España</span>
+          <span className="map-city">
+            <span aria-hidden="true">⌖</span> Málaga, España
+          </span>
         </div>
       </div>
 
-      <div className="map-filters" aria-label="Filtros del mapa">
-        <label>
-          Categoría
-          <select onChange={(event) => setCategory(event.target.value)} value={category}>
-            <option value="">Todas</option>
-            {MOCK_CATEGORIES.map((item) => <option key={item} value={item}>{CATEGORY_LABELS[item]}</option>)}
-          </select>
-        </label>
-        <label>
-          Estado
-          <select onChange={(event) => setStatus(event.target.value)} value={status}>
-            <option value="">Todos</option>
-            {MOCK_STATUSES.map((item) => <option key={item} value={item}>{STATUS_LABELS[item]}</option>)}
-          </select>
-        </label>
-        <span className="mock-data-note"><span aria-hidden="true">●</span> Datos simulados</span>
-      </div>
-
       <div className="map-frame">
-        <MapContainer center={MALAGA} className="city-map" zoom={13} scrollWheelZoom>
+        <MapContainer
+          center={MALAGA}
+          className="city-map"
+          zoom={13}
+          scrollWheelZoom
+        >
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          <VisibleBoundsWatcher onBoundsChange={handleBoundsChange} />
+
+          <ViewportIncidentLoader onBoundsChange={loadVisibleIncidents} />
+
           <MarkerClusterGroup chunkedLoading showCoverageOnHover={false}>
-            {incidents.map((incident) => (
-              <Marker
-                icon={markerIcon(incident.status)}
-                key={incident.id}
-                position={[incident.latitude, incident.longitude]}
-                title={incident.title}
-              >
-                <Popup>
-                  <article className="incident-popup">
-                    <span className="popup-category">{CATEGORY_LABELS[incident.categoryName] || 'Sin categoría'}</span>
-                    <h3>{incident.title}</h3>
-                    <p>{incident.description}</p>
-                    <div className="popup-meta">
-                      <span>{STATUS_LABELS[incident.status]}</span>
-                      <span>Prioridad {PRIORITY_LABELS[incident.priority]}</span>
-                    </div>
-                    <time dateTime={incident.createdAt}>{formatDate(incident.createdAt)}</time>
-                    <Link className="popup-detail-link" to={`/incidents/${incident.id}`}>Ver detalle</Link>
-                  </article>
-                </Popup>
-              </Marker>
-            ))}
+            {incidents.map((incident) => {
+              const status = STATUS_LABELS[incident.status]
+                ? incident.status
+                : 'REPORTED';
+
+              return (
+                <Marker
+                  icon={markerIcon(status)}
+                  key={incident.id}
+                  position={[incident.latitude, incident.longitude]}
+                  title={incident.title}
+                >
+                  <Popup>
+                    <article className="incident-popup">
+                      <span className="popup-category">
+                        {CATEGORY_LABELS[incident.categoryName] ||
+                          incident.categoryName ||
+                          'Sin categoría'}
+                      </span>
+                      <h3>{incident.title}</h3>
+                      <p>{incident.description}</p>
+                      <div className="popup-meta">
+                        <span>{STATUS_LABELS[status]}</span>
+                        <span>
+                          Prioridad{' '}
+                          {PRIORITY_LABELS[incident.priority] ||
+                            incident.priority ||
+                            'Sin asignar'}
+                        </span>
+                      </div>
+                      <time dateTime={incident.createdAt}>
+                        {formatDate(incident.createdAt)}
+                      </time>
+                      <Link
+                        className="popup-detail-link"
+                        to={`/incidents/${incident.id}`}
+                      >
+                        Ver detalle
+                      </Link>
+                    </article>
+                  </Popup>
+                </Marker>
+              );
+            })}
           </MarkerClusterGroup>
         </MapContainer>
+
+        {loadError && (
+          <div className="map-load-error" role="alert">
+            {loadError}
+          </div>
+        )}
+
+        {!loadError && mapTruncated && (
+          <div className="map-limit-notice" role="status">
+            Acerca el mapa para ver más incidencias de esta zona.
+          </div>
+        )}
       </div>
 
-      {error && (
-        <div className="map-message map-error-message" role="alert">
-          <span>No se pudieron cargar las incidencias del área.</span>
-          <button onClick={() => setReloadKey((key) => key + 1)} type="button">Reintentar</button>
-        </div>
-      )}
-      {bounds && !loading && !error && incidents.length === 0 && (
-        <p className="map-message" role="status">No hay incidencias con estos filtros en el área visible.</p>
+      {!loading && !loadError && incidents.length === 0 && (
+        <p className="map-message" role="status">
+          No hay incidencias en el área visible.
+        </p>
       )}
 
       <div className="map-legend" aria-label="Leyenda de estados">
         {Object.entries(STATUS_LABELS).map(([key, label]) => (
-          <span key={key}><i style={{ '--status-color': STATUS_COLORS[key] }} />{label}</span>
+          <span key={key}>
+            <i style={{ '--status-color': STATUS_COLORS[key] }} />
+            {label}
+          </span>
         ))}
       </div>
-      <p className="mock-data-disclaimer">Datos simulados. La consulta real por área se conectará cuando esté disponible la API (#54).</p>
     </section>
   );
 }

@@ -59,7 +59,7 @@ export SPRING_FLYWAY_LOCATIONS=classpath:db/migration,classpath:db/dev-seed   # 
 
 Flyway aplica al arrancar el backend las migraciones de `src/backend/src/main/resources/db/migration/`. La migración inicial activa PostGIS, crea las tablas `Incident` y `Category` y carga estas categorías: alumbrado, limpieza, mobiliario urbano, tráfico y semáforos, arbolado y otros. Otra crea `User` y `Role`, carga los roles `CITIZEN`, `OPERATOR` y `TECHNICIAN` y añade a `Incident` el ciudadano que la registró. La ubicación se almacena como `geometry(Point, 4326)`; `status_id = 1` representa el estado inicial `REPORTED` hasta que se añada la tabla `Status`. Las fechas `created_at` y `updated_at` son `timestamptz` con valor por defecto `now()`, así que también las filas insertadas directamente en la base de datos quedan en un instante inequívoco.
 
-La API REST permite registrarse e iniciar sesión, crear y consultar incidencias, listar categorías y listar técnicos. Las rutas, quién puede usar cada una y el formato de la respuesta de autenticación están en la [arquitectura](architecture.md#api). Los datos inválidos producen HTTP 400 con un mensaje en español; una incidencia inexistente produce HTTP 404. Las operaciones se documentan en Swagger UI.
+La API REST permite registrarse e iniciar sesión, crear y consultar incidencias, cargar las incidencias del área visible del mapa, listar categorías y listar técnicos. Las rutas, quién puede usar cada una y el formato de la respuesta de autenticación están en la [arquitectura](architecture.md#api). La consulta del mapa requiere `west`, `south`, `east` y `north` en WGS 84; devuelve como máximo 500 incidencias `REPORTED` y `truncated: true` cuando hay más. Los datos inválidos producen HTTP 400 con un mensaje en español; una incidencia inexistente produce HTTP 404. Las operaciones se documentan en Swagger UI.
 
 ### Autenticación y cuentas de desarrollo
 
@@ -92,7 +92,7 @@ cp .env.example .env    # y edita la IP, ver más abajo
 npx expo start
 ```
 
-Escanea el código QR con Expo Go (en iPhone, con la cámara). El móvil y el portátil deben estar en la misma red. La app abre un mapa de OpenStreetMap (teselas de `tile.openstreetmap.de`) centrado en Málaga con un marcador por incidencia; al tocar uno aparece un resumen, y al tocar el resumen se abre el detalle. El botón «Nueva incidencia» abre el formulario para registrar una; la primera vez pide permiso de ubicación.
+Escanea el código QR con Expo Go (en iPhone, con la cámara). El móvil y el portátil deben estar en la misma red. Tras iniciar sesión, la app abre un mapa de OpenStreetMap (teselas de `tile.openstreetmap.de`) centrado en Málaga y solicita solo las incidencias del área visible. Al terminar un movimiento o cambio de zoom, espera brevemente y consulta el nuevo rectángulo; si hay más de 500 resultados, indica que acerques el mapa. Al tocar un marcador aparece un resumen y al tocarlo se abre el detalle. El botón «Nueva incidencia» abre el formulario para registrar una; la primera vez pide permiso de ubicación.
 
 La app consume el backend para cargar las incidencias y categorías, consultar el detalle y registrar incidencias. Arranca Docker Compose antes de iniciar Expo y configura `EXPO_PUBLIC_API_URL` en `src/frontend/.env` con una dirección alcanzable desde el móvil. Si el backend no está disponible, la app muestra un mensaje de error; el detalle y las categorías del formulario permiten reintentar la carga.
 
