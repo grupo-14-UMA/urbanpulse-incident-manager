@@ -12,4 +12,4 @@ The skills speak in terms of five canonical triage roles. This file maps those r
 
 When a skill mentions a role, use the corresponding label string from this table, copied exactly (emoji included). Both "ready" roles share the `✅ ready` label: this repo does not distinguish who implements an issue.
 
-The `priority: …` and `area: …` labels and `🗺️ epic` are not triage labels; they are listed in `CONTRIBUTING.md`. Every new issue also needs them: follow the checklist in `docs/agents/issue-tracker.md`.
+The `area: …` labels and `🗺️ epic` are not triage labels; they are listed in `CONTRIBUTING.md`. Every new issue also needs them, plus the `Priority` and `Effort` issue fields: follow the checklist in `docs/agents/issue-tracker.md`.

@@ -27,7 +27,8 @@ public class ApiExceptionHandler {
 	public ResponseEntity<ApiErrorResponse> handleValidation(MethodArgumentNotValidException exception) {
 		Map<String, String> errors = new LinkedHashMap<>();
 		exception.getBindingResult().getFieldErrors().forEach(error ->
-				errors.putIfAbsent(error.getField(), error.getDefaultMessage()));
+				errors.putIfAbsent(error.getField(),
+						error.isBindingFailure() ? "Formato no válido." : error.getDefaultMessage()));
 		return ResponseEntity.badRequest()
 				.body(new ApiErrorResponse(INVALID_REQUEST_MESSAGE, errors));
 	}

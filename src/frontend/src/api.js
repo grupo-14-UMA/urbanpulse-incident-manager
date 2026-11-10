@@ -65,7 +65,7 @@ function errorForResponse(payload, status, preserveUnauthorizedMessage) {
 }
 
 function isRetryable(error) {
-  return error?.kind === 'connection' || error?.kind === 'server' && [502, 503, 504].includes(error.status);
+  return error?.kind === 'connection' || (error?.kind === 'server' && [502, 503, 504].includes(error.status));
 }
 
 function retryDelay(attempt) {
@@ -83,7 +83,14 @@ export function setUnauthorizedHandler(handler) {
 
 async function requestOnce(
   path,
-  { method = 'GET', body, authenticated = true, handleUnauthorized = true, preserveUnauthorizedMessage = false } = {},
+  {
+    method = 'GET',
+    body,
+    signal: requestSignal,
+    authenticated = true,
+    handleUnauthorized = true,
+    preserveUnauthorizedMessage = false,
+  } = {},
   attempt,
 ) {
   if (!BASE_URL) {
@@ -97,8 +104,18 @@ async function requestOnce(
   let responseText;
   const controller = new AbortController();
   let timeout;
+  let timedOut = false;
+  const abortFromRequest = () => controller.abort();
   try {
-    timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    if (requestSignal?.aborted) {
+      controller.abort();
+    } else {
+      requestSignal?.addEventListener('abort', abortFromRequest, { once: true });
+    }
+    timeout = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, REQUEST_TIMEOUT_MS);
     response = await fetch(BASE_URL + path, {
       method,
       headers: {
@@ -111,12 +128,15 @@ async function requestOnce(
     });
     responseText = await response.text();
   } catch (cause) {
-    const error = new ApiError(CONNECTION_ERROR, { cause });
+    if (requestSignal?.aborted && !timedOut) {
+      throw cause;
+    }
+    const error = new ApiError(CONNECTION_ERROR, { kind: 'connection', cause });
     logFailure(method, path, undefined, startedAt, 'connection', attempt);
-    error.kind = 'connection';
     throw error;
   } finally {
     clearTimeout(timeout);
+    requestSignal?.removeEventListener('abort', abortFromRequest);
   }
 
   let payload = null;
@@ -159,7 +179,7 @@ async function request(path, options = {}) {
     } catch (error) {
       const canRetry = method === 'GET' && attempt < RETRY_ATTEMPTS && isRetryable(error);
       const delay = canRetry ? retryDelay(attempt) : 0;
-      if (!canRetry || Date.now() - startedAt + delay >= RETRY_BUDGET_MS) {
+      if (!canRetry || options.signal?.aborted || Date.now() - startedAt + delay >= RETRY_BUDGET_MS) {
         throw error;
       }
       await new Promise((resolve) => setTimeout(resolve, delay));
@@ -212,8 +232,23 @@ export async function getCategories() {
   return expectArray(await request('/api/categories'));
 }
 
-export async function getIncidents() {
-  return expectArray(await request('/api/incidents')).map(expectIncident);
+export async function getIncidentsWithinBounds(bounds, { signal } = {}) {
+  const query = [
+    ['west', bounds.west],
+    ['south', bounds.south],
+    ['east', bounds.east],
+    ['north', bounds.north],
+  ]
+    .map(([name, value]) => `${name}=${encodeURIComponent(String(value))}`)
+    .join('&');
+  const payload = await request(`/api/incidents?${query}`, { signal });
+  if (!payload || !Array.isArray(payload.incidents) || typeof payload.truncated !== 'boolean') {
+    throw new ApiError('El backend devolvió un resultado de mapa no válido.');
+  }
+  return {
+    incidents: payload.incidents.map(expectIncident),
+    truncated: payload.truncated,
+  };
 }
 
 export async function getIncident(id) {
