@@ -81,4 +81,77 @@ describe('mobile API client', () => {
     });
     expect(global.fetch).not.toHaveBeenCalled();
   });
+
+  test('uploads an incident photo as multipart FormData and returns the attachment metadata', async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 201,
+      text: async () =>
+        JSON.stringify({
+          id: 7,
+          url: '/api/incidents/42/photos/7',
+          contentType: 'image/jpeg',
+          sizeBytes: 12345,
+          createdAt: '2026-11-10T10:00:00Z',
+        }),
+    });
+    const { setAccessToken, uploadIncidentPhoto } = require('./api');
+    setAccessToken('jwt-token');
+
+    const result = await uploadIncidentPhoto(42, {
+      uri: 'file:///tmp/photo.jpg',
+      mimeType: 'image/jpeg',
+      fileName: 'photo.jpg',
+    });
+
+    expect(result).toMatchObject({
+      id: 7,
+      url: '/api/incidents/42/photos/7',
+      contentType: 'image/jpeg',
+    });
+    expect(global.fetch).toHaveBeenCalledWith(
+      apiUrl + '/api/incidents/42/photos',
+      expect.objectContaining({
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          Authorization: 'Bearer jwt-token',
+        },
+        body: expect.any(FormData),
+      }),
+    );
+  });
+
+  test('surfaces the backend validation message when a photo is rejected for type or size', async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      text: async () =>
+        JSON.stringify({
+          message: 'El archivo supera el tamaño máximo de 5 MB.',
+        }),
+    });
+    const { uploadIncidentPhoto } = require('./api');
+
+    await expect(
+      uploadIncidentPhoto(42, {
+        uri: 'file:///tmp/huge.jpg',
+        mimeType: 'image/jpeg',
+        fileName: 'huge.jpg',
+      }),
+    ).rejects.toMatchObject({
+      message: 'El archivo supera el tamaño máximo de 5 MB.',
+      status: 400,
+    });
+  });
+
+  test('builds an authenticated image source for incident detail photos', () => {
+    const { getIncidentPhotoSource, setAccessToken } = require('./api');
+    setAccessToken('jwt-token');
+
+    expect(getIncidentPhotoSource('/api/incidents/42/photos/7')).toEqual({
+      uri: apiUrl + '/api/incidents/42/photos/7',
+      headers: { Authorization: 'Bearer jwt-token' },
+    });
+  });
 });
