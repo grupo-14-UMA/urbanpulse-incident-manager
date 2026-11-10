@@ -114,11 +114,7 @@ async function request(
     if (requestSignal?.aborted && !timedOut) {
       throw cause;
     }
-    const message = timedOut
-      ? 'El backend no respondió en ' +
-        REQUEST_TIMEOUT_MS / 1000 +
-        ' segundos. Comprueba la conexión de red y EXPO_PUBLIC_API_URL.'
-      : CONNECTION_ERROR;
+    const message = CONNECTION_ERROR;
     const error = new ApiError(message, { cause });
     logFailure(method, path, undefined, startedAt, timedOut ? 'timeout' : 'network');
     throw error;
