@@ -27,7 +27,7 @@ If a concern is deferred, propose a follow-up issue (title and body) and create 
 
 ### Issue tracker
 
-Issues live in GitHub Issues (`gh` CLI). See `docs/agents/issue-tracker.md`. Every new issue needs its type, labels, assignee, milestone, parent epic and dependencies: follow the checklist in `CONTRIBUTING.md` → "Crear un issue".
+Issues live in GitHub Issues (`gh` CLI). See `docs/agents/issue-tracker.md`. Create and promote issues with the `create-issue` skill.
 
 ### Triage labels
 

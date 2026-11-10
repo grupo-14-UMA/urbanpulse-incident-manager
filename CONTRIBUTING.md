@@ -79,27 +79,48 @@ Los títulos de los issues y de los PR siguen la misma convención.
 
 ## Crear un issue
 
-Todo issue, lo cree una persona o un agente, sale con todo esto:
+Los issues se crean y se promueven con la skill [`create-issue`](.claude/skills/create-issue/SKILL.md): el agente decide los valores y el script `create-issue.sh` los valida antes de crear nada, hace todas las llamadas a `gh` y comprueba el resultado. Un hook de Claude Code bloquea crear issues de cualquier otra forma; editar, comentar y cerrar issues sigue permitido. Un issue creado desde la web de GitHub tiene que cumplir lo mismo a mano.
+
+### Estados
+
+| Estado | Etiqueta | Qué necesita |
+| --- | --- | --- |
+| Triage | `🔍 triage` | Título con el prefijo de [Conventional Commits](#convención-de-commits), plantilla, tipo y un contexto corto. El milestone es opcional: sin milestone es una idea en la bandeja de entrada; con milestone pertenece a esa entrega, pero aún tiene preguntas abiertas. |
+| Ready | `✅ ready` | La [definición de listo](#definición-de-listo) y toda la [lista de un issue ready](#lista-de-un-issue-ready). |
+
+En la vista **Pendiente** del [tablero](#tablero-del-proyecto), las ideas aparecen en el grupo "No Milestone". Un issue de triage pasa a ready con la skill `create-issue`, tras una ronda corta de preguntas que resuelve lo que le falta.
+
+### Definición de listo
+
+Un issue dice *qué* hay que hacer y *cómo se comprueba*, nunca *cómo implementarlo*:
+
+- **Qué y por qué**: el problema o el objetivo en 2-4 líneas.
+- **Criterios de aceptación observables**: lo que se puede ver o medir desde fuera ("el operador filtra por estado y recibe resultados paginados"), no "crear la función X en el fichero Y".
+- **Atributos de calidad** que apliquen (consulta acotada, índice, logs, métricas), como pide `AGENTS.md` → Quality attributes.
+- **Fuera de alcance**, cuando ayude.
+- **Restricciones técnicas**, solo si ya están decididas (un ADR, una convención existente). El resto de decisiones de diseño son de quien lo implementa, que tiene que poder adaptarse cuando surjan problemas.
+
+### Lista de un issue ready
 
 - [ ] **Título** con el prefijo de [Conventional Commits](#convención-de-commits) (`feat: …`, `fix: …`, `docs: …`).
-- [ ] **Plantilla** de `.github/ISSUE_TEMPLATE/`: `feature_request.md` para `feat:`, `bug_report.md` para `fix:` y `task.md` para el resto.
-- [ ] **Tipo** (*issue type*) según el prefijo: `fix:` → `Bug`, `feat:` → `Feature`, cualquier otro → `Task`. La plantilla lo pone sola.
-- [ ] **Estado**: `✅ ready` si está especificado con criterios de aceptación; `🔍 triage` si hay que evaluarlo en equipo.
+- [ ] **Plantilla** de `.github/ISSUE_TEMPLATE/`: `feature_request.md` para `feat:`, `bug_report.md` para `fix:` y `task.md` para el resto, con la sección de criterios de aceptación.
+- [ ] **Tipo** (*issue type*) según el prefijo: `fix:` → `Bug`, `feat:` → `Feature`, cualquier otro → `Task`.
+- [ ] **Estado**: la etiqueta `✅ ready`.
 - [ ] **Prioridad**: el campo `Priority` (ver [Prioridad y esfuerzo](#prioridad-y-esfuerzo)).
 - [ ] **Esfuerzo**: el campo `Effort`.
-- [ ] **Área**: una etiqueta `area: …`, la del área responsable del issue.
+- [ ] **Área**: una sola etiqueta `area: …`, la del área responsable del issue.
 - [ ] **Assignee**: el dueño de esa área (ver [Áreas de desarrollo](#áreas-de-desarrollo)).
-- [ ] **Milestone** de la entrega actual.
+- [ ] **Milestone** de la entrega.
 - [ ] **Sub-issue** del epic de la entrega.
 - [ ] **Dependencias**: los issues que tienen que cerrarse antes, como *blocked by*.
 
-Los epic llevan `🗺️ epic` y no llevan área, prioridad ni esfuerzo. Los comandos `gh` de cada paso están en [docs/agents/issue-tracker.md](docs/agents/issue-tracker.md).
+Los epic llevan `🗺️ epic` y no llevan área, prioridad ni esfuerzo; se crean a mano, igual que los milestones.
 
 ## Etiquetas
 
 | Etiqueta | Significado |
 | --- | --- |
-| `🔍 triage` | Hay que evaluarlo en equipo |
+| `🔍 triage` | Idea o issue con preguntas abiertas (ver [Estados](#estados)) |
 | `✅ ready` | Especificado y listo para empezar |
 | `❓ question` | Falta información |
 | `🚫 wontfix` | No se va a hacer |
@@ -118,7 +139,7 @@ Los issues de cada entrega se agrupan en un milestone (por ejemplo "Entrega 1").
 
 ## Prioridad y esfuerzo
 
-La prioridad y el esfuerzo son los campos de issue `Priority` y `Effort` de la organización, no etiquetas. Se ponen en la barra lateral del issue; desde la terminal, con los comandos de [docs/agents/issue-tracker.md](docs/agents/issue-tracker.md).
+La prioridad y el esfuerzo son los campos de issue `Priority` y `Effort` de la organización, no etiquetas. Se ponen en la barra lateral del issue; desde la terminal, con la skill [`create-issue`](.claude/skills/create-issue/SKILL.md).
 
 | `Priority` | Significado |
 | --- | --- |
