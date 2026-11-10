@@ -77,6 +77,12 @@ const GENERATED_INCIDENTS = Array.from({ length: 96 }, (_, index) => {
 
 const INCIDENTS = [...SAMPLE_INCIDENTS, ...GENERATED_INCIDENTS];
 
+export const MOCK_PRIORITIES = PRIORITIES;
+
+export function getMockIncidents(limit = INCIDENTS.length) {
+  return INCIDENTS.slice(0, limit);
+}
+
 /**
  * Mock boundary for GET /api/incidents/map. It deliberately accepts visible
  * bounds and filters like the future bounded API request; replace its body

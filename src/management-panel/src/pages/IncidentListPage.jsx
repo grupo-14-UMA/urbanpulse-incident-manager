@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 import {
   INCIDENT_CATEGORIES,
@@ -26,6 +26,15 @@ const PRIORITY_LABELS = {
   URGENT: 'Urgente',
 };
 
+const CATEGORY_LABELS = {
+  alumbrado: 'Alumbrado',
+  limpieza: 'Limpieza',
+  'mobiliario urbano': 'Mobiliario urbano',
+  'tráfico y semáforos': 'Tráfico y semáforos',
+  arbolado: 'Arbolado',
+  otros: 'Otros',
+};
+
 const DATE_FORMAT = new Intl.DateTimeFormat('es-ES', {
   day: '2-digit',
   month: 'short',
@@ -39,7 +48,6 @@ function formatDate(value) {
 }
 
 export default function IncidentListPage() {
-  const navigate = useNavigate();
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [sort, setSort] = useState('date-desc');
   const [page, setPage] = useState(1);
@@ -85,17 +93,6 @@ export default function IncidentListPage() {
     setPage(1);
   }
 
-  function openIncident(incidentId) {
-    navigate(`/incidents/${incidentId}`);
-  }
-
-  function handleRowKeyDown(event, incidentId) {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      openIncident(incidentId);
-    }
-  }
-
   const firstItem = result.total === 0 ? 0 : (result.page - 1) * PAGE_SIZE + 1;
   const lastItem = Math.min(result.page * PAGE_SIZE, result.total);
 
@@ -122,7 +119,11 @@ export default function IncidentListPage() {
           Categoría
           <select name="category" onChange={updateFilter} value={filters.category}>
             <option value="">Todas</option>
-            {INCIDENT_CATEGORIES.map((category) => <option key={category} value={category}>{category}</option>)}
+            {INCIDENT_CATEGORIES.map((category) => (
+              <option key={category} value={category}>
+                {CATEGORY_LABELS[category] || category}
+              </option>
+            ))}
           </select>
         </label>
         <label>
@@ -197,16 +198,16 @@ export default function IncidentListPage() {
               <tbody aria-busy={loading}>
                 {result.items.map((incident) => (
                   <tr
-                    aria-label={`Abrir incidencia: ${incident.title}`}
                     className="incident-table-row"
                     key={incident.id}
-                    onClick={() => openIncident(incident.id)}
-                    onKeyDown={(event) => handleRowKeyDown(event, incident.id)}
-                    role="link"
-                    tabIndex={0}
                   >
-                    <td><strong>{incident.title}</strong><small>#{incident.id.toString().padStart(4, '0')}</small></td>
-                    <td>{incident.categoryName}</td>
+                    <td>
+                      <Link className="incident-title-link" to={`/incidents/${incident.id}`}>
+                        {incident.title}
+                      </Link>
+                      <small>#{incident.id.toString().padStart(4, '0')}</small>
+                    </td>
+                    <td>{CATEGORY_LABELS[incident.categoryName] || incident.categoryName || 'Sin categoría'}</td>
                     <td><span className={`incident-status status-${incident.status.toLowerCase()}`}>{STATUS_LABELS[incident.status]}</span></td>
                     <td><span className={`incident-priority priority-${incident.priority.toLowerCase()}`}><i />{PRIORITY_LABELS[incident.priority]}</span></td>
                     <td>{formatDate(incident.createdAt)}</td>

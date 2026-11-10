@@ -161,11 +161,12 @@ h1 { margin-bottom: 0; margin-top: 7px; color: #19293c; font-family: 'Manrope', 
 .incident-table { width: 100%; border-collapse: collapse; text-align: left; }
 .incident-table th { height: 39px; padding: 0 13px; color: #8592a1; background: #f9fafc; font-size: 9px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; white-space: nowrap; }
 .incident-table td { height: 61px; padding: 8px 13px; border-top: 1px solid #edf0f4; color: #5e6f82; font-size: 11px; white-space: nowrap; }
-.incident-table-row { cursor: pointer; outline: none; transition: background 120ms ease; }
-.incident-table-row:hover, .incident-table-row:focus-visible { background: #f2fbf7; }
+.incident-table-row { transition: background 120ms ease; }
+.incident-table-row:hover { background: #f2fbf7; }
 .incident-table td:first-child { min-width: 250px; }
-.incident-table td:first-child strong, .incident-table td:first-child small { display: block; }
-.incident-table td:first-child strong { overflow: hidden; max-width: 310px; color: #24374b; font-size: 11px; font-weight: 700; text-overflow: ellipsis; }
+.incident-table td:first-child .incident-title-link, .incident-table td:first-child small { display: block; }
+.incident-title-link { overflow: hidden; max-width: 310px; color: #24374b; font-size: 11px; font-weight: 700; text-overflow: ellipsis; }
+.incident-title-link:hover, .incident-title-link:focus-visible { color: #278968; text-decoration: underline; }
 .incident-table td:first-child small { margin-top: 4px; color: #96a2b0; font-size: 9px; }
 .incident-status { display: inline-flex; align-items: center; min-height: 23px; padding: 0 8px; border-radius: 20px; color: #53667a; background: #edf1f5; font-size: 9px; font-weight: 700; }
 .status-reported { color: #92651c; background: #fff4d8; }
@@ -255,7 +256,6 @@ h1 { margin-bottom: 0; margin-top: 7px; color: #19293c; font-family: 'Manrope', 
   .map-badges { gap: 5px; }
   .map-count { padding: 7px 7px; font-size: 8px; }
   .map-city { padding: 7px 8px; font-size: 9px; }
-  .map-frame { height: calc(100vh - 245px); min-height: 360px; }
   .incident-list-page { padding-top: 18px; }
   .list-heading-row { align-items: flex-start; }
   .incident-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 12px; }
