@@ -72,6 +72,7 @@ async function request(
   {
     method = 'GET',
     body,
+    formData,
     signal: requestSignal,
     authenticated = true,
     handleUnauthorized = true,
@@ -106,7 +107,11 @@ async function request(
         ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
         ...(authenticated && accessToken ? { Authorization: 'Bearer ' + accessToken } : {}),
       },
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      ...(formData !== undefined
+        ? { body: formData }
+        : body === undefined
+          ? {}
+          : { body: JSON.stringify(body) }),
       signal: controller.signal,
     });
     responseText = await response.text();
@@ -226,4 +231,65 @@ export async function createIncident({ title, description, latitude, longitude, 
 
   const incident = await request('/api/incidents', { method: 'POST', body });
   return expectIncident(incident);
+}
+
+function inferPhotoMimeType(photo) {
+  if (typeof photo?.mimeType === 'string' && photo.mimeType.trim()) {
+    return photo.mimeType.trim().toLowerCase();
+  }
+  const source = String(photo?.fileName || photo?.uri || '').toLowerCase();
+  if (source.endsWith('.png')) {
+    return 'image/png';
+  }
+  if (source.endsWith('.webp')) {
+    return 'image/webp';
+  }
+  return 'image/jpeg';
+}
+
+function inferPhotoFileName(photo, mimeType) {
+  if (typeof photo?.fileName === 'string' && photo.fileName.trim()) {
+    return photo.fileName.trim();
+  }
+  if (mimeType === 'image/png') {
+    return 'incident-photo.png';
+  }
+  if (mimeType === 'image/webp') {
+    return 'incident-photo.webp';
+  }
+  return 'incident-photo.jpg';
+}
+
+export async function uploadIncidentPhoto(incidentId, photo) {
+  const type = inferPhotoMimeType(photo);
+  const name = inferPhotoFileName(photo, type);
+  const formData = new FormData();
+  formData.append('file', {
+    uri: photo.uri,
+    name,
+    type,
+  });
+
+  const uploaded = await request(
+    '/api/incidents/' + encodeURIComponent(String(incidentId)) + '/photos',
+    { method: 'POST', formData },
+  );
+  if (!uploaded || typeof uploaded !== 'object' || typeof uploaded.url !== 'string') {
+    throw new ApiError('El backend devolvió una foto adjunta no válida.');
+  }
+  return uploaded;
+}
+
+export function getIncidentPhotoSource(photoUrl) {
+  if (typeof photoUrl !== 'string' || !photoUrl.trim() || !BASE_URL) {
+    return null;
+  }
+  const trimmed = photoUrl.trim();
+  const uri = /^https?:\/\//i.test(trimmed)
+    ? trimmed
+    : BASE_URL + (trimmed.startsWith('/') ? trimmed : '/' + trimmed);
+  return {
+    uri,
+    ...(accessToken ? { headers: { Authorization: 'Bearer ' + accessToken } } : {}),
+  };
 }

@@ -25,6 +25,13 @@
         {
           "locationWhenInUsePermission": "UrbanPulse usa tu ubicación para proponer dónde está la incidencia que vas a registrar."
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "UrbanPulse usa la cámara para tomar fotos de la incidencia.",
+          "photosPermission": "UrbanPulse accede a tus fotos para adjuntarlas a la incidencia."
+        }
       ]
     ]
   }
