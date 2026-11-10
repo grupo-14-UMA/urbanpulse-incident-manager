@@ -79,7 +79,7 @@ Los títulos de los issues y de los PR siguen la misma convención.
 
 ## Crear un issue
 
-Los issues se crean y se promueven con la skill [`create-issue`](.claude/skills/create-issue/SKILL.md): el agente decide los valores y el script `create-issue.sh` los valida antes de crear nada, hace todas las llamadas a `gh` y comprueba el resultado. Un hook de Claude Code bloquea crear issues de cualquier otra forma; editar, comentar y cerrar issues sigue permitido. Un issue creado desde la web de GitHub tiene que cumplir lo mismo a mano.
+Los issues, los epic y los milestones se crean con la skill [`create-issue`](.claude/skills/create-issue/SKILL.md): el agente decide los valores y el script `create-issue.sh` los valida antes de crear nada, hace todas las llamadas a `gh` y comprueba el resultado. El mismo script cambia los campos de la lista de un issue ya creado, en cualquier estado (`update`), y lo pasa de triage a ready (`promote`). Un hook de Claude Code bloquea crear issues de cualquier otra forma; comentar, cerrar o añadir una etiqueta suelta sigue haciéndose directamente con `gh`. Un issue creado desde la web de GitHub tiene que cumplir lo mismo.
 
 ### Estados
 
@@ -87,17 +87,21 @@ Los issues se crean y se promueven con la skill [`create-issue`](.claude/skills/
 | --- | --- | --- |
 | Triage | `🔍 triage` | Título con el prefijo de [Conventional Commits](#convención-de-commits), plantilla, tipo y un contexto corto. El milestone es opcional: sin milestone es una idea en la bandeja de entrada; con milestone pertenece a esa entrega, pero aún tiene preguntas abiertas. |
 | Ready | `✅ ready` | La [definición de listo](#definición-de-listo) y toda la [lista de un issue ready](#lista-de-un-issue-ready). |
+| Epic | `🗺️ epic` y `✅ ready` | Título con el prefijo de Conventional Commits, el objetivo de la entrega y su milestone. No lleva área, prioridad, esfuerzo ni epic padre. |
 
 En la vista **Pendiente** del [tablero](#tablero-del-proyecto), las ideas aparecen en el grupo "No Milestone". Un issue de triage pasa a ready con la skill `create-issue`, tras una ronda corta de preguntas que resuelve lo que le falta.
 
+El **milestone actual** es el milestone abierto con el número más bajo: puede haber varios abiertos a la vez, porque la siguiente entrega se planifica mientras la actual sigue en marcha, y los milestones no llevan fecha obligatoria.
+
 ### Definición de listo
 
-Un issue dice *qué* hay que hacer y *cómo se comprueba*, nunca *cómo implementarlo*:
+Un issue dice *qué* hay que hacer y *cómo se comprueba*. No obliga a una forma de implementarlo:
 
 - **Qué y por qué**: el problema o el objetivo en 2-4 líneas.
 - **Criterios de aceptación observables**: lo que se puede ver o medir desde fuera ("el operador filtra por estado y recibe resultados paginados"), no "crear la función X en el fichero Y".
 - **Atributos de calidad** que apliquen (consulta acotada, índice, logs, métricas), como pide `AGENTS.md` → Quality attributes.
 - **Fuera de alcance**, cuando ayude.
+- **Propuesta**, opcional: una primera idea de cómo podría hacerse. No es vinculante: quien lo implementa puede descartarla.
 - **Restricciones técnicas**, solo si ya están decididas (un ADR, una convención existente). El resto de decisiones de diseño son de quien lo implementa, que tiene que poder adaptarse cuando surjan problemas.
 
 ### Lista de un issue ready
@@ -110,11 +114,9 @@ Un issue dice *qué* hay que hacer y *cómo se comprueba*, nunca *cómo implemen
 - [ ] **Esfuerzo**: el campo `Effort`.
 - [ ] **Área**: una sola etiqueta `area: …`, la del área responsable del issue.
 - [ ] **Assignee**: el dueño de esa área (ver [Áreas de desarrollo](#áreas-de-desarrollo)).
-- [ ] **Milestone** de la entrega.
+- [ ] **Milestone** de la entrega (el [milestone actual](#estados), salvo que sea para la siguiente).
 - [ ] **Sub-issue** del epic de la entrega.
 - [ ] **Dependencias**: los issues que tienen que cerrarse antes, como *blocked by*.
-
-Los epic llevan `🗺️ epic` y no llevan área, prioridad ni esfuerzo; se crean a mano, igual que los milestones.
 
 ## Etiquetas
 

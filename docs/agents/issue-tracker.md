@@ -4,19 +4,25 @@ Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all o
 
 ## Creating an issue
 
-Create and promote issues with the `create-issue` skill (`.claude/skills/create-issue/SKILL.md`). It drives `.claude/skills/create-issue/create-issue.sh`, the only way to create issues: a `PreToolUse` hook (`block-raw-create.sh`, same folder) blocks `gh issue create` and `gh api` calls that create issues.
+Create issues, epics and milestones, and change the checklist fields of an issue, with the `create-issue` skill (`.claude/skills/create-issue/SKILL.md`). It drives `.claude/skills/create-issue/create-issue.sh`, the only way to create issues: a `PreToolUse` hook (`block-raw-create.sh`, same folder) blocks `gh issue create` and `gh api` calls that create issues.
 
 ```bash
 S=.claude/skills/create-issue/create-issue.sh
 $S create --dry-run --state ready --title "feat: …" --body-file body.md \
-  --area mobile --priority High --effort Simple --assignee <owner> \
-  --milestone "Entrega 2" --epic <epic> --blocked-by <n>,<n>
-$S create --batch issues.json                         # several issues, all validated first
-$S promote <n> --body-file body.md --priority Medium  # triage → ready, or fill missing fields
-$S --help                                             # every flag and the batch format
+  --area <area> --priority High --effort Simple --assignee <owner> \
+  --milestone current --epic <epic> --blocked-by <n>,<n>
+$S create --state epic --title "feat: …" --body-file goal.md --milestone <milestone>
+$S create --batch issues.json             # several issues (and their epic), all validated first
+$S update <n> --milestone ""              # change fields, keep the state; "" removes a field
+$S update <n> --state triage              # validated against the state it ends in
+$S promote <n> --body-file body.md        # update <n> --state ready
+$S milestone --title <title> [--due-on YYYY-MM-DD] [--description …]
+$S --help                                 # every flag and the batch format
 ```
 
-The script validates every value against `CONTRIBUTING.md` → Crear un issue before the first write, sets the labels, assignee, milestone, issue type, parent epic, *blocked by* and the `Priority` / `Effort` issue fields, and then verifies each one. When a write fails it prints which steps were done and which are missing. `--dry-run` runs only the read-only checks and prints the writes.
+The script validates every value against `CONTRIBUTING.md` → Crear un issue before the first write, sets the labels, assignee, milestone, issue type, parent epic, *blocked by* and the `Priority` / `Effort` issue fields, and then verifies each one. `--milestone current` is the open milestone with the lowest number. When a write fails it prints which steps were done and which are missing; finish the issue with `update <n>`. `--dry-run` runs only the read-only checks and prints the writes.
+
+Comments, closing and one-off labels go through `gh` directly (see below); checklist fields go through `update`.
 
 ## Conventions
 
