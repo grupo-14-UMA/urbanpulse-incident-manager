@@ -4,7 +4,7 @@ Este documento describe la arquitectura de UrbanPulse siguiendo el modelo C4. Di
 
 ## Visión general
 
-UrbanPulse es una plataforma para registrar, gestionar y analizar incidencias urbanas en Málaga. Tiene dos clientes: una aplicación móvil React Native con Expo para el ciudadano y el técnico, y un panel de gestión web con React para el operador, el administrador y el analista. Ambos están diseñados para usar un backend monolítico modular con Java 21 y Spring Boot 4, y PostgreSQL con PostGIS. Docker Compose proporciona el entorno local para el backend y la base de datos. La aplicación móvil consume la API para mostrar incidencias, consultar sus detalles y registrar nuevas incidencias. El panel web ofrece un mapa de Málaga con clusters, filtros por categoría y estado, carga simulada por área visible y un detalle de solo lectura para cada incidencia; el mapa aún no consume la API.
+UrbanPulse es una plataforma para registrar, gestionar y analizar incidencias urbanas en Málaga. Tiene dos clientes: una aplicación móvil React Native con Expo para el ciudadano y el técnico, y un panel de gestión web con React para el operador, el administrador y el analista. Ambos usan un backend monolítico modular con Java 21 y Spring Boot 4, y PostgreSQL con PostGIS. Docker Compose proporciona el entorno local para el backend y la base de datos. La aplicación móvil consume la API para mostrar, consultar y registrar incidencias. El panel ofrece un mapa con clusters que consulta la API por área visible y una lista filtrable y paginada con datos de muestra; la lista aún no consume la API.
 
 ## Nivel 1: Contexto del sistema
 
@@ -41,7 +41,7 @@ flowchart LR
 | Administrador | Gestiona usuarios, permisos, categorías, departamentos y fuentes externas. | Panel de gestión |
 | Analista | Consulta indicadores, patrones territoriales y resultados de análisis. | Panel de gestión |
 
-La aplicación móvil implementada autentica al usuario, renueva su sesión al abrirse y guarda el token con el almacenamiento seguro del dispositivo. Un ciudadano autenticado puede ver las incidencias del área visible en un mapa de Málaga, consultar su detalle y registrar nuevas; un técnico ve sus trabajos (aún sin asignaciones), y un operador recibe la indicación de usar el panel de gestión desde un ordenador. El panel web permite iniciar sesión a operadores, conserva y renueva la sesión, y carga en el mapa las incidencias del área visible. El listado y el detalle todavía son pantallas de estructura; los flujos de seguimiento y trabajo del técnico forman parte del alcance funcional previsto.
+La aplicación móvil implementada autentica al usuario, renueva su sesión al abrirse y guarda el token con el almacenamiento seguro del dispositivo. Un ciudadano autenticado puede ver las incidencias del área visible en un mapa de Málaga, consultar su detalle y registrar nuevas; un técnico ve sus trabajos (aún sin asignaciones), y un operador recibe la indicación de usar el panel de gestión desde un ordenador. El panel web permite iniciar sesión a operadores, conserva y renueva la sesión, y elimina el token al cerrar sesión. Su mapa carga las incidencias del área visible; el listado ofrece filtros y paginación con datos de muestra, y el detalle muestra datos de solo lectura. Los flujos de seguimiento y trabajo del técnico forman parte del alcance funcional previsto.
 
 ### Sistemas externos
 
@@ -67,6 +67,7 @@ flowchart LR
         web[Panel de gestión<br/>React · Vite · Leaflet]
         api[Backend API<br/>Java 21 · Spring Boot 4]
         db[(Base de datos<br/>PostgreSQL · PostGIS)]
+        photos[(Volumen de fotografías<br/>Sistema de ficheros · Docker)]
     end
 
     osm[Teselas OpenStreetMap]
@@ -75,9 +76,10 @@ flowchart LR
     citizen --> mobile
     technician -.-> mobile
     staff --> web
-    mobile -->|HTTP / JSON<br/>EXPO_PUBLIC_API_URL| api
+    mobile -->|HTTP / JSON / Multipart<br/>EXPO_PUBLIC_API_URL| api
     web -->|HTTP / JSON · VITE_API_URL| api
     api -->|JDBC| db
+    api -->|PhotoStorage| photos
     mobile -->|Teselas raster| osm
     web -->|Teselas raster| osm
     api -.->|Integraciones futuras| data
@@ -86,9 +88,10 @@ flowchart LR
 | Contenedor | Tecnología | Responsabilidad y estado |
 | --- | --- | --- |
 | Aplicación móvil | React Native, Expo, `expo-router`, `react-native-maps`, `expo-location` | Implementa registro e inicio de sesión para ciudadanos y una pantalla de mapa centrada en Málaga. El mapa consulta las incidencias del rectángulo visible al abrirse, cuando termina un movimiento o cambio de zoom y al volver a primer plano; también ofrece detalle y registro con coordenadas de GPS o seleccionadas en el mapa. Las llamadas REST se centralizan en `src/api.js`, y `EXPO_PUBLIC_API_URL` configura el backend. |
-| Panel de gestión | React, Vite, React Router, `react-leaflet`, CSS propio | Cliente web del operador ([ADR-0015](adr/0015-react-vite-y-leaflet-para-panel-de-gestion.md)). Ofrece inicio de sesión con `POST /api/auth/login`, protege sus rutas y permite el acceso a cuentas con rol `OPERATOR`. Conserva el token en el almacenamiento local del navegador, lo renueva al abrir el panel y lo elimina al cerrar sesión. El mapa consulta las incidencias del rectángulo visible al abrirse y al terminar movimientos o cambios de zoom; la API limita cada respuesta a 500 y avisa si hay más. El listado y el detalle todavía son pantallas de estructura. `VITE_API_URL` configura el backend. |
-| Backend | Java 21, Spring Boot 4, Spring Security, Maven | Monolito modular. Expone por REST el registro e inicio de sesión, usuarios y técnicos, categorías y operaciones con incidencias y sus fotografías. La consulta del mapa usa `ST_Intersects` y el índice GiST de `Incident.location`; requiere límites del área visible y devuelve hasta 500 incidencias `REPORTED`, con `truncated` para indicar si hay más. Las fotografías se validan y guardan en un volumen local detrás de la interfaz `PhotoStorage`, sustituible por S3 en despliegues en la nube. |
+| Panel de gestión | React, Vite, React Router, `react-leaflet`, CSS propio | Cliente web del operador ([ADR-0015](adr/0015-react-vite-y-leaflet-para-panel-de-gestion.md)). Ofrece inicio de sesión con `POST /api/auth/login`, protege sus rutas y permite el acceso a cuentas con rol `OPERATOR`. Conserva el token en el almacenamiento local del navegador, lo renueva al abrir el panel y lo elimina al cerrar sesión. El mapa consulta por área visible, agrupa los marcadores y avisa si la API limita los resultados a 500. El listado usa 18 incidencias de muestra compartidas con el mapa y aplica filtros, ordenación y paginación en el navegador. El detalle es de solo lectura y usa esos mismos datos; las acciones del Operador se incorporarán en siguientes issues. `VITE_API_URL` configura el backend. |
+| Backend | Java 21, Spring Boot 4, Spring Security, Maven | Monolito modular. Expone por REST el registro e inicio de sesión, usuarios y técnicos, categorías y operaciones con incidencias y sus fotografías. La consulta del mapa usa `ST_Intersects` y el índice GiST de `Incident.location`; requiere límites del área visible y devuelve hasta 500 incidencias `REPORTED`, con `truncated` para indicar si hay más. Las fotografías se validan y guardan a través de la interfaz `PhotoStorage` ([ADR-0018](adr/0018-almacenamiento-de-fotos-en-volumen-detras-de-interfaz.md)). |
 | Base de datos | PostgreSQL con PostGIS | Docker Compose utiliza `postgis/postgis`. Flyway crea `Incident`, `Attachment`, `Category`, `User` y `Role`, incluida la ubicación espacial, las categorías iniciales, los roles y la relación con el ciudadano que registra una incidencia. |
+| Volumen de fotografías | Volumen de Docker (`incident_photos`) | Persiste en el sistema de ficheros (`/var/lib/urbanpulse/photos`, configurable con `PHOTOS_DIR`) los binarios de las fotografías adjuntas a las incidencias para que sobrevivan a reinicios del backend, detrás de `PhotoStorage` para poder sustituirse por S3 ([ADR-0018](adr/0018-almacenamiento-de-fotos-en-volumen-detras-de-interfaz.md)). |
 
 En el entorno local, Docker Compose publica el backend en el puerto `8080` y PostgreSQL en el puerto `5432` por defecto. El backend se conecta a la base de datos mediante el nombre de servicio `db` dentro de la red de Compose. La aplicación móvil se inicia aparte con Expo. Para que un teléfono pueda acceder al backend, `EXPO_PUBLIC_API_URL` debe apuntar a la dirección de red del equipo que ejecuta Docker, no a `localhost`.
 
@@ -126,7 +129,7 @@ La API REST expone estas rutas. La columna «Acceso» indica quién puede usarla
 | `POST` | `/api/incidents` | Ciudadano | Crear una incidencia con título, descripción, latitud, longitud y categoría opcional. El ciudadano que la registra se toma del token. Devuelve la incidencia creada, con estado `REPORTED` (etiqueta visible: «Registrada») y fecha de registro `createdAt` en UTC con milisegundos (`2026-11-07T10:15:30.123Z`); los `GET` devuelven el mismo valor. |
 | `GET` | `/api/incidents?west=…&south=…&east=…&north=…` | Autenticado | Consultar hasta 500 incidencias `REPORTED` dentro del rectángulo visible WGS 84. Los cuatro límites son obligatorios; `west < east` y `south < north`. La respuesta incluye `incidents` y `truncated`; la consulta usa `ST_Intersects` y el índice GiST de la ubicación. |
 | `GET` | `/api/incidents/{id}` | Autenticado | Consultar el detalle de una incidencia (incluidas sus fotografías `photos`); devuelve 404 si no existe. |
-| `POST` | `/api/incidents/{id}/photos` | Ciudadano (autor) o Técnico | Adjuntar entre 1 y 3 fotografías (`multipart/form-data`, campo `photos`) en formato JPEG, PNG o WebP y hasta 5 MB por fichero. |
+| `POST` | `/api/incidents/{id}/photos` | Ciudadano (autor) | Adjuntar entre 1 y 3 fotografías (`multipart/form-data`, campo `photos`) en formato JPEG, PNG o WebP y hasta 5 MB por fichero. |
 | `GET` | `/api/incidents/{id}/photos/{photoId}` | Autenticado | Descargar el contenido binario de una fotografía adjunta a la incidencia. |
 | `GET` | `/api/categories` | Autenticado | Listar categorías disponibles. |
 
@@ -168,7 +171,7 @@ erDiagram
     CATEGORY o|--o{ INCIDENT : classifies
     INCIDENT ||--o{ INCIDENT_STATUS_HISTORY : records
     USER ||--o{ INCIDENT_STATUS_HISTORY : changes
-    INCIDENT ||--o{ EVIDENCE : has
+    INCIDENT ||--o{ ATTACHMENT : has
     INCIDENT ||--o{ ASSIGNMENT : receives
     DEPARTMENT ||--o{ ASSIGNMENT : handles
     USER ||--o{ ASSIGNMENT : performs
@@ -220,3 +223,6 @@ Las decisiones que fundamentan esta arquitectura se registran en [docs/adr/](adr
 - [ADR-0013: Spring Boot 4 para el backend](adr/0013-spring-boot-4-para-backend.md).
 - [ADR-0014: Aplicación móvil y panel de gestión web](adr/0014-aplicacion-movil-y-panel-de-gestion-web.md).
 - [ADR-0015: React con Vite y Leaflet para el panel de gestión](adr/0015-react-vite-y-leaflet-para-panel-de-gestion.md).
+- [ADR-0016: Autenticación con JWT emitidos por el propio backend](adr/0016-autenticacion-con-jwt-propio.md).
+- [ADR-0017: Guardar y exponer los instantes en UTC con zona explícita](adr/0017-instantes-en-utc-con-zona-explicita.md).
+- [ADR-0018: Almacenamiento de fotografías en un volumen detrás de una interfaz](adr/0018-almacenamiento-de-fotos-en-volumen-detras-de-interfaz.md).
