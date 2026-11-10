@@ -264,16 +264,17 @@ export async function uploadIncidentPhoto(incidentId, photo) {
   const type = inferPhotoMimeType(photo);
   const name = inferPhotoFileName(photo, type);
   const formData = new FormData();
-  formData.append('file', {
+  formData.append('photos', {
     uri: photo.uri,
     name,
     type,
   });
 
-  const uploaded = await request(
+  const payload = await request(
     '/api/incidents/' + encodeURIComponent(String(incidentId)) + '/photos',
     { method: 'POST', formData },
   );
+  const uploaded = Array.isArray(payload) ? payload[0] : null;
   if (!uploaded || typeof uploaded !== 'object' || typeof uploaded.url !== 'string') {
     throw new ApiError('El backend devolvió una foto adjunta no válida.');
   }

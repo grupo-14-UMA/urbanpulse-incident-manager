@@ -82,44 +82,56 @@ describe('mobile API client', () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
-  test('uploads an incident photo as multipart FormData and returns the attachment metadata', async () => {
+  test('uploads an incident photo as multipart FormData with the photos field and decodes the returned list', async () => {
+    const appendSpy = jest.spyOn(FormData.prototype, 'append');
     global.fetch.mockResolvedValueOnce({
       ok: true,
       status: 201,
       text: async () =>
-        JSON.stringify({
-          id: 7,
-          url: '/api/incidents/42/photos/7',
-          contentType: 'image/jpeg',
-          sizeBytes: 12345,
-          createdAt: '2026-11-10T10:00:00Z',
-        }),
+        JSON.stringify([
+          {
+            id: 7,
+            url: '/api/incidents/42/photos/7',
+            contentType: 'image/jpeg',
+            sizeBytes: 12345,
+            createdAt: '2026-11-10T10:00:00Z',
+          },
+        ]),
     });
     const { setAccessToken, uploadIncidentPhoto } = require('./api');
     setAccessToken('jwt-token');
 
-    const result = await uploadIncidentPhoto(42, {
-      uri: 'file:///tmp/photo.jpg',
-      mimeType: 'image/jpeg',
-      fileName: 'photo.jpg',
-    });
+    try {
+      const result = await uploadIncidentPhoto(42, {
+        uri: 'file:///tmp/photo.jpg',
+        mimeType: 'image/jpeg',
+        fileName: 'photo.jpg',
+      });
 
-    expect(result).toMatchObject({
-      id: 7,
-      url: '/api/incidents/42/photos/7',
-      contentType: 'image/jpeg',
-    });
-    expect(global.fetch).toHaveBeenCalledWith(
-      apiUrl + '/api/incidents/42/photos',
-      expect.objectContaining({
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          Authorization: 'Bearer jwt-token',
-        },
-        body: expect.any(FormData),
-      }),
-    );
+      expect(result).toMatchObject({
+        id: 7,
+        url: '/api/incidents/42/photos/7',
+        contentType: 'image/jpeg',
+      });
+      expect(appendSpy).toHaveBeenCalledWith('photos', {
+        uri: 'file:///tmp/photo.jpg',
+        name: 'photo.jpg',
+        type: 'image/jpeg',
+      });
+      expect(global.fetch).toHaveBeenCalledWith(
+        apiUrl + '/api/incidents/42/photos',
+        expect.objectContaining({
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            Authorization: 'Bearer jwt-token',
+          },
+          body: expect.any(FormData),
+        }),
+      );
+    } finally {
+      appendSpy.mockRestore();
+    }
   });
 
   test('surfaces the backend validation message when a photo is rejected for type or size', async () => {
