@@ -171,12 +171,16 @@ function CitizenMapScreen() {
             { top: insets.top + 58 },
             loadError ? styles.noticeError : styles.noticeInfo,
           ]}
-          pointerEvents="none"
           accessibilityLiveRegion="polite"
         >
           <Text style={[styles.noticeText, loadError ? styles.noticeErrorText : styles.noticeInfoText]}>
             {notice}
           </Text>
+          {loadError && (
+            <Pressable onPress={loadVisibleIncidents} accessibilityRole="button">
+              <Text style={styles.retryText}>Reintentar</Text>
+            </Pressable>
+          )}
         </View>
       )}
       {selectedIncident && (
@@ -267,6 +271,12 @@ const styles = StyleSheet.create({
   },
   noticeInfoText: {
     color: '#24547a',
+  },
+  retryText: {
+    marginTop: 6,
+    textAlign: 'center',
+    color: COLORS.primary,
+    fontWeight: '600',
   },
   card: {
     position: 'absolute',
