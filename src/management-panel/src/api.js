@@ -53,6 +53,10 @@ export async function getIncidentsWithinBounds(bounds, { signal } = {}) {
   return payload;
 }
 
+export async function getIncidentById(id, { signal } = {}) {
+  return apiRequest(`/api/incidents/${encodeURIComponent(id)}`, { signal });
+}
+
 export async function apiRequest(path, options = {}) {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
   const { skipAuth = false, headers: requestHeaders, ...fetchOptions } = options;
