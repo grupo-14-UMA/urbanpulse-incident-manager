@@ -11,6 +11,25 @@ import {
   submitIncidentWithPhotos,
 } from './incidentPhotos';
 
+jest.mock('expo-image-manipulator', () => ({
+  SaveFormat: { JPEG: 'jpeg' },
+  manipulateAsync: jest.fn(async (uri, _actions, options) => ({
+    uri: `file:///compressed-${uri.includes('big') ? 'big-' : ''}${options.compress}.jpg`,
+    width: 1920,
+    height: 1440,
+  })),
+}));
+
+jest.mock('expo-file-system', () => ({
+  File: class MockFile {
+    constructor(uri) {
+      this.size = uri.includes('big') || uri.includes('0.78')
+        ? 6 * 1024 * 1024
+        : 3 * 1024 * 1024;
+    }
+  },
+}));
+
 describe('incidentPhotos helper', () => {
   test('picks a photo from camera or gallery and caps the list at 3 photos', async () => {
     const mockPicker = {
@@ -46,15 +65,27 @@ describe('incidentPhotos helper', () => {
     expect(fromCamera).toEqual({
       status: 'picked',
       photo: {
-        uri: 'file:///camera-1.jpg',
+        uri: 'file:///compressed-0.66.jpg',
         mimeType: 'image/jpeg',
         fileName: 'camera-1.jpg',
-        fileSize: 2048,
+        fileSize: 3 * 1024 * 1024,
+        width: 1920,
+        height: 1440,
         uploaded: false,
         error: null,
       },
     });
-    expect(fromGallery.status).toBe('picked');
+    expect(fromGallery).toMatchObject({
+      status: 'picked',
+      photo: {
+        uri: 'file:///compressed-0.66.jpg',
+        mimeType: 'image/jpeg',
+        fileName: 'gallery-1.jpg',
+        fileSize: 3 * 1024 * 1024,
+      },
+    });
+    expect(mockPicker.launchCameraAsync).toHaveBeenCalledWith({ mediaTypes: ['images'], quality: 1 });
+    expect(mockPicker.launchImageLibraryAsync).toHaveBeenCalledWith({ mediaTypes: ['images'], quality: 1 });
 
     let list = [];
     list = addPickedPhoto(list, fromCamera.photo);
@@ -65,7 +96,24 @@ describe('incidentPhotos helper', () => {
     expect(list).toHaveLength(MAX_INCIDENT_PHOTOS);
 
     list = removePhotoAt(list, 1);
-    expect(list.map((item) => item.uri)).toEqual(['file:///camera-1.jpg', 'file:///third.webp']);
+    expect(list.map((item) => item.uri)).toEqual(['file:///compressed-0.66.jpg', 'file:///third.webp']);
+  });
+
+  test('rejects an image that stays over 5 MB after all resize and compression passes', async () => {
+    const picker = {
+      requestMediaLibraryPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
+      launchImageLibraryAsync: jest.fn().mockResolvedValue({
+        canceled: false,
+        assets: [{ uri: 'file:///big-photo.png', width: 6000, height: 4000 }],
+      }),
+    };
+    const { manipulateAsync } = require('expo-image-manipulator');
+    manipulateAsync.mockClear();
+
+    await expect(pickPhotoFromGallery(picker)).rejects.toThrow(
+      'No se pudo reducir la foto a menos de 5 MB. Elige otra imagen.',
+    );
+    expect(manipulateAsync).toHaveBeenCalledTimes(4);
   });
 
   test('returns a non-blocking notice when camera or gallery permission is denied', async () => {

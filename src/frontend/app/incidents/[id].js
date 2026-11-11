@@ -13,7 +13,12 @@ import { Image } from 'expo-image';
 import MapView, { Marker } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { getIncident, getIncidentPhotoSource } from '../../src/api';
+import { getIncident, getIncidentPhotoSource, uploadIncidentPhoto } from '../../src/api';
+import {
+  MAX_INCIDENT_PHOTOS,
+  pickPhotoFromCamera,
+  pickPhotoFromGallery,
+} from '../../src/incidentPhotos';
 import { categoryLabel, statusLabel } from '../../src/labels';
 import { OSM_MAP_PROPS, OsmAttribution, OsmTiles, STREET_DELTA } from '../../src/map';
 import { COLORS } from '../../src/theme';
@@ -37,6 +42,40 @@ export default function IncidentDetailScreen() {
 function IncidentDetailContent({ id }) {
   const insets = useSafeAreaInsets();
   const { status: state, data: incident, error, reload } = useLoad(() => getIncident(id));
+  const [pendingPhoto, setPendingPhoto] = useState(null);
+  const [photoMessage, setPhotoMessage] = useState(null);
+  const [photoUploading, setPhotoUploading] = useState(false);
+
+  async function choosePhoto(source) {
+    if (photoUploading) return;
+    setPhotoMessage(null);
+    try {
+      const outcome = source === 'camera' ? await pickPhotoFromCamera() : await pickPhotoFromGallery();
+      if (outcome.status === 'denied') {
+        setPhotoMessage(outcome.message);
+      } else if (outcome.status === 'picked') {
+        setPendingPhoto(outcome.photo);
+      }
+    } catch (photoError) {
+      setPhotoMessage(photoError?.message || 'No se pudo preparar la foto seleccionada.');
+    }
+  }
+
+  async function uploadPhoto() {
+    if (!pendingPhoto || photoUploading) return;
+    setPhotoUploading(true);
+    setPhotoMessage(null);
+    try {
+      await uploadIncidentPhoto(id, pendingPhoto);
+      setPendingPhoto(null);
+      setPhotoMessage('La foto se ha añadido a la incidencia.');
+      reload();
+    } catch (photoError) {
+      setPhotoMessage(photoError?.message || 'No se pudo subir la foto. Inténtalo de nuevo.');
+    } finally {
+      setPhotoUploading(false);
+    }
+  }
 
   if (state === 'loading') {
     return (
@@ -100,21 +139,81 @@ function IncidentDetailContent({ id }) {
       <Text style={styles.label}>Fecha de registro</Text>
       <Text style={styles.value}>{new Date(incident.createdAt).toLocaleString('es-ES')}</Text>
 
-      {photos.length > 0 && (
-        <>
-          <Text style={styles.label}>Fotos</Text>
-          <View style={styles.photoGrid}>
-            {photos.map((photo, index) => {
-              return (
-                <IncidentPhotoImage
-                  key={photo.id ?? `${photo.url}-${index}`}
-                  photo={photo}
-                  index={index}
-                />
-              );
-            })}
+      <Text style={styles.label}>Fotos ({photos.length}/{MAX_INCIDENT_PHOTOS})</Text>
+      {photos.length > 0 ? (
+        <View style={styles.photoGrid}>
+          {photos.map((photo, index) => (
+            <IncidentPhotoImage
+              key={photo.id ?? `${photo.url}-${index}`}
+              photo={photo}
+              index={index}
+            />
+          ))}
+        </View>
+      ) : (
+        <Text style={styles.value}>Esta incidencia todavía no tiene fotos.</Text>
+      )}
+
+      {photos.length < MAX_INCIDENT_PHOTOS && (
+        <View style={styles.addPhotoSection}>
+          <Text style={styles.value}>Añade una foto para completar la incidencia.</Text>
+          <View style={styles.photoActions}>
+            <Pressable
+              style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonPressed]}
+              onPress={() => choosePhoto('camera')}
+              disabled={photoUploading}
+              accessibilityRole="button"
+            >
+              <Text style={styles.secondaryButtonText}>Tomar foto</Text>
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonPressed]}
+              onPress={() => choosePhoto('gallery')}
+              disabled={photoUploading}
+              accessibilityRole="button"
+            >
+              <Text style={styles.secondaryButtonText}>Elegir de galería</Text>
+            </Pressable>
           </View>
-        </>
+          {pendingPhoto && (
+            <View style={styles.pendingPhoto}>
+              <Image source={{ uri: pendingPhoto.uri }} style={styles.pendingPhotoImage} contentFit="cover" />
+              <Pressable
+                onPress={() => {
+                  setPendingPhoto(null);
+                  setPhotoMessage(null);
+                }}
+                disabled={photoUploading}
+                accessibilityRole="button"
+              >
+                <Text style={styles.removePhotoText}>Quitar foto seleccionada</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [styles.uploadButton, pressed && styles.uploadButtonPressed]}
+                onPress={uploadPhoto}
+                disabled={photoUploading}
+                accessibilityRole="button"
+              >
+                {photoUploading
+                  ? <ActivityIndicator color={COLORS.onPrimary} />
+                  : <Text style={styles.uploadButtonText}>Subir foto</Text>}
+              </Pressable>
+            </View>
+          )}
+          {photoMessage && (
+            <View style={photoMessage.startsWith('La foto se ha añadido') ? styles.photoSuccess : styles.photoFailure}>
+              <Text
+                style={
+                  photoMessage.startsWith('La foto se ha añadido')
+                    ? styles.photoSuccessText
+                    : styles.photoFailureText
+                }
+              >
+                {photoMessage}
+              </Text>
+            </View>
+          )}
+        </View>
       )}
 
       <Text style={styles.label}>Localización</Text>
@@ -249,6 +348,81 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 10,
     marginTop: 4,
+  },
+  addPhotoSection: {
+    marginTop: 10,
+    gap: 10,
+  },
+  photoActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  secondaryButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.surface,
+  },
+  secondaryButtonText: {
+    color: COLORS.primary,
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  buttonPressed: {
+    opacity: 0.75,
+  },
+  pendingPhoto: {
+    gap: 8,
+  },
+  pendingPhotoImage: {
+    width: 132,
+    height: 132,
+    borderRadius: 8,
+    backgroundColor: COLORS.surfaceMuted,
+  },
+  removePhotoText: {
+    color: COLORS.error,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  uploadButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+    borderRadius: 8,
+    backgroundColor: COLORS.primary,
+  },
+  uploadButtonPressed: {
+    backgroundColor: COLORS.primaryPressed,
+  },
+  uploadButtonText: {
+    color: COLORS.onPrimary,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  photoSuccess: {
+    padding: 10,
+    borderRadius: 8,
+    backgroundColor: COLORS.successSoft,
+  },
+  photoSuccessText: {
+    color: COLORS.success,
+    fontSize: 14,
+  },
+  photoFailure: {
+    padding: 10,
+    borderRadius: 8,
+    backgroundColor: COLORS.errorSoft,
+  },
+  photoFailureText: {
+    color: COLORS.error,
+    fontSize: 14,
   },
   photoFrame: {
     width: '100%',

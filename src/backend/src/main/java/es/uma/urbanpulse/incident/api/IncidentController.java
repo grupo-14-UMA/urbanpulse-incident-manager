@@ -75,6 +75,7 @@ public class IncidentController {
 	@Operation(
 			summary = "Listar incidencias del área visible del mapa",
 			description = "Devuelve hasta 500 incidencias REPORTED dentro del rectángulo WGS 84 indicado. "
+					+ "Los ciudadanos solo reciben sus propias incidencias; los técnicos y operadores pueden consultar todas. "
 					+ "Si truncated es true, acerca el mapa para ver más incidencias."
 	)
 	@ApiResponses({
@@ -92,12 +93,16 @@ public class IncidentController {
 							schema = @Schema(implementation = ApiErrorResponse.class)))
 	})
 	public IncidentMapResponse findWithinBounds(
-			@Valid @ParameterObject @ModelAttribute IncidentBounds bounds) {
-		return incidentService.findWithinBounds(bounds);
+			@Valid @ParameterObject @ModelAttribute IncidentBounds bounds,
+			@AuthenticationPrincipal Jwt jwt) {
+		return incidentService.findWithinBounds(bounds, AuthTokens.subjectOf(jwt));
 	}
 
 	@GetMapping("/{id}")
-	@Operation(summary = "Consultar una incidencia por identificador")
+	@Operation(
+			summary = "Consultar una incidencia por identificador",
+			description = "Los ciudadanos solo pueden consultar incidencias que hayan registrado."
+	)
 	@ApiResponses({
 			@ApiResponse(responseCode = "200", description = "Incidencia encontrada."),
 			@ApiResponse(
@@ -113,8 +118,8 @@ public class IncidentController {
 							mediaType = "application/json",
 							schema = @Schema(implementation = ApiErrorResponse.class)))
 	})
-	public IncidentResponse findById(@PathVariable Integer id) {
-		return incidentService.findById(id);
+	public IncidentResponse findById(@PathVariable Integer id, @AuthenticationPrincipal Jwt jwt) {
+		return incidentService.findById(id, AuthTokens.subjectOf(jwt));
 	}
 
 	@PostMapping(path = "/{id}/photos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -151,7 +156,10 @@ public class IncidentController {
 	}
 
 	@GetMapping("/{id}/photos/{photoId}")
-	@Operation(summary = "Descargar una fotografía de una incidencia")
+	@Operation(
+			summary = "Descargar una fotografía de una incidencia",
+			description = "Los ciudadanos solo pueden descargar fotografías de sus incidencias."
+	)
 	@ApiResponses({
 			@ApiResponse(
 					responseCode = "200",
@@ -170,8 +178,9 @@ public class IncidentController {
 	})
 	public ResponseEntity<byte[]> downloadPhoto(
 			@PathVariable Integer id,
-			@PathVariable Integer photoId) {
-		StoredPhotoContent photo = incidentService.loadPhoto(id, photoId);
+			@PathVariable Integer photoId,
+			@AuthenticationPrincipal Jwt jwt) {
+		StoredPhotoContent photo = incidentService.loadPhoto(id, photoId, AuthTokens.subjectOf(jwt));
 		return ResponseEntity.ok()
 				.contentType(MediaType.parseMediaType(photo.contentType()))
 				.contentLength(photo.content().length)

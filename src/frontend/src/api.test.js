@@ -252,6 +252,27 @@ describe('mobile API client', () => {
     });
   });
 
+  test('explains an HTTP 413 photo upload response instead of showing a generic validation error', async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 413,
+      text: async () => '',
+    });
+    const { uploadIncidentPhoto } = require('./api');
+
+    await expect(
+      uploadIncidentPhoto(42, {
+        uri: 'file:///too-large.jpg',
+        mimeType: 'image/jpeg',
+        fileName: 'too-large.jpg',
+      }),
+    ).rejects.toMatchObject({
+      kind: 'invalid',
+      status: 413,
+      message: 'La foto supera el límite de 5 MB. Selecciona otra imagen o reduce su tamaño.',
+    });
+  });
+
   test('builds an authenticated image source for incident detail photos', () => {
     const { getIncidentPhotoSource, setAccessToken } = require('./api');
     setAccessToken('jwt-token');

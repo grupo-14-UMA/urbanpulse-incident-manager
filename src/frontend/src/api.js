@@ -70,6 +70,12 @@ function errorForResponse(payload, status, preserveUnauthorizedMessage) {
   if (status === 404) {
     return new ApiError(getResponseErrorMessage(payload, status) || 'Esta incidencia no existe.', { kind: 'notFound', status, payload });
   }
+  if (status === 413) {
+    return new ApiError(
+      'La foto supera el límite de 5 MB. Selecciona otra imagen o reduce su tamaño.',
+      { kind: 'invalid', status, payload },
+    );
+  }
   return new ApiError(getResponseErrorMessage(payload, status) || 'Revisa los datos e inténtalo de nuevo.', {
     kind: 'invalid',
     status,

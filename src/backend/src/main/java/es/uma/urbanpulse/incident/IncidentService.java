@@ -83,26 +83,31 @@ public class IncidentService {
 	}
 
 	@Transactional(readOnly = true)
-	public IncidentMapResponse findWithinBounds(IncidentBounds bounds) {
+	public IncidentMapResponse findWithinBounds(IncidentBounds bounds, TokenSubject caller) {
 		long queryStartedAt = System.nanoTime();
-		List<IncidentMapProjection> candidates = incidentRepository.findWithinBounds(
-				bounds.west(), bounds.south(), bounds.east(), bounds.north(),
-				IncidentStatus.REPORTED.getId(), MAP_RESULT_LIMIT + 1);
+		List<IncidentMapProjection> candidates = caller.role() == Role.CITIZEN
+				? incidentRepository.findWithinBoundsForReporter(
+						bounds.west(), bounds.south(), bounds.east(), bounds.north(),
+						IncidentStatus.REPORTED.getId(), caller.userId(), MAP_RESULT_LIMIT + 1)
+				: incidentRepository.findWithinBounds(
+						bounds.west(), bounds.south(), bounds.east(), bounds.north(),
+						IncidentStatus.REPORTED.getId(), MAP_RESULT_LIMIT + 1);
 		long queryDurationMs = (System.nanoTime() - queryStartedAt) / 1_000_000;
 		boolean truncated = candidates.size() > MAP_RESULT_LIMIT;
 		List<IncidentResponse> incidents = candidates.stream()
 				.limit(MAP_RESULT_LIMIT)
 				.map(IncidentService::toResponse)
 				.toList();
-		LOGGER.info("Loaded {} public map incidents (truncated={}) in {} ms",
-				incidents.size(), truncated, queryDurationMs);
+		LOGGER.info("Loaded {} map incidents for role {} (truncated={}) in {} ms",
+				incidents.size(), caller.role(), truncated, queryDurationMs);
 		return new IncidentMapResponse(incidents, truncated);
 	}
 
 	@Transactional(readOnly = true)
-	public IncidentResponse findById(Integer id) {
+	public IncidentResponse findById(Integer id, TokenSubject caller) {
 		Incident incident = incidentRepository.findById(id)
 				.orElseThrow(() -> new IncidentNotFoundException(id));
+		verifyReadPermission(incident, caller);
 		List<IncidentPhotoResponse> photos = attachmentRepository.findByIncidentIdOrderByIdAsc(id).stream()
 				.map((attachment) -> toPhotoResponse(id, attachment))
 				.toList();
@@ -165,7 +170,10 @@ public class IncidentService {
 	}
 
 	@Transactional(readOnly = true)
-	public StoredPhotoContent loadPhoto(Integer incidentId, Integer photoId) {
+	public StoredPhotoContent loadPhoto(Integer incidentId, Integer photoId, TokenSubject caller) {
+		Incident incident = incidentRepository.findById(incidentId)
+				.orElseThrow(() -> new IncidentNotFoundException(incidentId));
+		verifyReadPermission(incident, caller);
 		Attachment attachment = attachmentRepository.findByIdAndIncidentId(photoId, incidentId)
 				.orElseThrow(() -> new IncidentPhotoNotFoundException(incidentId, photoId));
 		try {
@@ -191,6 +199,13 @@ public class IncidentService {
 			return;
 		}
 		throw new AccessDeniedException("Role " + caller.role() + " cannot upload incident photos");
+	}
+
+	private static void verifyReadPermission(Incident incident, TokenSubject caller) {
+		if (caller.role() == Role.CITIZEN
+				&& (incident.getReporter() == null || !incident.getReporter().getId().equals(caller.userId()))) {
+			throw new AccessDeniedException("Citizen is not the reporter of incident " + incident.getId());
+		}
 	}
 
 	private static byte[] readBytes(MultipartFile file) {

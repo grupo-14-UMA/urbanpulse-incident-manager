@@ -121,6 +121,35 @@ class IncidentPhotoApiTests {
 	}
 
 	@Test
+	void aCitizenCannotDownloadAnotherCitizensIncidentPhoto() {
+		AuthResponse reporter = newCitizen(this.client);
+		AuthResponse otherCitizen = newCitizen(this.client);
+		IncidentResponse incident = createIncident(reporter);
+		MultiValueMap<String, Object> multipart = new LinkedMultiValueMap<>();
+		multipart.add("photos", filePart("privada.jpg", MediaType.IMAGE_JPEG, SAMPLE_JPEG));
+
+		List<IncidentPhotoResponse> uploaded = this.client.post()
+			.uri("/api/incidents/{id}/photos", incident.id())
+			.header("Authorization", bearer(reporter))
+			.contentType(MediaType.MULTIPART_FORM_DATA)
+			.body(multipart)
+			.exchange()
+			.expectStatus()
+			.isCreated()
+			.expectBody(new ParameterizedTypeReference<List<IncidentPhotoResponse>>() {
+			})
+			.returnResult()
+			.getResponseBody();
+
+		this.client.get()
+			.uri(uploaded.get(0).url())
+			.header("Authorization", bearer(otherCitizen))
+			.exchange()
+			.expectStatus()
+			.isForbidden();
+	}
+
+	@Test
 	void rejectsWrongFileTypesDisguisedFilesAndMissingOrMismatchedMimeTypes() {
 		AuthResponse citizen = newCitizen(this.client);
 		IncidentResponse incident = createIncident(citizen);

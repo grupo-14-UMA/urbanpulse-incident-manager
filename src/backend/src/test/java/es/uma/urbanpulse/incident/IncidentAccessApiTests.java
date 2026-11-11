@@ -21,6 +21,7 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 
 import es.uma.urbanpulse.PostgisContainerConfiguration;
 import es.uma.urbanpulse.auth.AuthResponse;
+import es.uma.urbanpulse.incident.api.IncidentMapResponse;
 import es.uma.urbanpulse.incident.api.IncidentResponse;
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
@@ -118,6 +119,64 @@ class IncidentAccessApiTests {
 			this.client.get().uri("/api/categories").header("Authorization", bearer(user)).exchange()
 				.expectStatus().isOk();
 		}
+	}
+
+	@Test
+	void citizensOnlySeeAndOpenTheirOwnIncidentsWhileStaffCanSeeTheMap() {
+		AuthResponse reporter = newCitizen(this.client);
+		AuthResponse colleague = newCitizen(this.client);
+		IncidentResponse reportersIncident = createIncident(reporter, "Incidencia propia");
+		IncidentResponse colleaguesIncident = createIncident(colleague, "Incidencia de otra cuenta");
+
+		IncidentMapResponse reporterMap = loadMap(reporter);
+		assertThat(reporterMap.incidents()).extracting(IncidentResponse::id)
+				.contains(reportersIncident.id())
+				.doesNotContain(colleaguesIncident.id());
+
+		IncidentMapResponse colleagueMap = loadMap(colleague);
+		assertThat(colleagueMap.incidents()).extracting(IncidentResponse::id)
+				.contains(colleaguesIncident.id())
+				.doesNotContain(reportersIncident.id());
+
+		this.client.get()
+			.uri("/api/incidents/{id}", colleaguesIncident.id())
+			.header("Authorization", bearer(reporter))
+			.exchange()
+			.expectStatus()
+			.isForbidden();
+
+		IncidentMapResponse operatorMap = loadMap(login(this.client, OPERATOR_EMAIL));
+		assertThat(operatorMap.incidents()).extracting(IncidentResponse::id)
+				.contains(reportersIncident.id(), colleaguesIncident.id());
+	}
+
+	private IncidentMapResponse loadMap(AuthResponse user) {
+		return this.client.get()
+			.uri(MAP_BOUNDS)
+			.header("Authorization", bearer(user))
+			.exchange()
+			.expectStatus()
+			.isOk()
+			.expectBody(IncidentMapResponse.class)
+			.returnResult()
+			.getResponseBody();
+	}
+
+	private IncidentResponse createIncident(AuthResponse citizen, String title) {
+		return this.client.post()
+			.uri("/api/incidents")
+			.header("Authorization", bearer(citizen))
+			.body(Map.of(
+					"title", title,
+					"description", "Descripción de prueba.",
+					"latitude", 36.7196,
+					"longitude", -4.4216))
+			.exchange()
+			.expectStatus()
+			.isCreated()
+			.expectBody(IncidentResponse.class)
+			.returnResult()
+			.getResponseBody();
 	}
 
 }

@@ -46,4 +46,33 @@ public interface IncidentRepository extends JpaRepository<Incident, Integer> {
 			@Param("north") double north,
 			@Param("publicStatusId") int publicStatusId,
 			@Param("fetchLimit") int fetchLimit);
+
+	/** Citizen map query; reporter_id is indexed together with created_at. */
+	@Query(value = """
+			SELECT incident."id" AS "id",
+				incident."title" AS "title",
+				incident."description" AS "description",
+				ST_Y(incident."location") AS "latitude",
+				ST_X(incident."location") AS "longitude",
+				category."id" AS "categoryId",
+				category."name" AS "categoryName",
+				incident."status_id" AS "statusId",
+				incident."created_at" AS "createdAt"
+			FROM "Incident" incident
+			LEFT JOIN "Category" category ON category."id" = incident."category_id"
+			WHERE ST_Intersects(
+				incident."location",
+				ST_MakeEnvelope(:west, :south, :east, :north, 4326))
+				AND incident."status_id" = :publicStatusId
+				AND incident."reporter_id" = :reporterId
+			LIMIT :fetchLimit
+			""", nativeQuery = true)
+	List<IncidentMapProjection> findWithinBoundsForReporter(
+			@Param("west") double west,
+			@Param("south") double south,
+			@Param("east") double east,
+			@Param("north") double north,
+			@Param("publicStatusId") int publicStatusId,
+			@Param("reporterId") int reporterId,
+			@Param("fetchLimit") int fetchLimit);
 }
