@@ -1,0 +1,108 @@
+name: Review policy
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+  pull_request_review:
+    types:
+      - submitted
+      - dismissed
+
+concurrency:
+  group: review-policy-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+permissions:
+  pull-requests: read
+  statuses: write
+
+env:
+  # Keep these logins aligned with the Reviewer and Tester in CODEOWNERS.
+  REVIEWER_LOGIN: apr2004
+  TESTER_LOGIN: mmartinmaria
+
+jobs:
+  review-policy:
+    if: github.event.pull_request.base.ref == 'main'
+    name: Enforce review policy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Publish review policy status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            function evaluateReviewPolicy({ authorLogin, reviewerLogin, testerLogin, reviews }) {
+              const requiredReviewers = authorLogin === testerLogin
+                ? [reviewerLogin]
+                : authorLogin === reviewerLogin
+                  ? [testerLogin]
+                  : [reviewerLogin, testerLogin];
+
+              const latestReviews = new Map();
+              for (const review of reviews) {
+                if (review.state === 'COMMENTED' || !review.user?.login) {
+                  continue;
+                }
+
+                const previous = latestReviews.get(review.user.login);
+                if (!previous || new Date(review.submitted_at).getTime() >= new Date(previous.submitted_at).getTime()) {
+                  latestReviews.set(review.user.login, review);
+                }
+              }
+
+              const missingReviewers = requiredReviewers.filter(
+                (login) => latestReviews.get(login)?.state !== 'APPROVED',
+              );
+
+              return {
+                requiredReviewers,
+                missingReviewers,
+                state: missingReviewers.length === 0 ? 'success' : 'pending',
+              };
+            }
+
+            const pullRequest = context.payload.pull_request;
+            const reviews = await github.paginate(github.rest.pulls.listReviews, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pullRequest.number,
+              per_page: 100,
+            });
+            const result = evaluateReviewPolicy({
+              authorLogin: pullRequest.user.login,
+              reviewerLogin: process.env.REVIEWER_LOGIN,
+              testerLogin: process.env.TESTER_LOGIN,
+              reviews,
+            });
+            const missing = result.missingReviewers.map((login) => '@' + login);
+            const description = missing.length > 0
+              ? 'Missing approval from ' + missing.join(' and ')
+              : 'All required approvals present';
+
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: pullRequest.head.sha,
+              state: result.state,
+              context: 'review-policy',
+              description,
+              target_url: context.serverUrl + '/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId,
+            });
+
+            const summary = result.state === 'success'
+              ? 'All required approvals are present.'
+              : 'Missing approval from ' + missing.join(' and ') + '.';
+            await core.summary
+              .addHeading('Review policy')
+              .addRaw(summary)
+              .addTable([
+                [{ data: 'PR author', header: true }, { data: 'Required approvals', header: true }],
+                [pullRequest.user.login, result.requiredReviewers.map((login) => '@' + login).join(', ')],
+              ])
+              .write();
