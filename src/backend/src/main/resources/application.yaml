@@ -11,7 +11,8 @@ spring:
     open-in-view: false
   servlet:
     multipart:
-      max-file-size: 20MB
+      # Keep a small transport margin so domain validation can return the API's 5 MB message.
+      max-file-size: 6MB
       max-request-size: 25MB
 
 server:

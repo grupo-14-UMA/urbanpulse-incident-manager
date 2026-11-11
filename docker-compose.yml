@@ -17,6 +17,7 @@ services:
       start_period: 10s
 
   backend:
+    image: urbanpulse-incident-manager-backend
     build:
       context: ./src/backend
     environment:
@@ -39,6 +40,17 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      photo-storage-init:
+        condition: service_completed_successfully
+
+  photo-storage-init:
+    image: urbanpulse-incident-manager-backend
+    user: "0:0"
+    entrypoint: ["/bin/sh", "-c", "mkdir -p /photos && chown 10001:0 /photos && chmod 750 /photos"]
+    command: []
+    volumes:
+      - incident_photos:/photos
+    restart: "no"
 
 volumes:
   postgres_data:
