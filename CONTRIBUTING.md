@@ -37,8 +37,6 @@ El dueño de un área desarrolla los issues con su etiqueta, revisa los PR que t
    GitHub pide las revisiones automáticamente según [`.github/CODEOWNERS`](.github/CODEOWNERS): siempre al Reviewer y al Tester y, si el PR toca su carpeta, también al dueño del área de desarrollo, al Maintainer o al Product Owner. Las revisiones adicionales de los dueños de área son opcionales.
 6. **Merge**: lo hace el autor del PR una vez aprobado.
 
-6. **Merge**: lo hace el autor del PR una vez aprobado.
-
 Los PR se fusionan con *Squash and merge* y la rama se borra después del merge.
 
 ## Tablero del proyecto
