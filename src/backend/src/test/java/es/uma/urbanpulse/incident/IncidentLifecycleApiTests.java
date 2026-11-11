@@ -167,6 +167,12 @@ class IncidentLifecycleApiTests {
 	}
 
 	@Test
+	void bodyErrorsComeBeforeTheNotFound() {
+		this.flow.request(2_000_000_000, "validate", this.flow.operator, Map.of("priorityJustification", "Urge."))
+			.expectStatus().isBadRequest();
+	}
+
+	@Test
 	void unknownPriorityIsAnInvalidBody() {
 		int id = this.flow.report();
 

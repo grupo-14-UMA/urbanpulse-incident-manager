@@ -106,11 +106,12 @@ public class IncidentService {
 	/** REPORTED to VALIDATED, setting the priority in the same step when given. */
 	@Transactional
 	public IncidentResponse validate(Integer id, ValidateIncidentRequest request, TokenSubject caller) {
-		Incident incident = load(id);
 		String justification = blankToNull(request.priorityJustification());
+		// A body error, so it comes before the 404.
 		if (justification != null && request.priority() == null) {
 			throw new InvalidIncidentRequestException("priority", "Indica la prioridad si añades una justificación.");
 		}
+		Incident incident = load(id);
 		IncidentStatus previous = incident.getStatus();
 		incident.validate(request.priority(), justification);
 		return recordChange(incident, previous, null, caller);
