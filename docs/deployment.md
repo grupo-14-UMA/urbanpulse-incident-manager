@@ -70,10 +70,11 @@ El fichero `.env` no se versiona. Los valores por defecto solo sirven para el en
 
 ## Integración continua
 
-Los tres workflows de GitHub Actions se ejecutan en cada pull request dirigido a `main`:
+Los cuatro workflows de GitHub Actions se ejecutan en cada pull request dirigido a `main`:
 
 - `.github/workflows/backend-ci.yml` prepara Java 21 y lanza `./mvnw verify` en `src/backend`, que compila el backend y ejecuta sus pruebas contra PostgreSQL con PostGIS mediante Testcontainers.
 - `.github/workflows/management-panel-ci.yml` instala las dependencias del panel con `npm ci` y ejecuta `npm run build`.
 - `.github/workflows/mobile-app-ci.yml` instala las dependencias de la aplicación móvil con `npm ci` y ejecuta `npm run lint` y `npm test -- --runInBand`.
+- `.github/workflows/review-policy.yml` comprueba que el pull request tenga las aprobaciones requeridas según su autor y publica el estado `review-policy`.
 
 El despliegue no está automatizado.
