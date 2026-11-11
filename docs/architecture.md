@@ -67,6 +67,7 @@ flowchart LR
         web[Panel de gestión<br/>React · Vite · Leaflet]
         api[Backend API<br/>Java 21 · Spring Boot 4]
         db[(Base de datos<br/>PostgreSQL · PostGIS)]
+        photos[(Volumen persistente<br/>de fotografías)]
     end
 
     osm[Teselas OpenStreetMap]
@@ -78,6 +79,7 @@ flowchart LR
     mobile -->|HTTP / JSON<br/>EXPO_PUBLIC_API_URL| api
     web -->|HTTP / JSON · VITE_API_URL| api
     api -->|JDBC| db
+    api -->|Ficheros de fotos| photos
     mobile -->|Teselas raster| osm
     web -->|Teselas raster| osm
     api -.->|Integraciones futuras| data
@@ -87,12 +89,12 @@ flowchart LR
 | --- | --- | --- |
 | Aplicación móvil | React Native, Expo, `expo-router`, `react-native-maps`, `expo-location`, `expo-image-picker` | Implementa registro e inicio de sesión para ciudadanos y una pantalla de mapa centrada en Málaga. El mapa consulta las incidencias del rectángulo visible al abrirse, cuando termina un movimiento o cambio de zoom y al volver a primer plano; también ofrece detalle (incluidas las fotos adjuntas) y registro con coordenadas de GPS o seleccionadas en el mapa y hasta 3 fotos desde la cámara o la galería. Las llamadas REST se centralizan en `src/api.js`, y `EXPO_PUBLIC_API_URL` configura el backend. |
 | Panel de gestión | React, Vite, React Router, `react-leaflet`, CSS propio | Cliente web del operador ([ADR-0015](adr/0015-react-vite-y-leaflet-para-panel-de-gestion.md)). Ofrece inicio de sesión con `POST /api/auth/login`, protege sus rutas y permite el acceso a cuentas con rol `OPERATOR`. Conserva el token en el almacenamiento local del navegador, lo renueva al abrir el panel y lo elimina al cerrar sesión. El mapa consulta por área visible, agrupa los marcadores y avisa si la API limita los resultados a 500. El listado usa 18 incidencias de muestra compartidas con el mapa y aplica filtros, ordenación y paginación en el navegador. El detalle es de solo lectura y usa esos mismos datos; las acciones del Operador se incorporarán en siguientes issues. `VITE_API_URL` configura el backend. |
-| Backend | Java 21, Spring Boot 4, Spring Security, Maven | Monolito modular. Expone por REST el registro e inicio de sesión, usuarios y técnicos, categorías y operaciones con incidencias. La consulta del mapa usa `ST_Intersects` y el índice GiST de `Incident.location`; requiere límites del área visible y devuelve hasta 500 incidencias `REPORTED`, con `truncated` para indicar si hay más. |
-| Base de datos | PostgreSQL con PostGIS | Docker Compose utiliza `postgis/postgis`. Flyway crea `Incident`, `Category`, `User` y `Role`, incluida la ubicación espacial, las categorías iniciales, los roles y la relación con el ciudadano que registra una incidencia. |
+| Backend | Java 21, Spring Boot 4, Spring Security, Maven | Monolito modular. Expone por REST el registro e inicio de sesión, usuarios y técnicos, categorías e incidencias. Valida y almacena fotos en `PHOTOS_DIR`; la descarga las sirve con su tipo MIME. La consulta del mapa usa `ST_Intersects` y el índice GiST de `Incident.location`; requiere límites del área visible y devuelve hasta 500 incidencias `REPORTED`, con `truncated` para indicar si hay más. |
+| Base de datos | PostgreSQL con PostGIS | Docker Compose utiliza `postgis/postgis`. Flyway crea las tablas `Incident`, `Attachment`, `Category`, `User` y `Role`, incluida la ubicación espacial, las categorías iniciales, los roles y la relación con el ciudadano que registra una incidencia. `Attachment` guarda la clave y los metadatos de cada foto; el contenido binario vive en el almacenamiento de ficheros. |
 
 En el entorno local, Docker Compose publica el backend en el puerto `8080` y PostgreSQL en el puerto `5432` por defecto. El backend se conecta a la base de datos mediante el nombre de servicio `db` dentro de la red de Compose. La aplicación móvil se inicia aparte con Expo. Para que un teléfono pueda acceder al backend, `EXPO_PUBLIC_API_URL` debe apuntar a la dirección de red del equipo que ejecuta Docker, no a `localhost`.
 
-Los dos clientes consumen la misma API REST mediante HTTP con JSON; los permisos dependen del rol, no de endpoints distintos por cliente ([ADR-0014](adr/0014-aplicacion-movil-y-panel-de-gestion-web.md)). La aplicación móvil configura la URL con `EXPO_PUBLIC_API_URL` ([ADR-0003](adr/0003-react-native-con-expo-para-frontend.md)) y añade el token a las llamadas autenticadas. El token y los datos básicos de usuario se guardan en el almacenamiento seguro del dispositivo y se renuevan con `POST /api/auth/refresh` al arrancar. El panel configura el backend con `VITE_API_URL`, conserva su token en el almacenamiento local del navegador y lo renueva al abrirse. El backend permite CORS en `/api/**` para `MANAGEMENT_PANEL_ORIGIN`, cuyo valor local por defecto es `http://localhost:5173`.
+Los dos clientes consumen la misma API REST mediante HTTP con JSON; las fotografías viajan como solicitudes multipart y se descargan como contenido binario. Los permisos dependen del rol, no de endpoints distintos por cliente ([ADR-0014](adr/0014-aplicacion-movil-y-panel-de-gestion-web.md)). La aplicación móvil configura la URL con `EXPO_PUBLIC_API_URL` ([ADR-0003](adr/0003-react-native-con-expo-para-frontend.md)) y añade el token a las llamadas autenticadas. El token y los datos básicos de usuario se guardan en el almacenamiento seguro del dispositivo y se renuevan con `POST /api/auth/refresh` al arrancar. El panel configura el backend con `VITE_API_URL`, conserva su token en el almacenamiento local del navegador y lo renueva al abrirse. El backend permite CORS en `/api/**` para `MANAGEMENT_PANEL_ORIGIN`, cuyo valor local por defecto es `http://localhost:5173`.
 
 ## Nivel 3: Componentes del backend
 
@@ -100,16 +102,17 @@ El backend se mantiene como un monolito modular. La estructura separa responsabi
 
 | Componente previsto | Responsabilidad |
 | --- | --- |
-| Controladores REST | Recibir solicitudes HTTP, validar la entrada y devolver respuestas de la API. Implementados para autenticación, usuarios, incidencias y categorías. |
-| Servicios de aplicación | Coordinar los casos de uso y las transacciones del dominio. Implementados para registrar usuarios e iniciar sesión, crear y consultar incidencias, consultar categorías y listar técnicos. |
-| Repositorios | Consultar y persistir entidades mediante Spring Data JPA. Implementados para `Incident`, `Category` y `User`. |
-| Entidades y modelo de dominio | Representar incidencias, categorías y las demás entidades del sistema. Implementadas `Incident`, `Category` y `User`, con el rol como enumeración; las demás se añaden con sus funcionalidades. |
-| Migraciones Flyway | Crear y evolucionar el esquema de la base de datos. Las migraciones de `db/migration` crean `Incident`, `Category`, `User` y `Role` y precargan las categorías y los roles. Las cuentas de personal de desarrollo están en una ubicación aparte, `db/dev-seed`, que solo activan Docker Compose y las pruebas. Flyway es la única autoridad para modificar el esquema. |
+| Controladores REST | Recibir solicitudes HTTP, validar la entrada y devolver respuestas de la API. Implementados para autenticación, usuarios, incidencias y categorías; `IncidentController` también recibe y descarga fotos. |
+| Servicios de aplicación | Coordinar los casos de uso y las transacciones del dominio. Implementados para registrar usuarios e iniciar sesión, crear y consultar incidencias, adjuntar y descargar fotos, consultar categorías y listar técnicos. |
+| Repositorios | Consultar y persistir entidades mediante Spring Data JPA. Implementados para `Incident`, `Attachment`, `Category` y `User`. |
+| Entidades y modelo de dominio | Representar incidencias, categorías y las demás entidades del sistema. Implementadas `Incident`, `Attachment`, `Category` y `User`, con el rol como enumeración; las demás se añaden con sus funcionalidades. |
+| Migraciones Flyway | Crear y evolucionar el esquema de la base de datos. Las migraciones de `db/migration` crean `Incident`, `Attachment`, `Category`, `User` y `Role` y precargan las categorías y los roles. Las cuentas de personal de desarrollo están en una ubicación aparte, `db/dev-seed`, que solo activan Docker Compose y las pruebas. Flyway es la única autoridad para modificar el esquema. |
+| Almacenamiento de fotos | Guardar el contenido binario fuera de PostgreSQL. `FileSystemPhotoStorage` escribe bajo `PHOTOS_DIR`; en Docker Compose apunta al volumen persistente `incident_photos`. |
 | Integraciones externas | Consultar fuentes de datos urbanos u otros proveedores sin acoplar el dominio a sus formatos. |
 | Seguridad | Validar el token de cada petición y aplicar los permisos por rol con Spring Security ([ADR-0016](adr/0016-autenticacion-con-jwt-propio.md)). |
 | Documentación API | Generar documentación OpenAPI con springdoc-openapi. |
 
-La API implementa los controladores y servicios para el contrato REST descrito abajo. La persistencia incluye las entidades y repositorios `Incident`, `Category` y `User`, además de las migraciones Flyway.
+La API implementa los controladores y servicios para el contrato REST descrito abajo. La persistencia incluye las entidades y repositorios `Incident`, `Attachment`, `Category` y `User`, las migraciones Flyway y el almacenamiento de ficheros configurado en `PHOTOS_DIR`.
 
 ## API
 
@@ -123,8 +126,10 @@ La API REST expone estas rutas. La columna «Acceso» indica quién puede usarla
 | `GET` | `/api/users/me` | Autenticado | Consultar el usuario actual (identificador, nombre, email y rol). |
 | `GET` | `/api/technicians?limit=` | Operador | Listar los técnicos por nombre. `limit` vale 50 por defecto y como máximo 200. |
 | `POST` | `/api/incidents` | Ciudadano | Crear una incidencia con título, descripción, latitud, longitud y categoría opcional. El ciudadano que la registra se toma del token. Devuelve la incidencia creada, con estado `REPORTED` (etiqueta visible: «Registrada») y fecha de registro `createdAt` en UTC con milisegundos (`2026-11-07T10:15:30.123Z`); los `GET` devuelven el mismo valor. |
+| `POST` | `/api/incidents/{id}/photos` | Ciudadano autor o técnico | Adjuntar hasta 3 fotos en total a una incidencia existente. Acepta JPEG, PNG o WebP de hasta 5 MB cada una y devuelve los metadatos y las URL de descarga. |
 | `GET` | `/api/incidents?west=…&south=…&east=…&north=…` | Autenticado | Consultar hasta 500 incidencias `REPORTED` dentro del rectángulo visible WGS 84. Los cuatro límites son obligatorios; `west < east` y `south < north`. La respuesta incluye `incidents` y `truncated`; la consulta usa `ST_Intersects` y el índice GiST de la ubicación. |
-| `GET` | `/api/incidents/{id}` | Autenticado | Consultar el detalle de una incidencia; devuelve 404 si no existe. |
+| `GET` | `/api/incidents/{id}` | Autenticado | Consultar el detalle y los metadatos de las fotos adjuntas; devuelve 404 si no existe. |
+| `GET` | `/api/incidents/{id}/photos/{photoId}` | Autenticado | Descargar una foto adjunta con su tipo MIME. |
 | `GET` | `/api/categories` | Autenticado | Listar categorías disponibles. |
 
 Registro, inicio de sesión y renovación devuelven la misma respuesta: `{ token, expiresAt, user: { id, name, email, role } }`. Las respuestas de incidencias no exponen quién las registró.
@@ -152,7 +157,7 @@ El modelo completo está descrito en [DBML](data-model/urbanpulse.dbml) y [SQL](
 | `User` | Identificador, nombre, email único, hash de la contraseña y `role_id` | Representa a ciudadanos y personal municipal. `nif` y `phone`, previstos en el modelo completo, no se crean hasta que algo los use. |
 | `Role` | Identificador y nombre | Define permisos para los distintos tipos de usuario. Se precargan `CITIZEN`, `OPERATOR` y `TECHNICIAN`. |
 | `IncidentStatusHistory` | Incidencia, estado anterior, estado nuevo, fecha, actor y motivo | Mantiene la trazabilidad del ciclo de vida de una incidencia. |
-| `Evidence` | Incidencia, referencia al fichero, tipo, tamaño y fecha de registro | Conserva referencias a fotografías u otros ficheros asociados. |
+| `Attachment` | Incidencia, `storage_key`, tipo MIME, tamaño y fecha de registro | Conserva los metadatos de las fotografías; los ficheros se guardan bajo `PHOTOS_DIR`. |
 | `Department` | Identificador y nombre | Representa a las unidades municipales responsables de atender incidencias. |
 | `Assignment` | Incidencia, departamento o técnico asignado, fecha y estado | Registra quién debe atender una incidencia validada. |
 | `UrbanAsset` | Identificador, tipo, ubicación y datos descriptivos | Representa activos urbanos que podrían asociarse a incidencias próximas. |
@@ -165,7 +170,7 @@ erDiagram
     CATEGORY o|--o{ INCIDENT : classifies
     INCIDENT ||--o{ INCIDENT_STATUS_HISTORY : records
     USER ||--o{ INCIDENT_STATUS_HISTORY : changes
-    INCIDENT ||--o{ EVIDENCE : has
+    INCIDENT ||--o{ ATTACHMENT : has
     INCIDENT ||--o{ ASSIGNMENT : receives
     DEPARTMENT ||--o{ ASSIGNMENT : handles
     USER ||--o{ ASSIGNMENT : performs
@@ -174,7 +179,7 @@ erDiagram
 
 La ubicación se almacena como `geometry(Point, 4326)` en PostGIS, usando WGS 84. La API expone las coordenadas como latitud y longitud y el backend las convierte al formato geoespacial de la base de datos ([ADR-0007](adr/0007-postgis-para-datos-geoespaciales.md)). En el MVP, `status_id = 1` representa `REPORTED`; la tabla `Status` se añade cuando se implemente la gestión del ciclo de vida.
 
-La persistencia cubre las incidencias, sus categorías, los usuarios y sus roles. `reporter_id` admite nulos solo porque las incidencias anteriores a la autenticación no tienen ciudadano; el servicio lo rellena siempre. El índice `(reporter_id, created_at)` de `Incident` respalda la consulta de las incidencias de un ciudadano, y el índice `(role_id, name, id)` de `User` el listado de técnicos. Asignaciones, evidencias, activos urbanos e integraciones de contexto se incorporarán cuando se implementen sus requisitos.
+La persistencia cubre las incidencias, sus categorías, las fotografías adjuntas, los usuarios y sus roles. La tabla `Attachment` almacena una clave relativa y metadatos; el contenido se almacena en `PHOTOS_DIR`, que Compose monta sobre `incident_photos` y conserva al recrear los contenedores. `docker compose down -v` elimina también ese volumen. `reporter_id` admite nulos solo porque las incidencias anteriores a la autenticación no tienen ciudadano; el servicio lo rellena siempre. El índice `(reporter_id, created_at)` de `Incident` respalda la consulta de las incidencias de un ciudadano, y el índice `(role_id, name, id)` de `User` el listado de técnicos. Asignaciones, activos urbanos e integraciones de contexto se incorporarán cuando se implementen sus requisitos.
 
 ## Atributos de calidad
 

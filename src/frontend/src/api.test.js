@@ -1,5 +1,20 @@
 /* global afterEach, beforeEach, describe, expect, jest, test */
 
+jest.mock('expo/fetch', () => ({
+  fetch: (...args) => global.fetch(...args),
+}));
+
+jest.mock('expo-file-system', () => ({
+  File: class MockFile {
+    constructor(uri) {
+      this.uri = uri;
+      this.name = uri.split('/').pop();
+      this.type = this.name.endsWith('.png') ? 'image/png' : 'image/jpeg';
+      this.bytes = async () => new Uint8Array([1, 2, 3]);
+    }
+  },
+}));
+
 describe('mobile API client', () => {
   const apiUrl = 'http://localhost:8080';
 
@@ -49,6 +64,7 @@ describe('mobile API client', () => {
   test('maps a network failure to the connection error', async () => {
     jest.useFakeTimers();
     jest.spyOn(Math, 'random').mockReturnValue(0.5);
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     global.fetch
       .mockRejectedValueOnce(new Error('socket closed'))
       .mockRejectedValueOnce(new Error('socket closed'))
@@ -62,6 +78,8 @@ describe('mobile API client', () => {
     await jest.advanceTimersByTimeAsync(1000);
     await jest.advanceTimersByTimeAsync(3000);
     await rejection;
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Error: socket closed'));
+    warnSpy.mockRestore();
     Math.random.mockRestore();
   });
 
@@ -152,11 +170,14 @@ describe('mobile API client', () => {
         url: '/api/incidents/42/photos/7',
         contentType: 'image/jpeg',
       });
-      expect(appendSpy).toHaveBeenCalledWith('photos', {
+      const [fieldName, file] = appendSpy.mock.calls[0];
+      expect(fieldName).toBe('photos');
+      expect(file).toMatchObject({
         uri: 'file:///tmp/photo.jpg',
         name: 'photo.jpg',
         type: 'image/jpeg',
       });
+      expect(file.bytes).toEqual(expect.any(Function));
       expect(global.fetch).toHaveBeenCalledWith(
         apiUrl + '/api/incidents/42/photos',
         expect.objectContaining({
@@ -170,6 +191,41 @@ describe('mobile API client', () => {
       );
     } finally {
       appendSpy.mockRestore();
+    }
+  });
+
+  test('allows a photo upload 60 seconds before timing out and logs the timeout distinctly', async () => {
+    jest.useFakeTimers();
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    global.fetch.mockImplementation((_url, { signal }) =>
+      new Promise((_resolve, reject) => {
+        signal.addEventListener('abort', () => reject(new Error('aborted')));
+      }),
+    );
+    const { uploadIncidentPhoto } = require('./api');
+    let settled = false;
+    const request = uploadIncidentPhoto(42, {
+      uri: 'file:///tmp/photo.jpg',
+      mimeType: 'image/jpeg',
+      fileName: 'photo.jpg',
+    });
+    request.then(() => { settled = true; }, () => { settled = true; });
+    const rejection = expect(request).rejects.toMatchObject({
+      kind: 'connection',
+      message: 'No se pudo conectar con UrbanPulse. Comprueba tu conexión e inténtalo de nuevo.',
+    });
+
+    try {
+      await jest.advanceTimersByTimeAsync(10000);
+      expect(settled).toBe(false);
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+
+      await jest.advanceTimersByTimeAsync(50000);
+      await rejection;
+      expect(settled).toBe(true);
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('timeout'));
+    } finally {
+      warnSpy.mockRestore();
     }
   });
 

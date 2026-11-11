@@ -37,7 +37,7 @@ docker compose up -d --build
 docker compose ps
 ```
 
-Compose construye la imagen del backend a partir de `src/backend/Dockerfile` y arranca PostgreSQL con PostGIS (`postgis/postgis`). El backend espera a que la base de datos esté lista antes de arrancar.
+Compose construye la imagen del backend a partir de `src/backend/Dockerfile` y arranca PostgreSQL con PostGIS (`postgis/postgis`). Antes de iniciar el backend, prepara el volumen `incident_photos` con permisos para el usuario sin privilegios que ejecuta la aplicación; `PHOTOS_DIR` apunta a ese volumen para que las fotos sobrevivan a la recreación del contenedor.
 
 Para detenerlo:
 
@@ -45,6 +45,8 @@ Para detenerlo:
 docker compose down       # los datos se conservan en el volumen
 docker compose down -v    # borra también los datos
 ```
+
+El volumen `incident_photos` se conserva con `docker compose down` y desaparece con `docker compose down -v`. Haz una copia del volumen antes de borrar los datos locales si necesitas conservar las fotos.
 
 ## Configuración
 

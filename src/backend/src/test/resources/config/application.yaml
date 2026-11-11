@@ -2,6 +2,8 @@
 urbanpulse:
   security:
     jwt-secret: test-only-jwt-secret-not-for-any-deployment
+  storage:
+    photos-dir: target/test-photos
 
 spring:
   flyway:

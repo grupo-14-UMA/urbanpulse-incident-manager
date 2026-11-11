@@ -28,6 +28,10 @@ _Evitar_: fecha de creación, fecha de alta
 Tipo de problema al que pertenece una incidencia. Es opcional cuando el ciudadano la registra.
 _Evitar_: tipo, clase
 
+**Fotografía adjunta** (`Attachment`):
+Imagen asociada a una incidencia. La base de datos conserva sus metadatos y el backend conserva el fichero.
+_Evitar_: evidencia (para referirse a la foto concreta)
+
 ### Actores
 
 **Usuario** (`User`):
