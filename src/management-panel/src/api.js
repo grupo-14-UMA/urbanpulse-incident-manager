@@ -53,7 +53,7 @@ export async function getIncidentsWithinBounds(bounds, { signal } = {}) {
   return payload;
 }
 
-export async function getIncidentById(id, { signal } = {}) {
+(id, { signal } = {}) {
   return apiRequest(`/api/incidents/${encodeURIComponent(id)}`, { signal });
 }
 
