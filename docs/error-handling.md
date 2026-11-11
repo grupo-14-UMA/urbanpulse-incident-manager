@@ -85,4 +85,4 @@ Nunca se registran los cuerpos de las peticiones ni de las respuestas, el títul
 
 Los logs del cliente solo se ven en la consola de desarrollo (la de `npx expo start` o la del navegador) y no se envían a ningún servidor.
 
-Si falla la descarga de una foto en la app móvil, se registra un aviso con el error nativo resumido y la URL eliminada; el detalle ofrece volver a intentarlo.
+Si falla la descarga o la decodificación de una foto en la app móvil, el cliente registra el método, la ruta sin host, el estado HTTP o el error técnico resumido; nunca registra el token ni una URL completa. El detalle muestra el estado de carga y ofrece volver a intentarlo.

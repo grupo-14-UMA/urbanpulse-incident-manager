@@ -6,13 +6,25 @@ jest.mock('expo/fetch', () => ({
 
 jest.mock('expo-file-system', () => ({
   File: class MockFile {
-    constructor(uri) {
-      this.uri = uri;
-      this.name = uri.split('/').pop();
+    constructor(...uris) {
+      this.uri = uris.reduce((path, uri) => {
+        const segment = typeof uri === 'string' ? uri : uri?.uri;
+        return path ? path.replace(/\/$/, '') + '/' + segment.replace(/^\/+/, '') : segment;
+      }, '');
+      this.name = this.uri.split('/').pop();
       this.type = this.name.endsWith('.png') ? 'image/png' : 'image/jpeg';
       this.bytes = async () => new Uint8Array([1, 2, 3]);
     }
+
+    create() {}
+
+    async write(content) {
+      this.content = content;
+    }
+
+    delete() {}
   },
+  Paths: { cache: { uri: 'file:///cache' } },
 }));
 
 describe('mobile API client', () => {
@@ -280,6 +292,54 @@ describe('mobile API client', () => {
     expect(getIncidentPhotoSource('/api/incidents/42/photos/7')).toEqual({
       uri: apiUrl + '/api/incidents/42/photos/7',
       headers: { Authorization: 'Bearer jwt-token' },
+    });
+  });
+
+  test('does not send the session token to a photo URL on another host', () => {
+    const { getIncidentPhotoSource, setAccessToken } = require('./api');
+    setAccessToken('jwt-token');
+
+    expect(getIncidentPhotoSource('https://another-host.example/photo.jpg')).toBeNull();
+  });
+
+  test('downloads an incident photo with the session token into a temporary local file', async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: { get: () => 'image/jpeg' },
+      arrayBuffer: async () => new Uint8Array([0xff, 0xd8, 0xff]).buffer,
+    });
+    const { downloadIncidentPhoto, setAccessToken } = require('./api');
+    setAccessToken('jwt-token');
+
+    const file = await downloadIncidentPhoto('/api/incidents/42/photos/7');
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      apiUrl + '/api/incidents/42/photos/7',
+      expect.objectContaining({
+        method: 'GET',
+        headers: {
+          Accept: 'image/jpeg, image/png, image/webp',
+          Authorization: 'Bearer jwt-token',
+        },
+      }),
+    );
+    expect(file.uri).toMatch(/^file:\/\/\/cache\/urbanpulse-incident-photo-.*\.jpg$/);
+    expect(file.content).toBeInstanceOf(ArrayBuffer);
+  });
+
+  test('reports a photo download authorization failure', async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 403,
+      headers: { get: () => 'application/json' },
+    });
+    const { downloadIncidentPhoto } = require('./api');
+
+    await expect(downloadIncidentPhoto('/api/incidents/42/photos/7')).rejects.toMatchObject({
+      kind: 'forbidden',
+      status: 403,
+      message: 'No tienes permiso para hacer esto.',
     });
   });
 });

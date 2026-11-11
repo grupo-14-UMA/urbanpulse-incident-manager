@@ -1,5 +1,5 @@
 import { Redirect, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Platform,
@@ -13,7 +13,7 @@ import { Image } from 'expo-image';
 import MapView, { Marker } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { getIncident, getIncidentPhotoSource, uploadIncidentPhoto } from '../../src/api';
+import { downloadIncidentPhoto, getIncident, uploadIncidentPhoto } from '../../src/api';
 import {
   MAX_INCIDENT_PHOTOS,
   pickPhotoFromCamera,
@@ -238,37 +238,74 @@ function IncidentDetailContent({ id }) {
 }
 
 function IncidentPhotoImage({ photo, index }) {
-  const [failed, setFailed] = useState(false);
+  const photoUrl = typeof photo.url === 'string' ? photo.url : '';
+  const [photoState, setPhotoState] = useState({ status: 'loading', uri: null });
   const [attempt, setAttempt] = useState(0);
-  const source = getIncidentPhotoSource(photo.url);
 
-  if (!source) {
-    return null;
-  }
+  useEffect(() => {
+    let active = true;
+    let downloadedFile = null;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+
+    downloadIncidentPhoto(photoUrl, { signal: controller.signal })
+      .then((file) => {
+        downloadedFile = file;
+        if (active) {
+          setPhotoState({ status: 'loaded', uri: file.uri });
+        } else {
+          removeTemporaryPhoto(file);
+        }
+      })
+      .catch((error) => {
+        if (active) {
+          const message = typeof error?.message === 'string'
+            ? error.message.replace(/https?:\/\/\S+/gi, '<photo-url>').slice(0, 160)
+            : '';
+          console.warn('[photos] No se pudo descargar una foto de incidencia' + (message ? ': ' + message : ''));
+          setPhotoState({ status: 'error', uri: null });
+        }
+      });
+
+    return () => {
+      active = false;
+      clearTimeout(timeout);
+      controller.abort();
+      if (downloadedFile) {
+        removeTemporaryPhoto(downloadedFile);
+      }
+    };
+  }, [photoUrl, attempt]);
 
   return (
     <View style={styles.photoFrame}>
-      <Image
-        key={attempt}
-        source={source}
-        style={styles.photo}
-        contentFit="cover"
-        cachePolicy="none"
-        accessibilityLabel={`Foto ${index + 1} de la incidencia`}
-        onLoad={() => setFailed(false)}
-        onError={(error) => {
-          const message = typeof error?.error === 'string' ? error.error : '';
-          const safeMessage = message.replace(/https?:\/\/\S+/gi, '<photo-url>').slice(0, 160);
-          console.warn('[photos] No se pudo cargar una foto de incidencia' + (safeMessage ? ': ' + safeMessage : ''));
-          setFailed(true);
-        }}
-      />
-      {failed && (
+      {photoState.status === 'loaded' && (
+        <Image
+          source={{ uri: photoState.uri }}
+          style={styles.photo}
+          contentFit="cover"
+          accessibilityLabel={`Foto ${index + 1} de la incidencia`}
+          onError={(error) => {
+            const message = typeof error?.message === 'string'
+              ? error.message.replace(/https?:\/\/\S+/gi, '<photo-url>').slice(0, 160)
+              : '';
+            console.warn('[photos] No se pudo mostrar una foto de incidencia' + (message ? ': ' + message : ''));
+            setPhotoState({ status: 'error', uri: null });
+          }}
+        />
+      )}
+      {photoState.status === 'loading' && (
+        <View style={styles.photoLoading}>
+          <ActivityIndicator color={COLORS.primary} />
+          <Text style={styles.photoErrorText}>Cargando foto…</Text>
+        </View>
+      )}
+      {photoState.status === 'error' && (
         <View style={styles.photoError}>
           <Text style={styles.photoErrorText}>No se pudo cargar esta foto.</Text>
           <Pressable
             onPress={() => {
-              setFailed(false);
+              setPhotoState({ status: 'loading', uri: null });
               setAttempt((current) => current + 1);
             }}
             accessibilityRole="button"
@@ -279,6 +316,14 @@ function IncidentPhotoImage({ photo, index }) {
       )}
     </View>
   );
+}
+
+function removeTemporaryPhoto(file) {
+  try {
+    file.delete();
+  } catch {
+    // The cache may have been cleared by the operating system already.
+  }
 }
 
 const styles = StyleSheet.create({
@@ -441,6 +486,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 12,
+    backgroundColor: COLORS.surfaceMuted,
+  },
+  photoLoading: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
     backgroundColor: COLORS.surfaceMuted,
   },
   photoErrorText: {
