@@ -1,6 +1,7 @@
 import { getStoredSession } from './authStorage.js';
 
-const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8080').replace(/\/+$/, '');
+const configuredApiBaseUrl = import.meta.env.VITE_API_URL;
+const API_BASE_URL = (configuredApiBaseUrl === undefined ? 'http://localhost:8080' : configuredApiBaseUrl).replace(/\/+$/, '');
 
 export class ApiError extends Error {
   constructor(message, { kind = 'unexpected', status = null, errors = {} } = {}) {

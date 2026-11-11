@@ -21,7 +21,8 @@ Utilizar Docker Compose para levantar el entorno local.
 - El servicio de base de datos usa la imagen `postgis/postgis`, la misma que utilizan las pruebas con Testcontainers.
 - Los datos se conservan en un volumen, de modo que `docker compose down` no los borra.
 - La configuración (base de datos, usuario, contraseña y puertos) viene de un fichero `.env` que no se versiona; `.env.example` muestra el formato.
-- Se puede arrancar todo el sistema con `docker compose up -d` o solo la base de datos con `docker compose up -d db` para ejecutar el backend desde el IDE con `./mvnw spring-boot:run`.
+- Se puede arrancar la base de datos, el backend y el panel web con `docker compose up -d --build`, o solo la base de datos con `docker compose up -d db` para ejecutar el backend desde el IDE con `./mvnw spring-boot:run`.
+- El panel se compila en una imagen multi-stage y Nginx sirve los archivos estáticos y reenvía `/api/` al backend; el navegador usa el mismo origen.
 - El esquema lo crea Flyway al arrancar el backend.
 - La aplicación móvil queda fuera de Compose: se ejecuta con Expo Go y se conecta al backend mediante `EXPO_PUBLIC_API_URL`.
 

@@ -104,10 +104,10 @@ function ManagementLayout() {
             <h1>{pageTitle(location.pathname)}</h1>
           </div>
           <div className="topbar-actions">
-            <div className={`api-address api-${apiStatus.kind}`} title="Configura esta URL con VITE_API_URL">
+            <div className={`api-address api-${apiStatus.kind}`} title="URL base de la API">
               <span className="api-dot" />
               <span className="api-label">{apiStatus.label}</span>
-              <code>{getApiBaseUrl()}</code>
+              <code>{getApiBaseUrl() || 'mismo origen'}</code>
               <button className="api-check" disabled={apiStatus.kind === 'checking'} onClick={handleCheckApi} type="button">
                 Probar
               </button>
