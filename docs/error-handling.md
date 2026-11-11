@@ -20,6 +20,7 @@ Política común de UrbanPulse ante una petición o un recurso que falla: qué v
 | Sin permiso | HTTP 403 | «No tienes permiso para hacer esto.» | No | No |
 | Otro error del cliente | Otro código 4xx | Igual que los datos no válidos. | No | No |
 | Respuesta inesperada | Cuerpo que no es JSON, campo obligatorio ausente o con un formato no válido | El mismo texto que un error del servidor. | No | Sí |
+| Fallo al cargar fotografía | La descarga o decodificación de la foto falla | «No se pudo cargar esta foto.» | No | Sí |
 | Recurso del dispositivo | Permiso de ubicación, cámara o galería denegado, GPS sin señal | Un aviso que no bloquea la pantalla y ofrece la alternativa, como marcar la localización en el mapa o enviar sin fotos. | No | No |
 
 El cliente clasifica el error en un único sitio, su capa de acceso a la API, y las pantallas solo reciben el tipo y el texto para el usuario. Una pantalla puede sustituir el texto de un tipo por otro más concreto (como en el 404), pero no mostrar el diagnóstico técnico.
@@ -81,3 +82,5 @@ Cada petición fallida deja una sola línea de log, al nivel de aviso, con:
 Nunca se registran los cuerpos de las peticiones ni de las respuestas, el título ni la descripción de una incidencia, la posición del ciudadano, tokens ni cabeceras de autenticación.
 
 Los logs del cliente solo se ven en la consola de desarrollo (la de `npx expo start` o la del navegador) y no se envían a ningún servidor.
+
+Si falla la descarga de una foto en la app móvil, se registra un aviso con el error nativo resumido y la URL eliminada; el detalle ofrece volver a intentarlo.
