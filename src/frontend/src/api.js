@@ -1,10 +1,11 @@
 import { API_URL } from './config';
 import { fetch as expoFetch } from 'expo/fetch';
-import { File } from 'expo-file-system';
+import { File, Paths } from 'expo-file-system';
 
 const BASE_URL = typeof API_URL === 'string' ? API_URL.trim().replace(/\/+$/, '') : '';
 const REQUEST_TIMEOUT_MS = 10000;
 const PHOTO_UPLOAD_TIMEOUT_MS = 60000;
+const MAX_PHOTO_DOWNLOAD_BYTES = 5 * 1024 * 1024;
 const RETRY_ATTEMPTS = 3;
 const RETRY_DELAYS_MS = [1000, 3000];
 const RETRY_BUDGET_MS = 15000;
@@ -330,4 +331,88 @@ export function getIncidentPhotoSource(photoUrl) {
     uri,
     ...(accessToken ? { headers: { Authorization: 'Bearer ' + accessToken } } : {}),
   };
+}
+
+export async function downloadIncidentPhoto(photoUrl, { signal } = {}) {
+  const source = getIncidentPhotoSource(photoUrl);
+  if (!source) {
+    throw new ApiError('La referencia de la foto no es válida.', { kind: 'unexpected' });
+  }
+
+  const path = photoUrl.trim().replace(/^https?:\/\/[^/]+/i, '').split('?', 1)[0];
+  const startedAt = Date.now();
+  let response;
+  try {
+    response = await expoFetch(source.uri, {
+      method: 'GET',
+      headers: {
+        Accept: 'image/jpeg, image/png, image/webp',
+        ...(source.headers ?? {}),
+      },
+      signal,
+    });
+  } catch (cause) {
+    if (signal?.aborted) {
+      throw cause;
+    }
+    const error = new ApiError(CONNECTION_ERROR, { kind: 'connection', cause });
+    logFailure('GET', path, undefined, startedAt, error.kind, 1, cause);
+    throw error;
+  }
+
+  if (!response.ok) {
+    const error = errorForResponse(null, response.status, false);
+    logFailure('GET', path, response.status, startedAt, error.kind, 1);
+    if (response.status === 401 && unauthorizedHandler) {
+      void unauthorizedHandler();
+    }
+    throw error;
+  }
+
+  const contentType = (response.headers.get('content-type') ?? '').split(';', 1)[0].trim().toLowerCase();
+  const extensions = {
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+  };
+  const extension = extensions[contentType];
+  if (!extension) {
+    throw new ApiError('El servidor devolvió una foto en un formato no compatible.', { kind: 'unexpected' });
+  }
+  const declaredSize = Number(response.headers.get('content-length'));
+  if (Number.isFinite(declaredSize) && declaredSize > MAX_PHOTO_DOWNLOAD_BYTES) {
+    throw new ApiError('La foto guardada supera el límite de 5 MB.', { kind: 'unexpected' });
+  }
+
+  let content;
+  try {
+    content = await response.arrayBuffer();
+  } catch (cause) {
+    throw new ApiError('No se pudo recibir la foto completa.', { kind: 'connection', cause });
+  }
+  if (!content.byteLength) {
+    throw new ApiError('El servidor devolvió una foto vacía.', { kind: 'unexpected' });
+  }
+  if (content.byteLength > MAX_PHOTO_DOWNLOAD_BYTES) {
+    throw new ApiError('La foto guardada supera el límite de 5 MB.', { kind: 'unexpected' });
+  }
+  console.info(`[photos] Descarga recibida: ${contentType}, ${content.byteLength} bytes.`);
+
+  const filename = `urbanpulse-incident-photo-${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
+  const file = new File(Paths.cache, filename);
+  try {
+    file.create({ overwrite: true });
+    await file.write(content);
+    console.info('[photos] Copia temporal de la foto preparada.');
+    return file;
+  } catch (cause) {
+    const causeName = typeof cause?.name === 'string' ? cause.name : 'Error';
+    console.warn(`[photos] No se pudo escribir la copia temporal (${causeName}).`);
+    try {
+      file.delete();
+    } catch {
+      // The file may not have been created.
+    }
+    throw new ApiError('No se pudo preparar la foto para mostrarla.', { kind: 'unexpected', cause });
+  }
 }

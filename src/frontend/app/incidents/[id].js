@@ -1,5 +1,5 @@
 import { Redirect, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Platform,
@@ -13,7 +13,7 @@ import { Image } from 'expo-image';
 import MapView, { Marker } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { getIncident, getIncidentPhotoSource, uploadIncidentPhoto } from '../../src/api';
+import { downloadIncidentPhoto, getIncident, uploadIncidentPhoto } from '../../src/api';
 import {
   MAX_INCIDENT_PHOTOS,
   pickPhotoFromCamera,
@@ -239,59 +239,101 @@ function IncidentDetailContent({ id }) {
 
 function IncidentPhotoImage({ photo, index }) {
   const photoUrl = typeof photo.url === 'string' ? photo.url : '';
-  const photoSource = getIncidentPhotoSource(photoUrl);
-  const [photoStatus, setPhotoStatus] = useState(photoSource ? 'loading' : 'error');
+  const [photoState, setPhotoState] = useState({ status: 'loading', uri: null });
   const [attempt, setAttempt] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    let downloadedFile = null;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+
+    console.info(`[photos] Iniciando descarga autenticada de la foto ${index + 1}.`);
+    downloadIncidentPhoto(photoUrl, { signal: controller.signal })
+      .then((file) => {
+        downloadedFile = file;
+        if (active) {
+          setPhotoState({ status: 'ready', uri: file.uri });
+        } else {
+          removeTemporaryPhoto(file);
+        }
+      })
+      .catch((error) => {
+        if (active) {
+          const message = typeof error?.message === 'string'
+            ? error.message.replace(/https?:\/\/\S+/gi, '<photo-url>').slice(0, 160)
+            : '';
+          console.warn('[photos] No se pudo preparar una foto para mostrarla' + (message ? ': ' + message : ''));
+          setPhotoState({ status: 'error', uri: null });
+        }
+      });
+
+    return () => {
+      active = false;
+      clearTimeout(timeout);
+      controller.abort();
+      if (downloadedFile) {
+        removeTemporaryPhoto(downloadedFile);
+      }
+    };
+  }, [photoUrl, attempt, index]);
 
   return (
     <View style={styles.photoFrame}>
-      {photoSource && (
+      {photoState.uri && (
         <Image
-          key={`${photoUrl}-${attempt}`}
-          source={photoSource}
+          key={photoState.uri}
+          source={{ uri: photoState.uri }}
           style={styles.photoImage}
           contentFit="cover"
           cachePolicy="none"
           transition={0}
           accessibilityLabel={`Foto ${index + 1} de la incidencia`}
-          onLoad={() => console.info(`[photos] Foto ${index + 1} recibida por expo-image.`)}
+          onLoadStart={() => console.info(`[photos] expo-image empieza a leer el archivo local de la foto ${index + 1}.`)}
+          onLoad={() => console.info(`[photos] expo-image decodificó el archivo local de la foto ${index + 1}.`)}
           onDisplay={() => {
             console.info(`[photos] Foto ${index + 1} mostrada en el detalle.`);
-            setPhotoStatus('loaded');
+            setPhotoState((current) => ({ ...current, status: 'displayed' }));
           }}
           onError={(event) => {
             const message = typeof event?.error === 'string'
               ? event.error.replace(/https?:\/\/\S+/gi, '<photo-url>').slice(0, 160)
               : '';
             console.warn('[photos] No se pudo mostrar una foto de incidencia' + (message ? ': ' + message : ''));
-            setPhotoStatus('error');
+            setPhotoState({ status: 'error', uri: null });
           }}
         />
       )}
-      {photoStatus === 'loading' && (
+      {(photoState.status === 'loading' || photoState.status === 'ready') && (
         <View style={styles.photoLoading}>
           <ActivityIndicator color={COLORS.primary} />
           <Text style={styles.photoErrorText}>Cargando foto…</Text>
         </View>
       )}
-      {photoStatus === 'error' && (
+      {photoState.status === 'error' && (
         <View style={styles.photoError}>
           <Text style={styles.photoErrorText}>No se pudo cargar esta foto.</Text>
-          {photoSource && (
-            <Pressable
-              onPress={() => {
-                setPhotoStatus('loading');
-                setAttempt((current) => current + 1);
-              }}
-              accessibilityRole="button"
-            >
-              <Text style={styles.photoRetryText}>Reintentar</Text>
-            </Pressable>
-          )}
+          <Pressable
+            onPress={() => {
+              setPhotoState({ status: 'loading', uri: null });
+              setAttempt((current) => current + 1);
+            }}
+            accessibilityRole="button"
+          >
+            <Text style={styles.photoRetryText}>Reintentar</Text>
+          </Pressable>
         </View>
       )}
     </View>
   );
+}
+
+function removeTemporaryPhoto(file) {
+  try {
+    file.delete();
+  } catch {
+    // The cache may have been cleared by the operating system already.
+  }
 }
 
 const styles = StyleSheet.create({
