@@ -3,6 +3,7 @@ import { Redirect, useNavigation, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   Platform,
   ScrollView,
@@ -14,7 +15,15 @@ import {
 import MapView, { Marker } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { createIncident, getCategories } from '../../src/api';
+import { createIncident, getCategories, uploadIncidentPhoto } from '../../src/api';
+import {
+  MAX_INCIDENT_PHOTOS,
+  addPickedPhoto,
+  pickPhotoFromCamera,
+  pickPhotoFromGallery,
+  removePhotoAt,
+  submitIncidentWithPhotos,
+} from '../../src/incidentPhotos';
 import {
   MALAGA_REGION,
   OSM_MAP_PROPS,
@@ -77,6 +86,9 @@ function NewIncidentForm() {
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState(null);
   const [location, setLocation] = useState(null);
+  const [photos, setPhotos] = useState([]);
+  const [photoMessage, setPhotoMessage] = useState(null);
+  const [createdIncident, setCreatedIncident] = useState(null);
 
   const { status: categoriesState, data: categories = [], error: categoriesError, reload: reloadCategories } = useLoad(getCategories);
   const [locating, setLocating] = useState(true);
@@ -133,12 +145,42 @@ function NewIncidentForm() {
     }
   }
 
+  const incidentLocked = sending || createdIncident !== null;
+
   function placeByHand(coordinate) {
-    if (sending) {
+    if (incidentLocked) {
       return;
     }
     placedByHandRef.current = true;
     setLocation(coordinate);
+  }
+
+  async function handlePickPhoto(source) {
+    if (sending || photos.length >= MAX_INCIDENT_PHOTOS) {
+      return;
+    }
+    setPhotoMessage(null);
+    try {
+      const outcome =
+        source === 'camera' ? await pickPhotoFromCamera() : await pickPhotoFromGallery();
+      if (outcome.status === 'denied') {
+        setPhotoMessage(outcome.message);
+        return;
+      }
+      if (outcome.status === 'picked') {
+        setPhotos((current) => addPickedPhoto(current, outcome.photo));
+      }
+    } catch {
+      setPhotoMessage('No se pudo abrir el selector de imágenes. Puedes enviar la incidencia sin fotos.');
+    }
+  }
+
+  function handleRemovePhoto(index) {
+    if (sending) {
+      return;
+    }
+    setPhotos((current) => removePhotoAt(current, index));
+    setSubmitError(null);
   }
 
   const form = { title, description, location };
@@ -149,7 +191,7 @@ function NewIncidentForm() {
       return;
     }
     setAttemptedSubmit(true);
-    if (!isValid(validateIncident(form))) {
+    if (!createdIncident && !isValid(validateIncident(form))) {
       return;
     }
 
@@ -157,13 +199,27 @@ function NewIncidentForm() {
     setSending(true);
     setSubmitError(null);
     try {
-      await createIncident({
-        title: title.trim(),
-        description: description.trim(),
-        latitude: location.latitude,
-        longitude: location.longitude,
-        categoryId,
+      const result = await submitIncidentWithPhotos({
+        createdIncident,
+        incidentDraft: {
+          title: title.trim(),
+          description: description.trim(),
+          latitude: location.latitude,
+          longitude: location.longitude,
+          categoryId,
+        },
+        photos,
+        createIncidentFn: createIncident,
+        uploadPhotoFn: uploadIncidentPhoto,
       });
+      if (!result.ok) {
+        setCreatedIncident(result.incident);
+        setPhotos(result.photos);
+        setSubmitError(result.errorMessage);
+        sendingRef.current = false;
+        setSending(false);
+        return;
+      }
       sendingRef.current = false;
       router.back();
     } catch (error) {
@@ -174,6 +230,9 @@ function NewIncidentForm() {
   }
 
   function toggleCategory(id) {
+    if (incidentLocked) {
+      return;
+    }
     setCategoryId((current) => (current === id ? null : id));
   }
 
@@ -219,7 +278,7 @@ function NewIncidentForm() {
         value={title}
         onChangeText={setTitle}
         placeholder="Ej.: Farola fundida"
-        editable={!sending}
+        editable={!incidentLocked}
         returnKeyType="next"
       />
       {errors.title && <Text style={styles.errorText}>{errors.title}</Text>}
@@ -230,7 +289,7 @@ function NewIncidentForm() {
         value={description}
         onChangeText={setDescription}
         placeholder="Describe el problema"
-        editable={!sending}
+        editable={!incidentLocked}
         multiline
         textAlignVertical="top"
       />
@@ -245,7 +304,7 @@ function NewIncidentForm() {
               key={category.id}
               style={[styles.chip, selected && styles.chipSelected]}
               onPress={() => toggleCategory(category.id)}
-              disabled={sending}
+              disabled={incidentLocked}
               accessibilityRole="button"
               accessibilityState={{ selected }}
             >
@@ -284,7 +343,7 @@ function NewIncidentForm() {
           {location && (
             <Marker
               coordinate={location}
-              draggable={!sending}
+              draggable={!incidentLocked}
               onDragEnd={(event) => placeByHand(event.nativeEvent.coordinate)}
             />
           )}
@@ -299,6 +358,71 @@ function NewIncidentForm() {
         )}
       </View>
       {errors.location && <Text style={styles.errorText}>{errors.location}</Text>}
+
+      <Text style={styles.label}>
+        Fotos (opcional, {photos.length}/{MAX_INCIDENT_PHOTOS})
+      </Text>
+      {photos.length < MAX_INCIDENT_PHOTOS && (
+        <View style={styles.photoActions}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.photoActionButton,
+              (pressed || sending) && styles.photoActionButtonPressed,
+            ]}
+            onPress={() => handlePickPhoto('camera')}
+            disabled={sending}
+            accessibilityRole="button"
+          >
+            <Text style={styles.photoActionText}>Tomar foto</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [
+              styles.photoActionButton,
+              (pressed || sending) && styles.photoActionButtonPressed,
+            ]}
+            onPress={() => handlePickPhoto('gallery')}
+            disabled={sending}
+            accessibilityRole="button"
+          >
+            <Text style={styles.photoActionText}>Elegir de galería</Text>
+          </Pressable>
+        </View>
+      )}
+      {photoMessage && <Text style={styles.photoMessage}>{photoMessage}</Text>}
+
+      {photos.length > 0 && (
+        <View style={styles.photoList}>
+          {photos.map((photo, index) => (
+            <View
+              key={`${photo.uri}-${index}`}
+              style={[styles.photoItem, photo.error && styles.photoItemError]}
+            >
+              <Image source={{ uri: photo.uri }} style={styles.photoPreview} />
+              {photo.uploaded ? (
+                <View style={styles.photoUploadedBadge}>
+                  <Text style={styles.photoUploadedText}>Subida</Text>
+                </View>
+              ) : (
+                <Pressable
+                  style={styles.photoRemoveButton}
+                  onPress={() => handleRemovePhoto(index)}
+                  disabled={sending}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Quitar foto ${index + 1}`}
+                >
+                  <Text style={styles.photoRemoveText}>Quitar</Text>
+                </Pressable>
+              )}
+            </View>
+          ))}
+        </View>
+      )}
+
+      {createdIncident && (
+        <Text style={styles.savedNotice}>
+          La incidencia ya se ha registrado. Puedes quitar o cambiar la foto con error y reintentar, o continuar sin añadir más fotos.
+        </Text>
+      )}
 
       {submitError && <Text style={styles.submitError}>{submitError}</Text>}
 
@@ -315,9 +439,28 @@ function NewIncidentForm() {
         {sending ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.submitButtonText}>Enviar incidencia</Text>
+          <Text style={styles.submitButtonText}>
+            {createdIncident
+              ? photos.some((photo) => !photo.uploaded)
+                ? 'Reintentar subida de fotos'
+                : 'Finalizar'
+              : 'Enviar incidencia'}
+          </Text>
         )}
       </Pressable>
+
+      {createdIncident && !sending && (
+        <Pressable
+          style={({ pressed }) => [
+            styles.secondaryButton,
+            pressed && styles.photoActionButtonPressed,
+          ]}
+          onPress={() => router.back()}
+          accessibilityRole="button"
+        >
+          <Text style={styles.secondaryButtonText}>Continuar sin más fotos</Text>
+        </Pressable>
+      )}
     </ScrollView>
   );
 }
@@ -441,6 +584,83 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: COLORS.text,
   },
+  photoActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  photoActionButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.surface,
+    alignItems: 'center',
+  },
+  photoActionButtonPressed: {
+    backgroundColor: COLORS.primarySoft,
+  },
+  photoActionText: {
+    color: COLORS.primary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  photoMessage: {
+    marginTop: 6,
+    fontSize: 13,
+    color: COLORS.textMuted,
+  },
+  photoList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginTop: 12,
+  },
+  photoItem: {
+    width: 96,
+    borderRadius: 8,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surfaceMuted,
+  },
+  photoItemError: {
+    borderColor: COLORS.error,
+    borderWidth: 2,
+  },
+  photoPreview: {
+    width: '100%',
+    height: 80,
+  },
+  photoRemoveButton: {
+    paddingVertical: 6,
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+  },
+  photoRemoveText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.error,
+  },
+  photoUploadedBadge: {
+    paddingVertical: 6,
+    alignItems: 'center',
+    backgroundColor: COLORS.primarySoft,
+  },
+  photoUploadedText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
+  savedNotice: {
+    marginTop: 16,
+    padding: 10,
+    borderRadius: 8,
+    backgroundColor: COLORS.primarySoft,
+    color: COLORS.text,
+    fontSize: 13,
+  },
   submitError: {
     marginTop: 16,
     padding: 10,
@@ -462,6 +682,21 @@ const styles = StyleSheet.create({
   submitButtonText: {
     color: COLORS.onPrimary,
     fontSize: 16,
+    fontWeight: '600',
+  },
+  secondaryButton: {
+    marginTop: 12,
+    height: 44,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.surface,
+  },
+  secondaryButtonText: {
+    color: COLORS.text,
+    fontSize: 15,
     fontWeight: '600',
   },
 });

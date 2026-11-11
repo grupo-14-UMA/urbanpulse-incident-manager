@@ -1,7 +1,10 @@
 import { API_URL } from './config';
+import { fetch as expoFetch } from 'expo/fetch';
+import { File } from 'expo-file-system';
 
 const BASE_URL = typeof API_URL === 'string' ? API_URL.trim().replace(/\/+$/, '') : '';
 const REQUEST_TIMEOUT_MS = 10000;
+const PHOTO_UPLOAD_TIMEOUT_MS = 60000;
 const RETRY_ATTEMPTS = 3;
 const RETRY_DELAYS_MS = [1000, 3000];
 const RETRY_BUDGET_MS = 15000;
@@ -23,10 +26,20 @@ class ApiError extends Error {
   }
 }
 
-function logFailure(method, path, status, startedAt, kind, attempt) {
+function logFailure(method, path, status, startedAt, kind, attempt, cause) {
   const statusLabel = status ?? 'sin respuesta';
   const durationMs = Date.now() - startedAt;
-  console.warn('[api] ' + method + ' ' + path + ' -> ' + statusLabel + ' (' + durationMs + ' ms, ' + kind + ', intento ' + attempt + ')');
+  const causeName = typeof cause?.name === 'string' ? cause.name : '';
+  const causeMessage = typeof cause?.message === 'string' ? cause.message : '';
+  const causeDetail = [causeName, causeMessage]
+    .filter(Boolean)
+    .join(': ')
+    .replace(/(?:file|ph|content):\/\/\S+/gi, '<local-file>')
+    .slice(0, 120);
+  console.warn(
+    '[api] ' + method + ' ' + path + ' -> ' + statusLabel + ' (' + durationMs + ' ms, ' + kind +
+      (causeDetail ? ', ' + causeDetail : '') + ', intento ' + attempt + ')',
+  );
 }
 
 function getResponseErrorMessage(payload, status) {
@@ -86,7 +99,10 @@ async function requestOnce(
   {
     method = 'GET',
     body,
+    formData,
+    fetchImpl = fetch,
     signal: requestSignal,
+    timeoutMs = REQUEST_TIMEOUT_MS,
     authenticated = true,
     handleUnauthorized = true,
     preserveUnauthorizedMessage = false,
@@ -115,15 +131,19 @@ async function requestOnce(
     timeout = setTimeout(() => {
       timedOut = true;
       controller.abort();
-    }, REQUEST_TIMEOUT_MS);
-    response = await fetch(BASE_URL + path, {
+    }, timeoutMs);
+    response = await fetchImpl(BASE_URL + path, {
       method,
       headers: {
         Accept: 'application/json',
         ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
         ...(authenticated && accessToken ? { Authorization: 'Bearer ' + accessToken } : {}),
       },
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      ...(formData !== undefined
+        ? { body: formData }
+        : body === undefined
+          ? {}
+          : { body: JSON.stringify(body) }),
       signal: controller.signal,
     });
     responseText = await response.text();
@@ -132,7 +152,7 @@ async function requestOnce(
       throw cause;
     }
     const error = new ApiError(CONNECTION_ERROR, { kind: 'connection', cause });
-    logFailure(method, path, undefined, startedAt, 'connection', attempt);
+    logFailure(method, path, undefined, startedAt, timedOut ? 'timeout' : 'connection', attempt, cause);
     throw error;
   } finally {
     clearTimeout(timeout);
@@ -264,4 +284,34 @@ export async function createIncident({ title, description, latitude, longitude, 
 
   const incident = await request('/api/incidents', { method: 'POST', body });
   return expectIncident(incident);
+}
+
+export async function uploadIncidentPhoto(incidentId, photo) {
+  const file = new File(photo.uri);
+  const formData = new FormData();
+  formData.append('photos', file);
+
+  const payload = await request(
+    '/api/incidents/' + encodeURIComponent(String(incidentId)) + '/photos',
+    { method: 'POST', formData, fetchImpl: expoFetch, timeoutMs: PHOTO_UPLOAD_TIMEOUT_MS },
+  );
+  const uploaded = Array.isArray(payload) ? payload[0] : null;
+  if (!uploaded || typeof uploaded !== 'object' || typeof uploaded.url !== 'string') {
+    throw new ApiError(SERVER_ERROR, { kind: 'unexpected' });
+  }
+  return uploaded;
+}
+
+export function getIncidentPhotoSource(photoUrl) {
+  if (typeof photoUrl !== 'string' || !photoUrl.trim() || !BASE_URL) {
+    return null;
+  }
+  const trimmed = photoUrl.trim();
+  const uri = /^https?:\/\//i.test(trimmed)
+    ? trimmed
+    : BASE_URL + (trimmed.startsWith('/') ? trimmed : '/' + trimmed);
+  return {
+    uri,
+    ...(accessToken ? { headers: { Authorization: 'Bearer ' + accessToken } } : {}),
+  };
 }

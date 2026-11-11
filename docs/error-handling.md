@@ -12,7 +12,7 @@ Política común de UrbanPulse ante una petición o un recurso que falla: qué v
 
 | Tipo | Ejemplo | Qué ve el usuario | Reintento automático | Botón «Reintentar» |
 | --- | --- | --- | --- | --- |
-| Sin conexión o timeout | Red caída, backend parado, sin respuesta en 10 s | «No se pudo conectar con UrbanPulse. Comprueba tu conexión e inténtalo de nuevo.» | Sí, solo en lecturas | Sí |
+| Sin conexión o timeout | Red caída, backend parado o sin respuesta dentro del plazo de la petición (10 s; 60 s para subir una fotografía) | «No se pudo conectar con UrbanPulse. Comprueba tu conexión e inténtalo de nuevo.» | Sí, solo en lecturas | Sí |
 | Error del servidor | HTTP 500, 502, 503, 504 | «Algo ha fallado en UrbanPulse. Inténtalo de nuevo en unos minutos.» | Solo 502, 503 y 504, y solo en lecturas | Sí |
 | Datos no válidos | HTTP 400 | El `message` del backend y los mensajes de `errors`. Si no hay, «Revisa los datos e inténtalo de nuevo.» | No | No: el usuario corrige y vuelve a enviar |
 | No encontrado | HTTP 404 | Un texto propio de la pantalla, por ejemplo «Esta incidencia no existe». | No | No |
@@ -20,7 +20,7 @@ Política común de UrbanPulse ante una petición o un recurso que falla: qué v
 | Sin permiso | HTTP 403 | «No tienes permiso para hacer esto.» | No | No |
 | Otro error del cliente | Otro código 4xx | Igual que los datos no válidos. | No | No |
 | Respuesta inesperada | Cuerpo que no es JSON, campo obligatorio ausente o con un formato no válido | El mismo texto que un error del servidor. | No | Sí |
-| Recurso del dispositivo | Permiso de ubicación denegado, GPS sin señal | Un aviso que no bloquea la pantalla y ofrece la alternativa. | No | No |
+| Recurso del dispositivo | Permiso de ubicación, cámara o galería denegado, GPS sin señal | Un aviso que no bloquea la pantalla y ofrece la alternativa, como marcar la localización en el mapa o enviar sin fotos. | No | No |
 
 El cliente clasifica el error en un único sitio, su capa de acceso a la API, y las pantallas solo reciben el tipo y el texto para el usuario. Una pantalla puede sustituir el texto de un tipo por otro más concreto (como en el 404), pero no mostrar el diagnóstico técnico.
 
@@ -40,17 +40,18 @@ Los reintentos automáticos absorben cortes breves de conexión o del backend si
 - **Solo en errores transitorios**: sin conexión, timeout, 502, 503 y 504. Un 4xx no se reintenta, porque repetirlo no lo arregla.
 - **Tres intentos en total**: el primero inmediato, el segundo tras unos 1 s y el tercero tras unos 3 s más.
 - **Con jitter**: cada espera se multiplica por un factor aleatorio entre 0,5 y 1,5. Así los clientes no reintentan todos a la vez cuando el backend vuelve tras una caída.
-- **Con un presupuesto de 15 s** desde el primer intento: pasado ese tiempo no se lanza un intento nuevo. El timeout de cada petición, de 10 s, sigue aplicándose.
+- **Con un presupuesto de 15 s** desde el primer intento: pasado ese tiempo no se lanza un intento nuevo. Las lecturas y envíos normales tienen un timeout de 10 s; subir una fotografía puede tardar hasta 60 s.
 
 Mientras dura la secuencia, la pantalla sigue en estado de carga. Si todos los intentos fallan, muestra el error con el botón «Reintentar», que vuelve a lanzar la secuencia completa.
 
 ## Envíos
 
-Al enviar datos (registrar una incidencia, cambiar su estado):
+Al enviar datos (registrar una incidencia, adjuntar fotografías o cambiar su estado):
 
 - El botón de envío queda bloqueado mientras se envía, para evitar el doble envío.
 - No se puede salir de la pantalla a mitad del envío, porque se perdería el resultado.
 - Si el envío falla, se conserva lo que escribió el usuario y se muestra el error junto al botón. Para reintentar, el usuario vuelve a pulsarlo.
+- La app móvil registra primero la incidencia y después sube las fotos una a una. Si una foto falla, mantiene la incidencia registrada, permite reintentar las fotos pendientes y deja continuar sin añadir más fotos.
 
 ## Estados de una pantalla
 

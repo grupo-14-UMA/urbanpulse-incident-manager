@@ -1,9 +1,18 @@
 import { Redirect, useLocalSearchParams } from 'expo-router';
-import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Image,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { getIncident } from '../../src/api';
+import { getIncident, getIncidentPhotoSource } from '../../src/api';
 import { categoryLabel, statusLabel } from '../../src/labels';
 import { OSM_MAP_PROPS, OsmAttribution, OsmTiles, STREET_DELTA } from '../../src/map';
 import { COLORS } from '../../src/theme';
@@ -60,6 +69,7 @@ function IncidentDetailContent({ id }) {
   }
 
   const coordinate = { latitude: incident.latitude, longitude: incident.longitude };
+  const photos = Array.isArray(incident.photos) ? incident.photos : [];
 
   return (
     <ScrollView
@@ -88,6 +98,29 @@ function IncidentDetailContent({ id }) {
 
       <Text style={styles.label}>Fecha de registro</Text>
       <Text style={styles.value}>{new Date(incident.createdAt).toLocaleString('es-ES')}</Text>
+
+      {photos.length > 0 && (
+        <>
+          <Text style={styles.label}>Fotos</Text>
+          <View style={styles.photoGrid}>
+            {photos.map((photo, index) => {
+              const source = getIncidentPhotoSource(photo.url);
+              if (!source) {
+                return null;
+              }
+              return (
+                <Image
+                  key={photo.id ?? `${photo.url}-${index}`}
+                  source={source}
+                  style={styles.photo}
+                  resizeMode="cover"
+                  accessibilityLabel={`Foto ${index + 1} de la incidencia`}
+                />
+              );
+            })}
+          </View>
+        </>
+      )}
 
       <Text style={styles.label}>Localización</Text>
       {/* Static, so scrolling the detail never moves the map by accident. */}
@@ -172,6 +205,20 @@ const styles = StyleSheet.create({
   value: {
     fontSize: 16,
     color: COLORS.text,
+  },
+  photoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 4,
+  },
+  photo: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surfaceMuted,
   },
   mapContainer: {
     height: 200,

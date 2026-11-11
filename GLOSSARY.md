@@ -28,6 +28,10 @@ _Evitar_: fecha de creación, fecha de alta
 Tipo de problema al que pertenece una incidencia. Es opcional cuando el ciudadano la registra.
 _Evitar_: tipo, clase
 
+**Fotografía adjunta** (`Attachment`):
+Imagen asociada a una incidencia. La API valida el fichero, guarda su contenido en el almacenamiento de fotos y conserva sus metadatos y referencia para mostrarla después.
+_Evitar_: archivo (sin más), imagen (sin contexto)
+
 ### Actores
 
 **Usuario** (`User`):
