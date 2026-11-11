@@ -474,6 +474,7 @@ const styles = StyleSheet.create({
   photoFrame: {
     width: '100%',
     height: 200,
+    position: 'relative',
     borderRadius: 8,
     overflow: 'hidden',
     borderWidth: 1,
@@ -481,7 +482,11 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surfaceMuted,
   },
   photo: {
-    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+    flex: 1,
+    zIndex: 1,
+    backgroundColor: 'transparent',
   },
   photoError: {
     ...StyleSheet.absoluteFillObject,
