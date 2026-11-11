@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { CircleMarker, MapContainer, TileLayer } from 'react-leaflet';
 
 import { ApiError, getIncidentById } from '../api.js';
 
@@ -89,7 +90,26 @@ export default function IncidentDetailPage() {
           <div><dt>Fecha de registro</dt><dd>{formatDate(incident.createdAt)}</dd></div>
           <div><dt>Coordenadas</dt><dd>{incident.latitude.toFixed(5)}, {incident.longitude.toFixed(5)}</dd></div>
         </dl>
-        <p className="mock-data-disclaimer">Datos actualizados desde el backend. Las acciones del Operador se incorporarán en la issue #73.</p>
+        <section aria-label="Ubicación de la incidencia" className="detail-location">
+          <h3>Ubicación</h3>
+          <MapContainer
+            center={[incident.latitude, incident.longitude]}
+            className="detail-location-map"
+            scrollWheelZoom={false}
+            zoom={16}
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            <CircleMarker
+              center={[incident.latitude, incident.longitude]}
+              pathOptions={{ color: '#fff', fillColor: '#d45c63', fillOpacity: 1, weight: 3 }}
+              radius={8}
+            />
+          </MapContainer>
+        </section>
+        <p className="incident-detail-note">Datos actualizados desde el backend. Las acciones de gestión estarán disponibles próximamente.</p>
       </article>
     </section>
   );

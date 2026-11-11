@@ -1,12 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import {
-  INCIDENT_CATEGORIES,
-  INCIDENT_PRIORITIES,
-  INCIDENT_STATUSES,
-  loadMockIncidentPage,
-} from '../mock/incidentList.js';
+import { getCategories } from '../api.js'; import { getIncidentPage, loadIncidentList } from '../incidentListData.js';
 
 const PAGE_SIZE = 6;
 
@@ -17,13 +12,6 @@ const STATUS_LABELS = {
   IN_PROGRESS: 'En curso',
   RESOLVED: 'Resuelta',
   REJECTED: 'Rechazada',
-};
-
-const PRIORITY_LABELS = {
-  LOW: 'Baja',
-  MEDIUM: 'Media',
-  HIGH: 'Alta',
-  URGENT: 'Urgente',
 };
 
 const CATEGORY_LABELS = {
@@ -41,7 +29,7 @@ const DATE_FORMAT = new Intl.DateTimeFormat('es-ES', {
   year: 'numeric',
 });
 
-const EMPTY_FILTERS = { status: '', category: '', priority: '', dateFrom: '', dateTo: '' };
+const EMPTY_FILTERS = { status: '', category: '', dateFrom: '', dateTo: '' };
 
 function formatDate(value) {
   return DATE_FORMAT.format(new Date(value));
@@ -52,35 +40,45 @@ export default function IncidentListPage() {
   const [sort, setSort] = useState('date-desc');
   const [page, setPage] = useState(1);
   const [reloadKey, setReloadKey] = useState(0);
-  const [result, setResult] = useState({ items: [], total: 0, page: 1, pageCount: 0 });
+  const [incidents, setIncidents] = useState([]); const [categoryOptions, setCategoryOptions] = useState([]); const [categoryError, setCategoryError] = useState('');
+  const [truncated, setTruncated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const filterKey = useMemo(() => JSON.stringify(filters), [filters]);
-
   useEffect(() => {
-    let active = true;
+    const controller = new AbortController();
     setLoading(true);
     setError('');
 
-    loadMockIncidentPage({ filters, page, pageSize: PAGE_SIZE, sort })
-      .then((nextResult) => {
-        if (active) {
-          setResult(nextResult);
-          if (nextResult.page !== page) setPage(nextResult.page);
+    loadIncidentList({ signal: controller.signal })
+      .then((response) => {
+        setIncidents(response.incidents);
+        setTruncated(response.truncated);
+      })
+      .catch((requestError) => {
+        if (!controller.signal.aborted) {
+          setError(requestError?.message || 'No se pudo cargar la lista. Inténtalo de nuevo.');
         }
       })
-      .catch(() => {
-        if (active) setError('No se pudo cargar la lista. Inténtalo de nuevo.');
-      })
       .finally(() => {
-        if (active) setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       });
 
-    return () => { active = false; };
-  // filterKey avoids reloading when React recreates an equivalent filters object.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filterKey, page, reloadKey, sort]);
+    return () => controller.abort();
+  }, [reloadKey]);
+
+  useEffect(() => { const controller = new AbortController(); getCategories({ signal: controller.signal }).then(setCategoryOptions).catch((requestError) => { if (!controller.signal.aborted) setCategoryError(requestError?.message || 'No se pudo cargar el catálogo de categorías.'); }); return () => controller.abort(); }, []); const statuses = useMemo(() => [...new Set(incidents.map((incident) => incident.status))].sort(), [incidents]);
+  const categories = useMemo(
+    () => [...categoryOptions].sort((left, right) => left.name.localeCompare(right.name, 'es')),
+    [categoryOptions],
+  );
+  const result = useMemo(() => getIncidentPage({
+    incidents,
+    filters,
+    page,
+    pageSize: PAGE_SIZE,
+    sort,
+  }), [incidents, filters, page, sort]);
 
   function updateFilter(event) {
     const { name, value } = event.target;
@@ -104,33 +102,32 @@ export default function IncidentListPage() {
           <h2 id="incidents-heading">Incidencias</h2>
           <p className="list-description">Consulta y filtra las incidencias registradas en Málaga.</p>
         </div>
-        <span className="list-sample-badge">Datos simulados</span>
+        <span className="list-source-note">Datos del backend · máximo 500</span>
       </div>
+
+      <p className="list-limit-note" role="note">{categoryError && <span role="alert">{categoryError} </span>}
+        {truncated
+          ? 'La API limita los resultados a 500 incidencias Registradas en Málaga. El filtro de estado solo puede mostrar Registrada con este endpoint; los filtros restantes y la paginación se calculan en el navegador.'
+          : 'El endpoint actual solo permite consultar incidencias Registradas en Málaga. Por eso, el filtro de estado solo ofrece Registrada y Todos; los demás estados requieren que la API de lista esté disponible. Los filtros restantes y la paginación se calculan en el navegador.'}
+      </p>
 
       <div aria-label="Filtros de incidencias" className="incident-filters">
         <label>
           Estado
           <select name="status" onChange={updateFilter} value={filters.status}>
             <option value="">Todos</option>
-            {INCIDENT_STATUSES.map((status) => <option key={status} value={status}>{STATUS_LABELS[status]}</option>)}
+            {statuses.map((status) => <option key={status} value={status}>{STATUS_LABELS[status] || status}</option>)}
           </select>
         </label>
         <label>
           Categoría
           <select name="category" onChange={updateFilter} value={filters.category}>
             <option value="">Todas</option>
-            {INCIDENT_CATEGORIES.map((category) => (
-              <option key={category} value={category}>
-                {CATEGORY_LABELS[category] || category}
+            {categories.map((category) => (
+              <option key={category.id} value={category.name}>
+                {CATEGORY_LABELS[category.name.toLowerCase()] || category.name}
               </option>
             ))}
-          </select>
-        </label>
-        <label>
-          Prioridad
-          <select name="priority" onChange={updateFilter} value={filters.priority}>
-            <option value="">Todas</option>
-            {INCIDENT_PRIORITIES.map((priority) => <option key={priority} value={priority}>{PRIORITY_LABELS[priority]}</option>)}
           </select>
         </label>
         <label>
@@ -146,8 +143,6 @@ export default function IncidentListPage() {
           <select onChange={changeSort} value={sort}>
             <option value="date-desc">Más recientes</option>
             <option value="date-asc">Más antiguas</option>
-            <option value="priority-desc">Prioridad más alta</option>
-            <option value="priority-asc">Prioridad más baja</option>
           </select>
         </label>
         <button
@@ -209,8 +204,8 @@ export default function IncidentListPage() {
                       <small>#{incident.id.toString().padStart(4, '0')}</small>
                     </td>
                     <td>{CATEGORY_LABELS[incident.categoryName] || incident.categoryName || 'Sin categoría'}</td>
-                    <td><span className={`incident-status status-${incident.status.toLowerCase()}`}>{STATUS_LABELS[incident.status]}</span></td>
-                    <td><span className={`incident-priority priority-${incident.priority.toLowerCase()}`}><i />{PRIORITY_LABELS[incident.priority]}</span></td>
+                    <td><span className={`incident-status status-${incident.status.toLowerCase()}`}>{STATUS_LABELS[incident.status] || incident.status}</span></td>
+                    <td aria-label="No disponible en la API actual">—</td>
                     <td>{formatDate(incident.createdAt)}</td>
                     <td>
                       <Link className="incident-detail-button" to={`/incidents/${incident.id}`}>
