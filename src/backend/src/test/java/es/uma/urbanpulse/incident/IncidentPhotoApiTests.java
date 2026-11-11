@@ -276,14 +276,32 @@ class IncidentPhotoApiTests {
 	}
 
 	@Test
-	void forbidsOtherCitizensOperatorsAndTechniciansFromUploadingPhotos() {
+	void technicianCanAttachResolutionPhoto() {
+		AuthResponse citizen = newCitizen(this.client);
+		IncidentResponse incident = createIncident(citizen);
+		AuthResponse technician = login(this.client, TECHNICIAN_EMAIL);
+
+		MultiValueMap<String, Object> multipart = new LinkedMultiValueMap<>();
+		multipart.add("photos", filePart("reparacion.jpg", MediaType.IMAGE_JPEG, SAMPLE_JPEG));
+
+		this.client.post()
+				.uri("/api/incidents/{id}/photos", incident.id())
+				.header("Authorization", bearer(technician))
+				.contentType(MediaType.MULTIPART_FORM_DATA)
+				.body(multipart)
+				.exchange()
+				.expectStatus()
+				.isCreated();
+	}
+
+	@Test
+	void forbidsOtherCitizensAndOperatorsFromUploadingPhotos() {
 		AuthResponse reporter = newCitizen(this.client);
 		AuthResponse otherCitizen = newCitizen(this.client);
 		AuthResponse operator = login(this.client, OPERATOR_EMAIL);
-		AuthResponse technician = login(this.client, TECHNICIAN_EMAIL);
 		IncidentResponse incident = createIncident(reporter);
 
-		for (AuthResponse unauthorized : List.of(otherCitizen, operator, technician)) {
+		for (AuthResponse unauthorized : List.of(otherCitizen, operator)) {
 			MultiValueMap<String, Object> multipart = new LinkedMultiValueMap<>();
 			multipart.add("photos", filePart("foto.jpg", MediaType.IMAGE_JPEG, SAMPLE_JPEG));
 

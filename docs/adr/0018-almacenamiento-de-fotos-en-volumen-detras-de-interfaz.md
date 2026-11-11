@@ -19,6 +19,7 @@ Una incidencia puede incluir hasta 3 fotografías aportadas como evidencia visua
 Se elige la opción 3:
 
 - La tabla `Attachment` almacena solo los metadatos de cada fotografía (`incident_id`, `storage_key`, `file_type`, `file_size`, `created_at`) con el índice compuesto `(incident_id, id)`.
+- La subida se expone como operación independiente (`POST /api/incidents/{id}/photos`, `multipart/form-data`, campo `photos`) accesible para el `Ciudadano` autor de la incidencia y para el rol `Técnico` (que documenta la resolución). Así un fallo al subir una fotografía no impide conservar la incidencia registrada.
 - El límite de 3 fotografías por incidencia se protege en transacción bloqueando la fila de `Incident` (`SELECT … FOR UPDATE`) antes de contar e insertar los adjuntos.
 - El backend valida que cada fichero no esté vacío, no supere 5 MB y tenga un tipo MIME declarado (`image/jpeg`, `image/png` o `image/webp`) coherente con su firma binaria (*magic bytes*).
 - El dominio depende únicamente de la interfaz `PhotoStorage` (`store`, `read`, `delete`). En local y Docker Compose, `FileSystemPhotoStorage` escribe bajo el directorio configurado por `PHOTOS_DIR` (montado en el volumen `incident_photos`) y verifica que ninguna clave resuelva fuera de dicho directorio.

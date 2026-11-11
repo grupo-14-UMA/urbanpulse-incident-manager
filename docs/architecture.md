@@ -129,7 +129,7 @@ La API REST expone estas rutas. La columna «Acceso» indica quién puede usarla
 | `POST` | `/api/incidents` | Ciudadano | Crear una incidencia con título, descripción, latitud, longitud y categoría opcional. El ciudadano que la registra se toma del token. Devuelve la incidencia creada, con estado `REPORTED` (etiqueta visible: «Registrada») y fecha de registro `createdAt` en UTC con milisegundos (`2026-11-07T10:15:30.123Z`); los `GET` devuelven el mismo valor. |
 | `GET` | `/api/incidents?west=…&south=…&east=…&north=…` | Autenticado | Consultar hasta 500 incidencias `REPORTED` dentro del rectángulo visible WGS 84. Los cuatro límites son obligatorios; `west < east` y `south < north`. La respuesta incluye `incidents` y `truncated`; la consulta usa `ST_Intersects` y el índice GiST de la ubicación. |
 | `GET` | `/api/incidents/{id}` | Autenticado | Consultar el detalle de una incidencia (incluidas sus fotografías `photos`); devuelve 404 si no existe. |
-| `POST` | `/api/incidents/{id}/photos` | Ciudadano (autor) | Adjuntar entre 1 y 3 fotografías (`multipart/form-data`, campo `photos`) en formato JPEG, PNG o WebP y hasta 5 MB por fichero. |
+| `POST` | `/api/incidents/{id}/photos` | Ciudadano (autor) o Técnico | Adjuntar entre 1 y 3 fotografías (`multipart/form-data`, campo `photos`) en formato JPEG, PNG o WebP y hasta 5 MB por fichero. |
 | `GET` | `/api/incidents/{id}/photos/{photoId}` | Autenticado | Descargar el contenido binario de una fotografía adjunta a la incidencia. |
 | `GET` | `/api/categories` | Autenticado | Listar categorías disponibles. |
 
