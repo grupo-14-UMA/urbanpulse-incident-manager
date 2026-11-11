@@ -56,8 +56,11 @@ Table Incident {
   description varchar
   category_id integer
   location geometry(Point, 4326) [not null]
-  priority varchar
-  status_id integer [not null, note: '1 = REPORTED in the MVP; Status table is used when lifecycle management is implemented.']
+  priority varchar(10) [note: 'LOW, MEDIUM, HIGH or URGENT. Null means no priority.']
+  priority_justification varchar(1000)
+  status_id integer [not null, note: 'References Status.']
+  assignee_id integer [note: 'Technician in charge. Null until assigned.']
+  version integer [not null, default: 0, note: 'Optimistic locking counter.']
   reporter_id integer [note: 'Citizen who reported it. Null only for incidents stored before authentication.']
   urban_asset_id integer 
   urban_context_id integer 
@@ -67,7 +70,7 @@ Table Incident {
 
 Table Status {
   id integer [primary key]
-  name varchar
+  name varchar(20) [not null, unique]
 }
 
 /*
@@ -109,13 +112,13 @@ Table Department {
 }
 
 Table StatusChange {
-  id integer [primary key]
-  incident_id integer 
-  change_user_id integer 
-  previous_status varchar
-  new_status varchar
-  updates varchar
-  changed_at timestamptz
+  id bigint [primary key, increment]
+  incident_id integer [not null]
+  previous_status_id integer [note: 'Null only for the initial entry.']
+  new_status_id integer [not null]
+  changed_by_id integer [note: 'Null only for incidents without reporter.']
+  changed_at timestamptz [not null]
+  note varchar(1000) [note: 'Rejection reason or resolution note.']
 }
 
 Table ExternalObservation {
@@ -148,6 +151,7 @@ Ref: Incident.reporter_id > User.id
 Ref: Incident.urban_asset_id > UrbanAsset.id
 Ref: Incident.urban_context_id > UrbanContext.id
 Ref: Incident.status_id > Status.id
+Ref: Incident.assignee_id > User.id
 Ref: Incident.category_id > Category.id
 
 Ref: Attachment.incident_id > Incident.id
@@ -164,7 +168,9 @@ Ref: Team.department_id > Department.id
 Ref: Department.team_id > Team.id
 
 Ref: StatusChange.incident_id > Incident.id
-Ref: StatusChange.change_user_id > User.id
+Ref: StatusChange.changed_by_id > User.id
+Ref: StatusChange.previous_status_id > Status.id
+Ref: StatusChange.new_status_id > Status.id
 
 Ref: ExternalObservation.incident_id > Incident.id
 
