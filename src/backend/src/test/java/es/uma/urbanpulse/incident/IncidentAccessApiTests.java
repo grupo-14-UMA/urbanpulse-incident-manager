@@ -31,6 +31,8 @@ class IncidentAccessApiTests {
 
 	private static final String MAP_BOUNDS =
 			"/api/incidents?west=-4.45&south=36.68&east=-4.38&north=36.77";
+	private static final String ISOLATED_MAP_BOUNDS =
+			"/api/incidents?west=-0.001&south=-0.001&east=0.001&north=0.001";
 
 	private static final Map<String, Object> NEW_INCIDENT = Map.of(
 			"title", "Farola fundida",
@@ -128,12 +130,12 @@ class IncidentAccessApiTests {
 		IncidentResponse reportersIncident = createIncident(reporter, "Incidencia propia");
 		IncidentResponse colleaguesIncident = createIncident(colleague, "Incidencia de otra cuenta");
 
-		IncidentMapResponse reporterMap = loadMap(reporter);
+		IncidentMapResponse reporterMap = loadMap(reporter, ISOLATED_MAP_BOUNDS);
 		assertThat(reporterMap.incidents()).extracting(IncidentResponse::id)
 				.contains(reportersIncident.id())
 				.doesNotContain(colleaguesIncident.id());
 
-		IncidentMapResponse colleagueMap = loadMap(colleague);
+		IncidentMapResponse colleagueMap = loadMap(colleague, ISOLATED_MAP_BOUNDS);
 		assertThat(colleagueMap.incidents()).extracting(IncidentResponse::id)
 				.contains(colleaguesIncident.id())
 				.doesNotContain(reportersIncident.id());
@@ -145,14 +147,18 @@ class IncidentAccessApiTests {
 			.expectStatus()
 			.isForbidden();
 
-		IncidentMapResponse operatorMap = loadMap(login(this.client, OPERATOR_EMAIL));
+		IncidentMapResponse operatorMap = loadMap(login(this.client, OPERATOR_EMAIL), ISOLATED_MAP_BOUNDS);
 		assertThat(operatorMap.incidents()).extracting(IncidentResponse::id)
 				.contains(reportersIncident.id(), colleaguesIncident.id());
 	}
 
 	private IncidentMapResponse loadMap(AuthResponse user) {
+		return loadMap(user, MAP_BOUNDS);
+	}
+
+	private IncidentMapResponse loadMap(AuthResponse user, String bounds) {
 		return this.client.get()
-			.uri(MAP_BOUNDS)
+			.uri(bounds)
 			.header("Authorization", bearer(user))
 			.exchange()
 			.expectStatus()
@@ -169,8 +175,8 @@ class IncidentAccessApiTests {
 			.body(Map.of(
 					"title", title,
 					"description", "Descripción de prueba.",
-					"latitude", 36.7196,
-					"longitude", -4.4216))
+					"latitude", 0.0,
+					"longitude", 0.0))
 			.exchange()
 			.expectStatus()
 			.isCreated()
