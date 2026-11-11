@@ -69,7 +69,7 @@ export default function IncidentListPage() {
 
   useEffect(() => { const controller = new AbortController(); getCategories({ signal: controller.signal }).then(setCategoryOptions).catch((requestError) => { if (!controller.signal.aborted) setCategoryError(requestError?.message || 'No se pudo cargar el catálogo de categorías.'); }); return () => controller.abort(); }, []); const statuses = useMemo(() => [...new Set(incidents.map((incident) => incident.status))].sort(), [incidents]);
   const categories = useMemo(
-    () => [...new Set(categoryOptions.map((category) => category.name))].sort(),
+    () => [...categoryOptions].sort((left, right) => left.name.localeCompare(right.name, 'es')),
     [categoryOptions],
   );
   const result = useMemo(() => getIncidentPage({
@@ -108,7 +108,7 @@ export default function IncidentListPage() {
       <p className="list-limit-note" role="note">{categoryError && <span role="alert">{categoryError} </span>}
         {truncated
           ? 'La API limita los resultados a 500 incidencias Registradas en Málaga. El filtro de estado solo puede mostrar Registrada con este endpoint; los filtros restantes y la paginación se calculan en el navegador.'
-          : 'El endpoint actual solo permite consultar incidencias Registradas en Málaga. Por eso, el filtro de estado solo ofrece Registrada y Todos; los demás estados requieren la API de lista (#55). Los filtros restantes y la paginación se calculan en el navegador.'}
+          : 'El endpoint actual solo permite consultar incidencias Registradas en Málaga. Por eso, el filtro de estado solo ofrece Registrada y Todos; los demás estados requieren que la API de lista esté disponible. Los filtros restantes y la paginación se calculan en el navegador.'}
       </p>
 
       <div aria-label="Filtros de incidencias" className="incident-filters">
