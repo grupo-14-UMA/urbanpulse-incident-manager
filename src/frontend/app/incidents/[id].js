@@ -2,6 +2,7 @@ import { Redirect, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Image as NativeImage,
   Platform,
   Pressable,
   ScrollView,
@@ -280,14 +281,15 @@ function IncidentPhotoImage({ photo, index }) {
   return (
     <View style={styles.photoFrame}>
       {photoState.status === 'loaded' && (
-        <Image
+        <NativeImage
           source={{ uri: photoState.uri }}
           style={styles.photo}
-          contentFit="cover"
+          resizeMode="cover"
           accessibilityLabel={`Foto ${index + 1} de la incidencia`}
+          onLoad={() => console.info('[photos] La foto local se ha dibujado en el detalle.')}
           onError={(error) => {
-            const message = typeof error?.message === 'string'
-              ? error.message.replace(/https?:\/\/\S+/gi, '<photo-url>').slice(0, 160)
+            const message = typeof error?.nativeEvent?.error === 'string'
+              ? error.nativeEvent.error.replace(/https?:\/\/\S+/gi, '<photo-url>').slice(0, 160)
               : '';
             console.warn('[photos] No se pudo mostrar una foto de incidencia' + (message ? ': ' + message : ''));
             setPhotoState({ status: 'error', uri: null });

@@ -396,14 +396,18 @@ export async function downloadIncidentPhoto(photoUrl, { signal } = {}) {
   if (content.byteLength > MAX_PHOTO_DOWNLOAD_BYTES) {
     throw new ApiError('La foto guardada supera el límite de 5 MB.', { kind: 'unexpected' });
   }
+  console.info(`[photos] Descarga recibida: ${contentType}, ${content.byteLength} bytes.`);
 
   const filename = `urbanpulse-incident-photo-${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
   const file = new File(Paths.cache, filename);
   try {
     file.create({ overwrite: true });
     await file.write(content);
+    console.info('[photos] Copia temporal de la foto preparada.');
     return file;
   } catch (cause) {
+    const causeName = typeof cause?.name === 'string' ? cause.name : 'Error';
+    console.warn(`[photos] No se pudo escribir la copia temporal (${causeName}).`);
     try {
       file.delete();
     } catch {
