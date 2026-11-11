@@ -9,11 +9,13 @@ on:
       - synchronize
       - reopened
   pull_request_review:
-    branches:
-      - main
     types:
       - submitted
       - dismissed
+
+concurrency:
+  group: review-policy-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
 
 permissions:
   pull-requests: read
@@ -26,6 +28,7 @@ env:
 
 jobs:
   review-policy:
+    if: github.event.pull_request.base.ref == 'main'
     name: Enforce review policy
     runs-on: ubuntu-latest
 
