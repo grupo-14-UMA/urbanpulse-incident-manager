@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { getIncidentPage, loadIncidentList } from '../incidentListData.js';
+import { getCategories } from '../api.js'; import { getIncidentPage, loadIncidentList } from '../incidentListData.js';
 
 const PAGE_SIZE = 6;
 
@@ -40,7 +40,7 @@ export default function IncidentListPage() {
   const [sort, setSort] = useState('date-desc');
   const [page, setPage] = useState(1);
   const [reloadKey, setReloadKey] = useState(0);
-  const [incidents, setIncidents] = useState([]);
+  const [incidents, setIncidents] = useState([]); const [categoryOptions, setCategoryOptions] = useState([]); const [categoryError, setCategoryError] = useState('');
   const [truncated, setTruncated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -67,10 +67,10 @@ export default function IncidentListPage() {
     return () => controller.abort();
   }, [reloadKey]);
 
-  const statuses = useMemo(() => [...new Set(incidents.map((incident) => incident.status))].sort(), [incidents]);
+  useEffect(() => { const controller = new AbortController(); getCategories({ signal: controller.signal }).then(setCategoryOptions).catch((requestError) => { if (!controller.signal.aborted) setCategoryError(requestError?.message || 'No se pudo cargar el catálogo de categorías.'); }); return () => controller.abort(); }, []); const statuses = useMemo(() => [...new Set(incidents.map((incident) => incident.status))].sort(), [incidents]);
   const categories = useMemo(
-    () => [...new Set(incidents.map((incident) => incident.categoryName).filter(Boolean))].sort(),
-    [incidents],
+    () => [...new Set(categoryOptions.map((category) => category.name))].sort(),
+    [categoryOptions],
   );
   const result = useMemo(() => getIncidentPage({
     incidents,
@@ -105,10 +105,10 @@ export default function IncidentListPage() {
         <span className="list-source-note">Datos del backend · máximo 500</span>
       </div>
 
-      <p className="list-limit-note" role="note">
+      <p className="list-limit-note" role="note">{categoryError && <span role="alert">{categoryError} </span>}
         {truncated
-          ? 'La API ha limitado los resultados a 500 incidencias con estado Registrada en Málaga. Los filtros y las páginas se calculan en el navegador.'
-          : 'La API actual solo devuelve incidencias con estado Registrada en Málaga. Los filtros y las páginas se calculan en el navegador hasta que esté disponible la lista paginada.'}
+          ? 'La API limita los resultados a 500 incidencias Registradas en Málaga. El filtro de estado solo puede mostrar Registrada con este endpoint; los filtros restantes y la paginación se calculan en el navegador.'
+          : 'El endpoint actual solo permite consultar incidencias Registradas en Málaga. Por eso, el filtro de estado solo ofrece Registrada y Todos; los demás estados requieren la API de lista (#55). Los filtros restantes y la paginación se calculan en el navegador.'}
       </p>
 
       <div aria-label="Filtros de incidencias" className="incident-filters">
@@ -124,8 +124,8 @@ export default function IncidentListPage() {
           <select name="category" onChange={updateFilter} value={filters.category}>
             <option value="">Todas</option>
             {categories.map((category) => (
-              <option key={category} value={category}>
-                {CATEGORY_LABELS[category] || category}
+              <option key={category.id} value={category.name}>
+                {CATEGORY_LABELS[category.name.toLowerCase()] || category.name}
               </option>
             ))}
           </select>
