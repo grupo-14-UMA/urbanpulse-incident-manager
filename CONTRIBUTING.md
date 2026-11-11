@@ -30,9 +30,13 @@ El dueño de un área desarrolla los issues con su etiqueta, revisa los PR que t
 2. **Rama**: se crea desde `main` actualizado, con el nombre `<tipo>/<descripcion-corta>` (por ejemplo `feat/incident-map`, `fix/login-timeout`). Una rama por issue.
 3. **Commits**: siguen [Conventional Commits](https://www.conventionalcommits.org/) (ver abajo).
 4. **Pull request**: se abre contra `main` rellenando la plantilla y enlazando el issue con `Closes #<n>`.
-5. **Revisión y protección de `main`**: el ruleset **main protection** de GitHub exige abrir un PR y tener 1 aprobación antes de fusionarlo. Si se suben nuevos commits después de la aprobación, esta deja de contar y hace falta revisar de nuevo. Para completar la protección, configura como checks obligatorios `Verify backend`, `Build management panel` y `Lint and test mobile app`, y exige que la rama esté actualizada. Los tres workflows se ejecutan en todos los PR para que esos checks estén disponibles. No se permiten pushes directos, force pushes ni borrar `main`; tampoco hay bypass para administradores.
+5. **Revisión y protección de `main`**: el ruleset **main protection** de GitHub exige abrir un PR y tener 1 aprobación antes de fusionarlo. Si se suben nuevos commits después de la aprobación, esta deja de contar y hace falta revisar de nuevo. Para completar la protección, configura como checks obligatorios `Verify backend`, `Build management panel`, `Lint and test mobile app` y `review-policy`, y exige que la rama esté actualizada. Los workflows se ejecutan en los PR para que esos checks estén disponibles. No se permiten pushes directos, force pushes ni borrar `main`; tampoco hay bypass para administradores.
 
-   GitHub pide las revisiones automáticamente según [`.github/CODEOWNERS`](.github/CODEOWNERS): siempre al Reviewer y al Tester y, si el PR toca su carpeta, también al dueño del área de desarrollo, al Maintainer o al Product Owner. El Reviewer y el Tester revisan el código y los criterios de aceptación del issue; en un PR sin cambios de comportamiento (documentación, configuración) basta un vistazo. Como siempre se pide a los dos, un PR de uno de ellos lo aprueba el otro.
+   El workflow `review-policy` comprueba las revisiones al abrir, reabrir o actualizar un PR y cuando se envía o descarta una revisión. Un PR del Tester (@mmartinmaria) necesita la aprobación del Reviewer (@apr2004); uno del Reviewer necesita la del Tester; cualquier otro PR necesita las dos. Solo cuenta la revisión más reciente de cada persona que no sea un comentario: una revisión posterior con cambios solicitados vuelve a bloquear el PR, y un nuevo push descarta las aprobaciones anteriores.
+
+   GitHub pide las revisiones automáticamente según [`.github/CODEOWNERS`](.github/CODEOWNERS): siempre al Reviewer y al Tester y, si el PR toca su carpeta, también al dueño del área de desarrollo, al Maintainer o al Product Owner. Las revisiones adicionales de los dueños de área son opcionales.
+6. **Merge**: lo hace el autor del PR una vez aprobado.
+
 6. **Merge**: lo hace el autor del PR una vez aprobado.
 
 Los PR se fusionan con *Squash and merge* y la rama se borra después del merge.
