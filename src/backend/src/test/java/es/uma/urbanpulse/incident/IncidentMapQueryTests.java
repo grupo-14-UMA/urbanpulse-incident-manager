@@ -20,6 +20,7 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 import es.uma.urbanpulse.PostgisContainerConfiguration;
 import es.uma.urbanpulse.auth.AuthResponse;
 import es.uma.urbanpulse.incident.api.IncidentMapResponse;
+import es.uma.urbanpulse.incident.api.IncidentPageResponse;
 import es.uma.urbanpulse.incident.api.IncidentResponse;
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
@@ -65,13 +66,20 @@ class IncidentMapQueryTests {
 	}
 
 	@Test
-	void requiresBoundsInsteadOfReturningAnUnboundedList() {
-		client.get()
+	void returnsAPaginatedPageWhenMapBoundsAreOmitted() {
+		IncidentPageResponse response = client.get()
 				.uri("/api/incidents")
 				.header("Authorization", this.authorization)
 				.exchange()
 				.expectStatus()
-				.isBadRequest();
+				.isOk()
+				.expectBody(IncidentPageResponse.class)
+				.returnResult()
+				.getResponseBody();
+
+		assertThat(response.page()).isZero();
+		assertThat(response.size()).isEqualTo(20);
+		assertThat(response.totalElements()).isZero();
 	}
 
 	@Test
@@ -117,6 +125,22 @@ class IncidentMapQueryTests {
 	}
 
 	@Test
+	void filtersMapResultsByCategoryAndIncludesUncategorizedWhenRequested() {
+		Integer categoryId = jdbcTemplate.queryForObject(
+				"SELECT id FROM \"Category\" ORDER BY id LIMIT 1", Integer.class);
+		jdbcTemplate.update(
+				"INSERT INTO \"Incident\" (title, location, status_id, category_id) "
+						+ "VALUES ('categorized', ST_SetSRID(ST_MakePoint(-4.42, 36.72), 4326), 1, ?), "
+						+ "('uncategorized', ST_SetSRID(ST_MakePoint(-4.42, 36.72), 4326), 1, NULL)",
+				categoryId);
+
+		assertThat(loadMapResponse("&categoryId=" + categoryId).incidents())
+				.extracting(IncidentResponse::title).containsExactly("categorized");
+		assertThat(loadMapResponse("&uncategorized=true").incidents())
+				.extracting(IncidentResponse::title).containsExactly("uncategorized");
+	}
+
+	@Test
 	void explainUsesTheGiSTIndexForASelectiveMapArea() {
 		insertSpatialGrid(20_000);
 		jdbcTemplate.execute("ANALYZE \"Incident\"");
@@ -133,8 +157,12 @@ class IncidentMapQueryTests {
 	}
 
 	private IncidentMapResponse loadMapResponse() {
+		return loadMapResponse("");
+	}
+
+	private IncidentMapResponse loadMapResponse(String extraQuery) {
 		return client.get()
-				.uri(MAP_BOUNDS)
+				.uri(MAP_BOUNDS + extraQuery)
 				.header("Authorization", this.authorization)
 				.exchange()
 				.expectStatus()

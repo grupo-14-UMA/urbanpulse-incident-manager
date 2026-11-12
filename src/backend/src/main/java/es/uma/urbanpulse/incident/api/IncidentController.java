@@ -79,18 +79,21 @@ public class IncidentController {
 
 	@GetMapping
 	@Operation(
-			summary = "Listar incidencias del área visible del mapa",
-			description = "Devuelve hasta 500 incidencias abiertas (REPORTED, VALIDATED, ASSIGNED o IN_PROGRESS) dentro del rectángulo WGS 84 indicado. "
-					+ "Si truncated es true, acerca el mapa para ver más incidencias. "
-					+ "Cada incidencia incluye su prioridad; assignee y priorityJustification son siempre nulos aquí."
+			summary = "Listar incidencias o consultar el área visible del mapa",
+			description = "Sin límites del mapa devuelve una página (por defecto 20, máximo 100) con filtros por estado, categoría, prioridad y fecha. "
+					+ "Operadores ven todas; ciudadanos solo las propias; técnicos solo las asignadas. "
+					+ "Con los cuatro límites WGS 84 devuelve hasta 500 incidencias abiertas del área; admite los mismos filtros y truncated indica si hay más."
 	)
 	@ApiResponses({
 			@ApiResponse(
 					responseCode = "200",
-					description = "Incidencias encontradas en el área, con máximo de 500.",
+					description = "Página de incidencias o incidencias encontradas en el área del mapa.",
 					content = @Content(
 							mediaType = "application/json",
-							examples = @ExampleObject(value = "{\"incidents\": [], \"truncated\": false}"))),
+							schema = @Schema(oneOf = { IncidentPageResponse.class, IncidentMapResponse.class }),
+							examples = {
+								@ExampleObject(name = "Página", value = "{\"incidents\": [], \"page\": 0, \"size\": 20, \"totalElements\": 0, \"totalPages\": 0}"),
+								@ExampleObject(name = "Mapa", value = "{\"incidents\": [], \"truncated\": false}") })),
 			@ApiResponse(
 					responseCode = "400",
 					description = "Los límites del área no son válidos.",
@@ -98,10 +101,13 @@ public class IncidentController {
 							mediaType = "application/json",
 							schema = @Schema(implementation = ApiErrorResponse.class)))
 	})
-	public IncidentMapResponse findWithinBounds(
-			@Valid @ParameterObject @ModelAttribute IncidentBounds bounds,
+	public ResponseEntity<?> list(
+			@Valid @ParameterObject @ModelAttribute IncidentQueryParameters query,
 			@AuthenticationPrincipal Jwt jwt) {
-		return incidentService.findWithinBounds(bounds, AuthTokens.subjectOf(jwt));
+		if (query.hasBounds()) {
+			return ResponseEntity.ok(incidentService.findWithinBounds(query, AuthTokens.subjectOf(jwt)));
+		}
+		return ResponseEntity.ok(incidentService.findPage(query, AuthTokens.subjectOf(jwt)));
 	}
 
 	@GetMapping("/{id}")

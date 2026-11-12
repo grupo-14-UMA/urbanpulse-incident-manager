@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { getCategories } from '../api.js'; import { getIncidentPage, loadIncidentList } from '../incidentListData.js';
+import { getCategories, getIncidentPage } from '../api.js';
 
 const PAGE_SIZE = 6;
 
@@ -12,6 +12,13 @@ const STATUS_LABELS = {
   IN_PROGRESS: 'En curso',
   RESOLVED: 'Resuelta',
   REJECTED: 'Rechazada',
+};
+
+const PRIORITY_LABELS = {
+  LOW: 'Baja',
+  MEDIUM: 'Media',
+  HIGH: 'Alta',
+  URGENT: 'Urgente',
 };
 
 const CATEGORY_LABELS = {
@@ -29,32 +36,58 @@ const DATE_FORMAT = new Intl.DateTimeFormat('es-ES', {
   year: 'numeric',
 });
 
-const EMPTY_FILTERS = { status: '', category: '', dateFrom: '', dateTo: '' };
+const EMPTY_FILTERS = { status: '', categoryId: '', priority: '', dateFrom: '', dateTo: '' };
 
 function formatDate(value) {
   return DATE_FORMAT.format(new Date(value));
 }
 
+function startOfLocalDate(date) {
+  return date ? new Date(`${date}T00:00:00`).toISOString() : '';
+}
+
+function endOfLocalDateExclusive(date) {
+  if (!date) return '';
+  const nextDay = new Date(`${date}T00:00:00`);
+  nextDay.setDate(nextDay.getDate() + 1);
+  return nextDay.toISOString();
+}
+
 export default function IncidentListPage() {
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [sort, setSort] = useState('date-desc');
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(0);
   const [reloadKey, setReloadKey] = useState(0);
-  const [incidents, setIncidents] = useState([]); const [categoryOptions, setCategoryOptions] = useState([]); const [categoryError, setCategoryError] = useState('');
-  const [truncated, setTruncated] = useState(false);
+  const [result, setResult] = useState({ incidents: [], page: 0, size: PAGE_SIZE, totalElements: 0, totalPages: 0 });
+  const [categoryOptions, setCategoryOptions] = useState([]);
+  const [categoryError, setCategoryError] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  const requestParameters = useMemo(() => {
+    const [sortBy, sortDirection] = sort.split('-');
+    return {
+      page,
+      size: PAGE_SIZE,
+      sortBy: sortBy === 'date' ? 'createdAt' : 'priority',
+      sortDirection,
+      ...(filters.status ? { status: filters.status } : {}),
+      ...(filters.categoryId === 'uncategorized'
+        ? { uncategorized: true }
+        : filters.categoryId ? { categoryId: filters.categoryId } : {}),
+      ...(filters.priority ? { priority: filters.priority } : {}),
+      ...(filters.dateFrom ? { createdAfter: startOfLocalDate(filters.dateFrom) } : {}),
+      ...(filters.dateTo ? { createdBefore: endOfLocalDateExclusive(filters.dateTo) } : {}),
+    };
+  }, [filters, page, sort]);
 
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
     setError('');
 
-    loadIncidentList({ signal: controller.signal })
-      .then((response) => {
-        setIncidents(response.incidents);
-        setTruncated(response.truncated);
-      })
+    getIncidentPage(requestParameters, { signal: controller.signal })
+      .then((response) => setResult(response))
       .catch((requestError) => {
         if (!controller.signal.aborted) {
           setError(requestError?.message || 'No se pudo cargar la lista. Inténtalo de nuevo.');
@@ -65,41 +98,43 @@ export default function IncidentListPage() {
       });
 
     return () => controller.abort();
-  }, [reloadKey]);
+  }, [requestParameters, reloadKey]);
 
-  useEffect(() => { const controller = new AbortController(); getCategories({ signal: controller.signal }).then(setCategoryOptions).catch((requestError) => { if (!controller.signal.aborted) setCategoryError(requestError?.message || 'No se pudo cargar el catálogo de categorías.'); }); return () => controller.abort(); }, []);
-  const statuses = useMemo(() => {
-    const knownStatuses = Object.keys(STATUS_LABELS);
-    const additionalStatuses = [...new Set(incidents.map((incident) => incident.status))]
-      .filter((status) => status && !knownStatuses.includes(status))
-      .sort();
-    return [...knownStatuses, ...additionalStatuses];
-  }, [incidents]);
+  useEffect(() => {
+    const controller = new AbortController();
+    getCategories({ signal: controller.signal })
+      .then(setCategoryOptions)
+      .catch((requestError) => {
+        if (!controller.signal.aborted) {
+          setCategoryError(requestError?.message || 'No se pudo cargar el catálogo de categorías.');
+        }
+      });
+    return () => controller.abort();
+  }, []);
+
   const categories = useMemo(
     () => [...categoryOptions].sort((left, right) => left.name.localeCompare(right.name, 'es')),
     [categoryOptions],
   );
-  const result = useMemo(() => getIncidentPage({
-    incidents,
-    filters,
-    page,
-    pageSize: PAGE_SIZE,
-    sort,
-  }), [incidents, filters, page, sort]);
+  const firstItem = result.totalElements === 0 ? 0 : result.page * PAGE_SIZE + 1;
+  const lastItem = Math.min((result.page + 1) * PAGE_SIZE, result.totalElements);
 
   function updateFilter(event) {
     const { name, value } = event.target;
     setFilters((current) => ({ ...current, [name]: value }));
-    setPage(1);
+    setPage(0);
   }
 
   function changeSort(event) {
     setSort(event.target.value);
-    setPage(1);
+    setPage(0);
   }
 
-  const firstItem = result.total === 0 ? 0 : (result.page - 1) * PAGE_SIZE + 1;
-  const lastItem = Math.min(result.page * PAGE_SIZE, result.total);
+  function clearFilters() {
+    setFilters(EMPTY_FILTERS);
+    setSort('date-desc');
+    setPage(0);
+  }
 
   return (
     <section aria-labelledby="incidents-heading" className="incident-list-page">
@@ -109,31 +144,39 @@ export default function IncidentListPage() {
           <h2 id="incidents-heading">Incidencias</h2>
           <p className="list-description">Consulta y filtra las incidencias registradas en Málaga.</p>
         </div>
-        <span className="list-source-note">Datos del backend · máximo 500</span>
+        <span className="list-source-note">Resultados paginados desde el backend</span>
       </div>
 
-      <p className="list-limit-note" role="note">{categoryError && <span role="alert">{categoryError} </span>}
-        {truncated
-          ? 'La API limita los resultados a 500 incidencias abiertas en Málaga. El filtro muestra todos los estados, pero este endpoint no devuelve incidencias Rechazadas ni Resueltas; los filtros restantes y la paginación se calculan en el navegador.'
-          : 'El endpoint actual solo permite consultar incidencias abiertas en Málaga. El filtro muestra todos los estados, pero no habrá resultados para Rechazada ni Resuelta con este endpoint. Los filtros restantes y la paginación se calculan en el navegador.'}
-      </p>
+      {categoryError && <p className="list-limit-note" role="alert">{categoryError}</p>}
 
       <div aria-label="Filtros de incidencias" className="incident-filters">
         <label>
           Estado
           <select name="status" onChange={updateFilter} value={filters.status}>
             <option value="">Todos</option>
-            {statuses.map((status) => <option key={status} value={status}>{STATUS_LABELS[status] || status}</option>)}
+            {Object.entries(STATUS_LABELS).map(([status, label]) => (
+              <option key={status} value={status}>{label}</option>
+            ))}
           </select>
         </label>
         <label>
           Categoría
-          <select name="category" onChange={updateFilter} value={filters.category}>
+          <select name="categoryId" onChange={updateFilter} value={filters.categoryId}>
             <option value="">Todas</option>
+            <option value="uncategorized">Sin categoría</option>
             {categories.map((category) => (
-              <option key={category.id} value={category.name}>
+              <option key={category.id} value={category.id}>
                 {CATEGORY_LABELS[category.name.toLowerCase()] || category.name}
               </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Prioridad
+          <select name="priority" onChange={updateFilter} value={filters.priority}>
+            <option value="">Todas</option>
+            {Object.entries(PRIORITY_LABELS).map(([priority, label]) => (
+              <option key={priority} value={priority}>{label}</option>
             ))}
           </select>
         </label>
@@ -150,12 +193,14 @@ export default function IncidentListPage() {
           <select onChange={changeSort} value={sort}>
             <option value="date-desc">Más recientes</option>
             <option value="date-asc">Más antiguas</option>
+            <option value="priority-desc">Prioridad más alta</option>
+            <option value="priority-asc">Prioridad más baja</option>
           </select>
         </label>
         <button
           className="clear-filters"
           disabled={Object.values(filters).every((value) => !value) && sort === 'date-desc'}
-          onClick={() => { setFilters(EMPTY_FILTERS); setSort('date-desc'); setPage(1); }}
+          onClick={clearFilters}
           type="button"
         >
           Limpiar filtros
@@ -164,22 +209,20 @@ export default function IncidentListPage() {
 
       <div className="incident-table-card">
         <div className="table-summary" aria-live="polite">
-          {loading ? 'Cargando incidencias…' : `${result.total} incidencias · ${firstItem}–${lastItem}`}
+          {loading ? 'Cargando incidencias…' : `${result.totalElements} incidencias · ${firstItem}–${lastItem}`}
         </div>
 
-        {error && (
+        {error ? (
           <div className="list-error" role="alert">
             <p>{error}</p>
             <button className="auth-secondary" onClick={() => setReloadKey((current) => current + 1)} type="button">Reintentar</button>
           </div>
-        )}
-
-        {loading && result.total === 0 ? (
+        ) : loading && result.totalElements === 0 ? (
           <div className="list-state" role="status">
             <span aria-hidden="true" className="auth-spinner" />
             <p>Cargando incidencias…</p>
           </div>
-        ) : result.total === 0 && !loading && !error ? (
+        ) : result.totalElements === 0 ? (
           <div className="list-state" role="status">
             <span aria-hidden="true" className="placeholder-icon">⌕</span>
             <strong>No hay incidencias con esos filtros</strong>
@@ -199,11 +242,8 @@ export default function IncidentListPage() {
                 </tr>
               </thead>
               <tbody aria-busy={loading}>
-                {result.items.map((incident) => (
-                  <tr
-                    className="incident-table-row"
-                    key={incident.id}
-                  >
+                {result.incidents.map((incident) => (
+                  <tr className="incident-table-row" key={incident.id}>
                     <td>
                       <Link className="incident-title-link" to={`/incidents/${incident.id}`}>
                         {incident.title}
@@ -212,7 +252,7 @@ export default function IncidentListPage() {
                     </td>
                     <td>{CATEGORY_LABELS[incident.categoryName] || incident.categoryName || 'Sin categoría'}</td>
                     <td><span className={`incident-status status-${incident.status.toLowerCase()}`}>{STATUS_LABELS[incident.status] || incident.status}</span></td>
-                    <td aria-label="No disponible en la API actual">—</td>
+                    <td>{PRIORITY_LABELS[incident.priority] || 'Sin asignar'}</td>
                     <td>{formatDate(incident.createdAt)}</td>
                     <td>
                       <Link className="incident-detail-button" to={`/incidents/${incident.id}`}>
@@ -226,12 +266,12 @@ export default function IncidentListPage() {
           </div>
         )}
 
-        {result.total > 0 && !loading && (
+        {result.totalElements > 0 && !error && (
           <nav aria-label="Paginación de incidencias" className="list-pagination">
-            <span>Página {result.page} de {result.pageCount}</span>
+            <span>Página {result.page + 1} de {result.totalPages}</span>
             <div>
-              <button aria-label="Página anterior" disabled={loading || result.page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))} type="button">← Anterior</button>
-              <button aria-label="Página siguiente" disabled={loading || result.page >= result.pageCount} onClick={() => setPage((current) => current + 1)} type="button">Siguiente →</button>
+              <button aria-label="Página anterior" disabled={loading || result.page <= 0} onClick={() => setPage((current) => Math.max(0, current - 1))} type="button">← Anterior</button>
+              <button aria-label="Página siguiente" disabled={loading || result.page + 1 >= result.totalPages} onClick={() => setPage((current) => current + 1)} type="button">Siguiente →</button>
             </div>
           </nav>
         )}
