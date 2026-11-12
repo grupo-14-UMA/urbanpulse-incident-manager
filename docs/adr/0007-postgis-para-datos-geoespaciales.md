@@ -21,7 +21,7 @@ Utilizar la extensión PostGIS sobre PostgreSQL ([ADR-0001](0001-postgresql-como
 - La migración de Flyway activa la extensión `postgis`.
 - Las pruebas y el entorno local usan la imagen `postgis/postgis`, para trabajar siempre con el mismo motor.
 - La API sigue exponiendo la localización como `latitude` y `longitude`; la conversión a geometría es responsabilidad del backend.
-- Los mapas consultan el rectángulo visible con `ST_Intersects` y los límites en orden oeste, sur, este y norte. La API devuelve como máximo 500 incidencias `REPORTED` y marca `truncated` cuando hay más; los clientes piden ampliar el zoom.
+- Los mapas consultan el rectángulo visible con `ST_Intersects` y los límites en orden oeste, sur, este y norte. La API devuelve como máximo 500 incidencias abiertas (`REPORTED`, `VALIDATED`, `ASSIGNED` o `IN_PROGRESS`) y marca `truncated` cuando hay más; los clientes piden ampliar el zoom.
 
 ## Consecuencias
 

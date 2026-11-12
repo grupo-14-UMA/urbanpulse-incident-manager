@@ -28,9 +28,7 @@ export function getApiBaseUrl() {
 
 function logApiFailure({ method, path, status, kind, hint, startedAt }) {
   const duration = Math.round(performance.now() - startedAt);
-  console.warn(
-    `[api] ${method} ${path} -> ${status ?? 'sin respuesta'} (${duration} ms) kind=${kind} attempt=1${hint ? ` hint=${hint}` : ''}`,
-  );
+  console.warn('[api] ' + method + ' ' + path + ' -> ' + (status ?? 'sin respuesta') + ' (' + duration + ' ms) kind=' + kind + ' attempt=1' + (hint ? ' hint=' + hint : ''));
 }
 
 function authExpired() {
@@ -46,19 +44,27 @@ export async function getIncidentsWithinBounds(bounds, { signal } = {}) {
     east: String(bounds.east),
     north: String(bounds.north),
   });
-  const payload = await apiRequest(`/api/incidents?${query.toString()}`, { signal });
+  const payload = await apiRequest('/api/incidents?' + query.toString(), { signal });
   if (!payload || !Array.isArray(payload.incidents) || typeof payload.truncated !== 'boolean') {
     throw new Error('La API devolvió un resultado de mapa no válido.');
   }
   return payload;
 }
 
+export async function getCategories({ signal } = {}) {
+  const categories = await apiRequest('/api/categories', { signal });
+  if (!Array.isArray(categories) || categories.some((category) => !category || typeof category.id !== 'number' || typeof category.name !== 'string')) {
+    throw new Error('La API devolvió un catálogo de categorías no válido.');
+  }
+  return categories;
+}
+
 export async function getIncidentById(id, { signal } = {}) {
-  return apiRequest(`/api/incidents/${encodeURIComponent(id)}`, { signal });
+  return apiRequest('/api/incidents/' + encodeURIComponent(id), { signal });
 }
 
 export async function apiRequest(path, options = {}) {
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  const normalizedPath = path.startsWith('/') ? path : '/' + path;
   const { skipAuth = false, headers: requestHeaders, ...fetchOptions } = options;
   const method = (fetchOptions.method || 'GET').toUpperCase();
   const startedAt = performance.now();
@@ -66,7 +72,7 @@ export async function apiRequest(path, options = {}) {
   const headers = {
     Accept: 'application/json',
     ...(fetchOptions.body ? { 'Content-Type': 'application/json' } : {}),
-    ...(session?.token ? { Authorization: `Bearer ${session.token}` } : {}),
+    ...(session?.token ? { Authorization: 'Bearer ' + session.token } : {}),
     ...requestHeaders,
   };
 
@@ -77,7 +83,7 @@ export async function apiRequest(path, options = {}) {
 
   let response;
   try {
-    response = await fetch(`${API_BASE_URL}${normalizedPath}`, {
+    response = await fetch(API_BASE_URL + normalizedPath, {
       ...fetchOptions,
       headers,
       signal,

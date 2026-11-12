@@ -13,7 +13,7 @@ import org.springframework.data.repository.query.Param;
 public interface IncidentRepository extends JpaRepository<Incident, Integer> {
 
 	@Override
-	@EntityGraph(attributePaths = "category")
+	@EntityGraph(attributePaths = { "category", "assignee" })
 	Optional<Incident> findById(Integer id);
 
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
@@ -30,13 +30,14 @@ public interface IncidentRepository extends JpaRepository<Incident, Integer> {
 				category."id" AS "categoryId",
 				category."name" AS "categoryName",
 				incident."status_id" AS "statusId",
-				incident."created_at" AS "createdAt"
+				incident."created_at" AS "createdAt",
+				incident."priority" AS "priority"
 			FROM "Incident" incident
 			LEFT JOIN "Category" category ON category."id" = incident."category_id"
 			WHERE ST_Intersects(
 				incident."location",
 				ST_MakeEnvelope(:west, :south, :east, :north, 4326))
-				AND incident."status_id" = :publicStatusId
+				AND incident."status_id" IN (:activeStatusIds)
 			LIMIT :fetchLimit
 			""", nativeQuery = true)
 	List<IncidentMapProjection> findWithinBounds(
@@ -44,7 +45,7 @@ public interface IncidentRepository extends JpaRepository<Incident, Integer> {
 			@Param("south") double south,
 			@Param("east") double east,
 			@Param("north") double north,
-			@Param("publicStatusId") int publicStatusId,
+			@Param("activeStatusIds") List<Integer> activeStatusIds,
 			@Param("fetchLimit") int fetchLimit);
 
 	/** Citizen map query; reporter_id is indexed together with created_at. */
@@ -57,13 +58,14 @@ public interface IncidentRepository extends JpaRepository<Incident, Integer> {
 				category."id" AS "categoryId",
 				category."name" AS "categoryName",
 				incident."status_id" AS "statusId",
-				incident."created_at" AS "createdAt"
+				incident."created_at" AS "createdAt",
+				incident."priority" AS "priority"
 			FROM "Incident" incident
 			LEFT JOIN "Category" category ON category."id" = incident."category_id"
 			WHERE ST_Intersects(
 				incident."location",
 				ST_MakeEnvelope(:west, :south, :east, :north, 4326))
-				AND incident."status_id" = :publicStatusId
+				AND incident."status_id" IN (:activeStatusIds)
 				AND incident."reporter_id" = :reporterId
 			LIMIT :fetchLimit
 			""", nativeQuery = true)
@@ -72,7 +74,7 @@ public interface IncidentRepository extends JpaRepository<Incident, Integer> {
 			@Param("south") double south,
 			@Param("east") double east,
 			@Param("north") double north,
-			@Param("publicStatusId") int publicStatusId,
+			@Param("activeStatusIds") List<Integer> activeStatusIds,
 			@Param("reporterId") int reporterId,
 			@Param("fetchLimit") int fetchLimit);
 }

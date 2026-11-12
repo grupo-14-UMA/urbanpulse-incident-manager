@@ -22,4 +22,6 @@ public interface IncidentMapProjection {
 	Integer getStatusId();
 
 	Instant getCreatedAt();
+
+	String getPriority();
 }
