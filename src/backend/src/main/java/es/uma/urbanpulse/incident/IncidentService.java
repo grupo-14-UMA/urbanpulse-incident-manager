@@ -15,6 +15,9 @@ import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,8 +33,10 @@ import es.uma.urbanpulse.incident.api.IncidentAccessDeniedException;
 import es.uma.urbanpulse.incident.api.IncidentBounds;
 import es.uma.urbanpulse.incident.api.IncidentMapResponse;
 import es.uma.urbanpulse.incident.api.IncidentNotFoundException;
+import es.uma.urbanpulse.incident.api.IncidentPageResponse;
 import es.uma.urbanpulse.incident.api.IncidentPhotoNotFoundException;
 import es.uma.urbanpulse.incident.api.IncidentPhotoResponse;
+import es.uma.urbanpulse.incident.api.IncidentQueryParameters;
 import es.uma.urbanpulse.incident.api.IncidentResponse;
 import es.uma.urbanpulse.incident.api.InvalidCategoryException;
 import es.uma.urbanpulse.incident.api.InvalidIncidentPhotoException;
@@ -101,15 +106,19 @@ public class IncidentService {
 	}
 
 	@Transactional(readOnly = true)
-	public IncidentMapResponse findWithinBounds(IncidentBounds bounds, TokenSubject caller) {
+	public IncidentMapResponse findWithinBounds(IncidentQueryParameters query, TokenSubject caller) {
+		IncidentBounds bounds = query.toBounds();
 		long queryStartedAt = System.nanoTime();
 		List<IncidentMapProjection> candidates = caller.role() == Role.CITIZEN
 				? incidentRepository.findWithinBoundsForReporter(
 						bounds.west(), bounds.south(), bounds.east(), bounds.north(),
-						IncidentStatus.activeIds(), caller.userId(), MAP_RESULT_LIMIT + 1)
+						IncidentStatus.activeIds(), caller.userId(), statusId(query), query.getCategoryId(),
+						query.isUncategorized(), priorityName(query), query.getCreatedAfter(), query.getCreatedBefore(),
+						MAP_RESULT_LIMIT + 1)
 				: incidentRepository.findWithinBounds(
 						bounds.west(), bounds.south(), bounds.east(), bounds.north(),
-						IncidentStatus.activeIds(), MAP_RESULT_LIMIT + 1);
+						IncidentStatus.activeIds(), statusId(query), query.getCategoryId(), query.isUncategorized(),
+						priorityName(query), query.getCreatedAfter(), query.getCreatedBefore(), MAP_RESULT_LIMIT + 1);
 		long queryDurationMs = (System.nanoTime() - queryStartedAt) / 1_000_000;
 		boolean truncated = candidates.size() > MAP_RESULT_LIMIT;
 		List<IncidentResponse> incidents = candidates.stream()
@@ -119,6 +128,39 @@ public class IncidentService {
 		LOGGER.info("Loaded {} map incidents for role {} (truncated={}) in {} ms",
 				incidents.size(), caller.role(), truncated, queryDurationMs);
 		return new IncidentMapResponse(incidents, truncated);
+	}
+
+	/** Returns one bounded page, scoped to the caller's role before optional filters are applied. */
+	@Transactional(readOnly = true)
+	public IncidentPageResponse findPage(IncidentQueryParameters query, TokenSubject caller) {
+		long queryStartedAt = System.nanoTime();
+		Sort.Direction direction = "asc".equals(query.getSortDirection())
+				? Sort.Direction.ASC : Sort.Direction.DESC;
+		Sort sort = "priority".equals(query.getSortBy())
+				? Sort.by(new Sort.Order(direction, "priorityRank"),
+						new Sort.Order(Sort.Direction.DESC, "createdAt"),
+						new Sort.Order(Sort.Direction.DESC, "id"))
+				: Sort.by(new Sort.Order(direction, "createdAt"),
+						new Sort.Order(Sort.Direction.DESC, "id"));
+		PageRequest pageable = PageRequest.of(query.getPage(), query.getSize(), sort);
+		Page<Incident> result = incidentRepository.findAll(IncidentListSpecification.forQuery(query, caller), pageable);
+		List<IncidentResponse> incidents = result.getContent().stream()
+				.map(incident -> toResponse(incident, caller))
+				.toList();
+		long queryDurationMs = (System.nanoTime() - queryStartedAt) / 1_000_000;
+		LOGGER.info("Loaded incident page for role {} user {} (page={}, size={}, results={}, total={}) in {} ms",
+				caller.role(), caller.userId(), query.getPage(), query.getSize(), incidents.size(),
+				result.getTotalElements(), queryDurationMs);
+		return new IncidentPageResponse(incidents, result.getNumber(), result.getSize(),
+				result.getTotalElements(), result.getTotalPages());
+	}
+
+	private static Integer statusId(IncidentQueryParameters query) {
+		return query.getStatus() == null ? null : query.getStatus().getId();
+	}
+
+	private static String priorityName(IncidentQueryParameters query) {
+		return query.getPriority() == null ? null : query.getPriority().name();
 	}
 
 	@Transactional(readOnly = true)
