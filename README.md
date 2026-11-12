@@ -30,12 +30,12 @@ Plataforma cloud para comunicar, gestionar y analizar incidencias urbanas en Má
 
 ```bash
 cp .env.example .env
-docker compose up -d          # base de datos + backend
+docker compose up -d --build  # base de datos + backend + panel web
 cd src/frontend && npx expo start
 ```
 
 La guía completa está en [docs/development.md](docs/development.md).
-El panel web se ejecuta aparte desde `src/management-panel` con `npm ci` y `npm run dev`.
+El panel web queda disponible en `http://localhost:8081`. Para desarrollarlo con Vite, se puede ejecutar aparte desde `src/management-panel` con `npm ci` y `npm run dev`.
 
 ## Estructura del repositorio
 

@@ -67,7 +67,14 @@ export default function IncidentListPage() {
     return () => controller.abort();
   }, [reloadKey]);
 
-  useEffect(() => { const controller = new AbortController(); getCategories({ signal: controller.signal }).then(setCategoryOptions).catch((requestError) => { if (!controller.signal.aborted) setCategoryError(requestError?.message || 'No se pudo cargar el catálogo de categorías.'); }); return () => controller.abort(); }, []); const statuses = useMemo(() => [...new Set(incidents.map((incident) => incident.status))].sort(), [incidents]);
+  useEffect(() => { const controller = new AbortController(); getCategories({ signal: controller.signal }).then(setCategoryOptions).catch((requestError) => { if (!controller.signal.aborted) setCategoryError(requestError?.message || 'No se pudo cargar el catálogo de categorías.'); }); return () => controller.abort(); }, []);
+  const statuses = useMemo(() => {
+    const knownStatuses = Object.keys(STATUS_LABELS);
+    const additionalStatuses = [...new Set(incidents.map((incident) => incident.status))]
+      .filter((status) => status && !knownStatuses.includes(status))
+      .sort();
+    return [...knownStatuses, ...additionalStatuses];
+  }, [incidents]);
   const categories = useMemo(
     () => [...categoryOptions].sort((left, right) => left.name.localeCompare(right.name, 'es')),
     [categoryOptions],
@@ -107,8 +114,8 @@ export default function IncidentListPage() {
 
       <p className="list-limit-note" role="note">{categoryError && <span role="alert">{categoryError} </span>}
         {truncated
-          ? 'La API limita los resultados a 500 incidencias abiertas en Málaga (Rechazadas y Resueltas no aparecen); los filtros restantes y la paginación se calculan en el navegador.'
-          : 'El endpoint actual solo permite consultar incidencias abiertas en Málaga. Por eso, el filtro de estado no ofrece Rechazada ni Resuelta; esos estados requieren que la API de lista esté disponible. Los filtros restantes y la paginación se calculan en el navegador.'}
+          ? 'La API limita los resultados a 500 incidencias abiertas en Málaga. El filtro muestra todos los estados, pero este endpoint no devuelve incidencias Rechazadas ni Resueltas; los filtros restantes y la paginación se calculan en el navegador.'
+          : 'El endpoint actual solo permite consultar incidencias abiertas en Málaga. El filtro muestra todos los estados, pero no habrá resultados para Rechazada ni Resuelta con este endpoint. Los filtros restantes y la paginación se calculan en el navegador.'}
       </p>
 
       <div aria-label="Filtros de incidencias" className="incident-filters">

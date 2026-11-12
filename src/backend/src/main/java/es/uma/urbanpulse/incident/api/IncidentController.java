@@ -261,23 +261,14 @@ public class IncidentController {
 			description = "Permite al ciudadano que registró la incidencia o a un técnico adjuntar hasta 3 fotografías en total (JPEG, PNG o WebP, máximo 5 MB cada una).")
 	@ApiResponses({
 			@ApiResponse(responseCode = "201", description = "Fotografías almacenadas."),
-			@ApiResponse(
-					responseCode = "400",
-					description = "El tipo, tamaño o número de fotografías no es válido.",
-					content = @Content(
-							mediaType = "application/json",
+			@ApiResponse(responseCode = "400", description = "El tipo, tamaño o número de fotografías no es válido.",
+					content = @Content(mediaType = "application/json",
 							schema = @Schema(implementation = ApiErrorResponse.class))),
-			@ApiResponse(
-					responseCode = "403",
-					description = "Sin permiso para adjuntar fotografías a esta incidencia.",
-					content = @Content(
-							mediaType = "application/json",
+			@ApiResponse(responseCode = "403", description = "Sin permiso para adjuntar fotografías a esta incidencia.",
+					content = @Content(mediaType = "application/json",
 							schema = @Schema(implementation = ApiErrorResponse.class))),
-			@ApiResponse(
-					responseCode = "404",
-					description = "La incidencia no existe.",
-					content = @Content(
-							mediaType = "application/json",
+			@ApiResponse(responseCode = "404", description = "La incidencia no existe.",
+					content = @Content(mediaType = "application/json",
 							schema = @Schema(implementation = ApiErrorResponse.class)))
 	})
 	public ResponseEntity<List<IncidentPhotoResponse>> uploadPhotos(
@@ -289,24 +280,14 @@ public class IncidentController {
 	}
 
 	@GetMapping("/{id}/photos/{photoId}")
-	@Operation(
-			summary = "Descargar una fotografía de una incidencia",
-			description = "Los ciudadanos solo pueden descargar fotografías de sus incidencias."
-	)
+	@Operation(summary = "Descargar una fotografía de una incidencia",
+			description = "Los ciudadanos solo pueden descargar fotografías de sus incidencias.")
 	@ApiResponses({
-			@ApiResponse(
-					responseCode = "200",
-					description = "Contenido binario de la fotografía.",
-					content = {
-							@Content(mediaType = "image/jpeg"),
-							@Content(mediaType = "image/png"),
-							@Content(mediaType = "image/webp")
-					}),
-			@ApiResponse(
-					responseCode = "404",
-					description = "La incidencia o la fotografía no existe.",
-					content = @Content(
-							mediaType = "application/json",
+			@ApiResponse(responseCode = "200", description = "Contenido binario de la fotografía.",
+					content = {@Content(mediaType = "image/jpeg"), @Content(mediaType = "image/png"),
+							@Content(mediaType = "image/webp")}),
+			@ApiResponse(responseCode = "404", description = "La incidencia o la fotografía no existe.",
+					content = @Content(mediaType = "application/json",
 							schema = @Schema(implementation = ApiErrorResponse.class)))
 	})
 	public ResponseEntity<byte[]> downloadPhoto(

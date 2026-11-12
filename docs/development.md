@@ -30,8 +30,9 @@ Variables de `.env`:
 | `POSTGRES_USER` | Usuario de la base de datos (compartido con la imagen de Postgres) | `urbanpulse` |
 | `POSTGRES_PASSWORD` | Contraseña de la base de datos (compartida con la imagen de Postgres) | `urbanpulse` |
 | `SERVER_PORT` | Puerto HTTP del backend | `8080` |
-| `MANAGEMENT_PANEL_ORIGIN` | Origen web permitido por CORS para el panel | `http://localhost:5173` |
 | `PHOTOS_DIR` | Carpeta local donde el backend guarda las fotografías cuando se ejecuta fuera de Docker | `./data/photos` |
+| `MANAGEMENT_PANEL_ORIGIN` | Origen permitido por CORS; en Compose sigue el puerto del panel, y para Vite se establece a `http://localhost:5173` | Derivado de `MANAGEMENT_PANEL_PORT` |
+| `MANAGEMENT_PANEL_PORT` | Puerto publicado para el panel en Docker Compose | `8081` |
 | `JWT_SECRET` | Secreto que firma los tokens de acceso, de al menos 32 bytes. Obligatorio | Valor solo para desarrollo en `.env.example` y Docker Compose |
 
 El fichero `.env` no se versiona. `./mvnw spring-boot:run` no lo lee: fuera de Docker, el backend usa estos valores por defecto o las variables de entorno de la shell. `JWT_SECRET` no tiene valor por defecto en la aplicación: sin él el backend no arranca. Un despliegue real usa un secreto propio y aleatorio, por ejemplo el resultado de `openssl rand -base64 48`.
@@ -39,11 +40,13 @@ El fichero `.env` no se versiona. `./mvnw spring-boot:run` no lo lee: fuera de D
 ## Base de datos y backend
 
 ```bash
-docker compose up -d      # arranca la base de datos y el backend
+docker compose up -d --build # arranca la base de datos, el backend y el panel web
 docker compose ps         # estado de los servicios
 docker compose logs -f    # logs
 docker compose down       # detener (los datos se conservan en el volumen)
 ```
+
+El panel queda disponible en `http://localhost:8081` (o en el puerto indicado por `MANAGEMENT_PANEL_PORT`). Nginx sirve la aplicación y reenvía las peticiones `/api/` al backend dentro de Compose. Los logs de acceso se consultan con `docker compose logs -f panel`.
 
 Para ejecutar el backend fuera de Docker con la base de datos en Docker:
 
@@ -99,7 +102,7 @@ La app consume el backend para cargar las incidencias propias y categorías, con
 
 Al abrirla, la aplicación muestra el inicio de sesión. Desde «Crear cuenta» se registra un ciudadano y se entra directamente al mapa. También se pueden usar las cuentas de desarrollo indicadas arriba: un técnico ve «Mis trabajos» (aún sin asignaciones) y un operador recibe el aviso de que debe usar el panel de gestión desde un ordenador. El botón «Cerrar sesión» borra la sesión del teléfono.
 
-El token y los datos básicos del usuario se guardan con el almacenamiento seguro del dispositivo. Cada reapertura intenta renovarlo con `POST /api/auth/refresh`; si ya no es válido, se borra y se muestra «Tu sesión ha caducado. Vuelve a iniciar sesión.». La aplicación nunca escribe tokens, contraseñas ni datos personales en la consola. Tanto el mapa como el detalle y la descarga de fotos están limitados en el backend a las incidencias creadas por el ciudadano autenticado.
+El token y los datos básicos del usuario se guardan con el almacenamiento seguro del dispositivo. Cada reapertura intenta renovarlo con `POST /api/auth/refresh`; si ya no es válido, se borra y se muestra «Tu sesión ha caducado. Vuelve a iniciar sesión.». La aplicación nunca escribe tokens, contraseñas ni datos personales en la consola. Para ciudadanos, el backend limita el mapa, el detalle y la descarga de fotos a las incidencias que hayan registrado; operadores y técnicos pueden consultar todas.
 
 En redes que aíslan a los dispositivos entre sí, como eduroam, el móvil no llega al portátil y Expo Go muestra «Something went wrong». En ese caso arranca con túnel (la primera vez pide instalar `@expo/ngrok`) o conecta el portátil al punto de acceso del móvil:
 
@@ -125,7 +128,9 @@ Para obtener la IP local del portátil (suele empezar por `192.168.` o `10.`):
 
 ## Panel de gestión web
 
-El panel es un proyecto independiente en `src/management-panel`, con React, Vite, React Router y Leaflet. Para abrirlo localmente:
+Para usar el panel ya compilado en Docker, arranca el entorno con `docker compose up -d --build` y abre `http://localhost:8081`. En este modo el navegador llama a `/api` en el mismo origen; Nginx reenvía esas solicitudes al backend.
+
+Para desarrollar el panel con Vite, ejecuta:
 
 ```bash
 cd src/management-panel
@@ -136,17 +141,9 @@ npm run dev
 
 En Windows PowerShell, usa `Copy-Item .env.example .env` en lugar de `cp`. Vite muestra la dirección local al arrancar (por defecto `http://localhost:5173`). El panel pide iniciar sesión antes de mostrar sus pantallas. Usa la cuenta de Operador de desarrollo de la tabla anterior (`operador@urbanpulse.test` / `urbanpulse-dev`). La página inicial muestra el mapa de OpenStreetMap centrado en Málaga, con marcadores agrupados y datos cargados desde la API para el área visible. La consulta se repite al terminar un movimiento o cambio de zoom; si la API limita la respuesta a 500, el mapa indica que se acerque.
 
-La ruta «Incidencias» consulta incidencias registradas en Málaga mediante el endpoint del mapa, con un máximo de 500 resultados. El selector de categorías carga el catálogo completo desde la API de categorías. El endpoint de incidencias disponible solo devuelve incidencias abiertas, así que el filtro de estado no ofrece Rechazada ni Resuelta; esos estados requieren la lista de #55. Los filtros por categoría, estado y fechas, la ordenación por fecha y las seis filas por página se calculan en el navegador. Prioridad y ordenación por prioridad no están disponibles en esta consulta. Esta solución provisional se sustituirá por la lista paginada cuando esté lista #55. El detalle muestra los datos del backend y la ubicación en un mapa; las acciones del Operador se implementarán en #73.
+La ruta «Incidencias» consulta Málaga mediante el endpoint del mapa, con un máximo de 500 resultados. El selector de categorías carga el catálogo completo desde la API. El filtro de estado muestra todos los estados conocidos, aunque el endpoint solo devuelve incidencias abiertas (`REPORTED`, `VALIDATED`, `ASSIGNED` o `IN_PROGRESS`); «Rechazada» y «Resuelta» no producirán resultados con esta consulta. Los filtros por categoría, estado y fechas, la ordenación por fecha y las seis filas por página se calculan en el navegador. Prioridad y ordenación por prioridad no están disponibles. El detalle muestra los datos del backend y la ubicación en un mapa.
 
-`VITE_API_URL` en `src/management-panel/.env` configura la URL base del backend y por defecto apunta a `http://localhost:8080`. El inicio de sesión usa `POST /api/auth/login` y solo permite el rol `OPERATOR`; las cuentas de Ciudadano y Técnico reciben un mensaje de falta de permiso. El token se guarda en el almacenamiento local del navegador para conservar la sesión al recargar. Al abrir el panel se renueva con `POST /api/auth/refresh`; si ha caducado, se vuelve al inicio de sesión. «Cerrar sesión» elimina el token guardado. Los errores de credenciales muestran el mensaje de la API sin redirigir.
-
-El backend permite peticiones del origen indicado por `MANAGEMENT_PANEL_ORIGIN` solo en `/api/**`. El valor por defecto, `http://localhost:5173`, coincide con el servidor de desarrollo de Vite. Si cambias el puerto del panel, actualiza la variable en el `.env` de la raíz y recrea el backend:
-
-```bash
-docker compose up -d --force-recreate backend
-```
-
-El panel no forma parte de Docker Compose; se ejecuta con Vite durante el desarrollo.
+En Docker Compose, el navegador llama a `/api` en el mismo origen y Nginx reenvía esas solicitudes al backend. Con Vite, `VITE_API_URL` en `src/management-panel/.env` configura la URL base del backend y apunta por defecto a `http://localhost:8080`. El backend permite peticiones del origen indicado por `MANAGEMENT_PANEL_ORIGIN` solo en `/api/**`: para Vite, establece `MANAGEMENT_PANEL_ORIGIN=http://localhost:5173` en el `.env` de la raíz y recrea el backend con `docker compose up -d --force-recreate backend`; para Docker Compose, el origen predeterminado es `http://localhost:8081`.
 
 ### Lint
 
