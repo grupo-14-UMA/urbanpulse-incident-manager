@@ -30,3 +30,4 @@ Cada ADR recoge una decisión relevante: su contexto, las opciones consideradas,
 | [0015](0015-react-vite-y-leaflet-para-panel-de-gestion.md) | React con Vite y Leaflet para el panel de gestión | accepted |
 | [0016](0016-autenticacion-con-jwt-propio.md) | Autenticación con JWT emitidos por el propio backend | accepted |
 | [0017](0017-instantes-en-utc-con-zona-explicita.md) | Instantes en UTC con zona explícita | accepted |
+| [0018](0018-ciclo-de-vida-de-la-incidencia.md) | Ciclo de vida de la incidencia | accepted |

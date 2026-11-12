@@ -3,6 +3,11 @@
 // One label per incident Status code (see GLOSSARY.md). An unknown code is shown as is.
 const STATUS_LABELS = {
   REPORTED: 'Registrada',
+  VALIDATED: 'Validada',
+  REJECTED: 'Rechazada',
+  ASSIGNED: 'Asignada',
+  IN_PROGRESS: 'En curso',
+  RESOLVED: 'Resuelta',
 };
 
 export function statusLabel(status) {
