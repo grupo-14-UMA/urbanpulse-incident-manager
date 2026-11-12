@@ -2,6 +2,7 @@ import { Redirect, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Image as NativeImage,
   Platform,
   Pressable,
   ScrollView,
@@ -281,30 +282,26 @@ function IncidentPhotoImage({ photo, index }) {
   return (
     <View style={styles.photoFrame}>
       {photoState.uri && (
-        <Image
+        <NativeImage
           key={photoState.uri}
           source={{ uri: photoState.uri }}
           style={styles.photoImage}
-          contentFit="cover"
-          cachePolicy="none"
-          transition={0}
+          resizeMode="cover"
           accessibilityLabel={`Foto ${index + 1} de la incidencia`}
-          onLoadStart={() => console.info(`[photos] expo-image empieza a leer el archivo local de la foto ${index + 1}.`)}
-          onLoad={() => console.info(`[photos] expo-image decodificó el archivo local de la foto ${index + 1}.`)}
-          onDisplay={() => {
+          onLoad={() => {
             console.info(`[photos] Foto ${index + 1} mostrada en el detalle.`);
             setPhotoState((current) => ({ ...current, status: 'displayed' }));
           }}
           onError={(event) => {
-            const message = typeof event?.error === 'string'
-              ? event.error.replace(/https?:\/\/\S+/gi, '<photo-url>').slice(0, 160)
+            const message = typeof event?.nativeEvent?.error === 'string'
+              ? event.nativeEvent.error.replace(/https?:\/\/\S+/gi, '<photo-url>').slice(0, 160)
               : '';
             console.warn('[photos] No se pudo mostrar una foto de incidencia' + (message ? ': ' + message : ''));
             setPhotoState({ status: 'error', uri: null });
           }}
         />
       )}
-      {(photoState.status === 'loading' || photoState.status === 'ready') && (
+      {photoState.status === 'loading' && (
         <View style={styles.photoLoading}>
           <ActivityIndicator color={COLORS.primary} />
           <Text style={styles.photoErrorText}>Cargando foto…</Text>
@@ -490,7 +487,11 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surfaceMuted,
   },
   photoImage: {
-    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+    flex: 1,
+    zIndex: 1,
+    backgroundColor: 'transparent',
   },
   photoError: {
     ...StyleSheet.absoluteFillObject,
