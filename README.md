@@ -5,8 +5,8 @@ Plataforma cloud para comunicar, gestionar y analizar incidencias urbanas en Má
 ## Características principales
 
 - [x] Mapas móvil y web con consultas limitadas al área visible (máximo 500 incidencias); el panel requiere una cuenta con rol Operador.
-- [x] Detalle de una incidencia: título, descripción, categoría, estado y fecha.
-- [x] Registro de incidencias con ubicación (GPS o seleccionada en el mapa) y categoría opcional.
+- [x] Detalle de una incidencia: título, descripción, categoría, estado, fecha, fotografías adjuntas y subida de fotos adicionales por su autor.
+- [x] Registro de incidencias con ubicación (GPS o seleccionada en el mapa), categoría opcional y subida de hasta 3 fotografías en el backend.
 - [x] Cuentas de usuario con roles (ciudadano, operador y técnico) y autenticación con token en la API.
 - [ ] Documentación interactiva de la API (Swagger UI).
 
@@ -24,7 +24,7 @@ Plataforma cloud para comunicar, gestionar y analizar incidencias urbanas en Má
 | React Native + Expo | Aplicación móvil | [ADR-0003](docs/adr/0003-react-native-con-expo-para-frontend.md) |
 | React + Vite + Leaflet | Panel de gestión web | [ADR-0014](docs/adr/0014-aplicacion-movil-y-panel-de-gestion-web.md), [ADR-0015](docs/adr/0015-react-vite-y-leaflet-para-panel-de-gestion.md) |
 | react-native-maps + OpenStreetMap | Mapa de incidencias en la aplicación móvil | [ADR-0004](docs/adr/0004-openstreetmap-como-fuente-de-mapas.md), [ADR-0005](docs/adr/0005-react-native-maps-como-renderizador.md) |
-| Docker Compose | Entorno local | [ADR-0012](docs/adr/0012-docker-compose-para-desarrollo-local.md) |
+| Docker Compose | Entorno local y volumen de fotografías | [ADR-0012](docs/adr/0012-docker-compose-para-desarrollo-local.md), [ADR-0018](docs/adr/0018-almacenamiento-de-fotos-en-volumen-detras-de-interfaz.md) |
 
 ## Puesta en marcha rápida
 

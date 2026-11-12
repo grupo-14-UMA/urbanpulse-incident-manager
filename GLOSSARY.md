@@ -17,7 +17,7 @@ Punto del mapa donde está el problema de una incidencia, expresado en coordenad
 _Evitar_: posición, ubicación, punto
 
 **Estado** (`Status`):
-Fase del ciclo de vida en la que se encuentra una incidencia ([ADR-0018](docs/adr/0018-ciclo-de-vida-de-la-incidencia.md)). Toda incidencia empieza en **Registrada** (`REPORTED`), el estado que tiene en cuanto el ciudadano la registra. Después puede ser **Validada** (`VALIDATED`, un operador comprobó que es un problema real), **Rechazada** (`REJECTED`, un operador la descartó con un motivo; es final), **Asignada** (`ASSIGNED`, un operador la encargó a un técnico), **En curso** (`IN_PROGRESS`, el técnico asignado empezó el trabajo) o **Resuelta** (`RESOLVED`, el técnico asignado la terminó con una nota; es final).
+Fase del ciclo de vida en la que se encuentra una incidencia ([ADR-0019](docs/adr/0019-ciclo-de-vida-de-la-incidencia.md)). Toda incidencia empieza en **Registrada** (`REPORTED`), el estado que tiene en cuanto el ciudadano la registra. Después puede ser **Validada** (`VALIDATED`, un operador comprobó que es un problema real), **Rechazada** (`REJECTED`, un operador la descartó con un motivo; es final), **Asignada** (`ASSIGNED`, un operador la encargó a un técnico), **En curso** (`IN_PROGRESS`, el técnico asignado empezó el trabajo) o **Resuelta** (`RESOLVED`, el técnico asignado la terminó con una nota; es final).
 _Evitar_: situación, fase
 
 **Prioridad** (`Priority`):
@@ -45,6 +45,10 @@ _Evitar_: fecha de creación, fecha de alta
 **Categoría** (`Category`):
 Tipo de problema al que pertenece una incidencia. Es opcional cuando el ciudadano la registra.
 _Evitar_: tipo, clase
+
+**Fotografía adjunta** (`Attachment`):
+Imagen asociada a una incidencia. La API valida el fichero, guarda su contenido en el almacenamiento de fotos y conserva sus metadatos y referencia para mostrarla después.
+_Evitar_: archivo (sin más), imagen (sin contexto)
 
 ### Actores
 

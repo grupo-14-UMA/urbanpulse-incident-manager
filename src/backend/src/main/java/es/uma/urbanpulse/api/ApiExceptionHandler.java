@@ -11,10 +11,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 import es.uma.urbanpulse.auth.EmailAlreadyRegisteredException;
 import es.uma.urbanpulse.auth.InvalidCredentialsException;
@@ -22,8 +25,10 @@ import es.uma.urbanpulse.auth.InvalidSessionException;
 import es.uma.urbanpulse.incident.InvalidStatusTransitionException;
 import es.uma.urbanpulse.incident.api.IncidentAccessDeniedException;
 import es.uma.urbanpulse.incident.api.IncidentNotFoundException;
+import es.uma.urbanpulse.incident.api.IncidentPhotoNotFoundException;
 import es.uma.urbanpulse.incident.api.InvalidIncidentRequestException;
 import es.uma.urbanpulse.incident.api.InvalidCategoryException;
+import es.uma.urbanpulse.incident.api.InvalidIncidentPhotoException;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
@@ -51,14 +56,26 @@ public class ApiExceptionHandler {
 				.body(new ApiErrorResponse(INVALID_REQUEST_MESSAGE, errors));
 	}
 
-	@ExceptionHandler(InvalidCategoryException.class)
-	public ResponseEntity<ApiErrorResponse> handleInvalidCategory(InvalidCategoryException exception) {
+	@ExceptionHandler({ InvalidCategoryException.class, InvalidIncidentPhotoException.class })
+	public ResponseEntity<ApiErrorResponse> handleBadRequestDomainException(RuntimeException exception) {
 		return ResponseEntity.badRequest()
 				.body(new ApiErrorResponse(exception.getMessage(), Map.of()));
 	}
 
-	@ExceptionHandler(IncidentNotFoundException.class)
-	public ResponseEntity<ApiErrorResponse> handleIncidentNotFound(IncidentNotFoundException exception) {
+	@ExceptionHandler(MaxUploadSizeExceededException.class)
+	public ResponseEntity<ApiErrorResponse> handleMaxUploadSizeExceeded() {
+		return ResponseEntity.badRequest()
+				.body(new ApiErrorResponse("Cada fotografía puede ocupar como máximo 5 MB.", Map.of()));
+	}
+
+	@ExceptionHandler({ MissingServletRequestPartException.class, MultipartException.class })
+	public ResponseEntity<ApiErrorResponse> handleMultipartError() {
+		return ResponseEntity.badRequest()
+				.body(new ApiErrorResponse("Debes adjuntar al menos una fotografía.", Map.of()));
+	}
+
+	@ExceptionHandler({ IncidentNotFoundException.class, IncidentPhotoNotFoundException.class })
+	public ResponseEntity<ApiErrorResponse> handleNotFound(RuntimeException exception) {
 		return ResponseEntity.status(HttpStatus.NOT_FOUND)
 				.body(new ApiErrorResponse(exception.getMessage(), Map.of()));
 	}

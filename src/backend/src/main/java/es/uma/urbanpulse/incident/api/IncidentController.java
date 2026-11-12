@@ -4,6 +4,10 @@ import java.net.URI;
 import java.util.List;
 
 import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.http.CacheControl;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -15,11 +19,14 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import es.uma.urbanpulse.api.ApiErrorResponse;
 import es.uma.urbanpulse.auth.AuthTokens;
 import es.uma.urbanpulse.incident.IncidentService;
+import es.uma.urbanpulse.incident.StoredPhotoContent;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -92,8 +99,9 @@ public class IncidentController {
 							schema = @Schema(implementation = ApiErrorResponse.class)))
 	})
 	public IncidentMapResponse findWithinBounds(
-			@Valid @ParameterObject @ModelAttribute IncidentBounds bounds) {
-		return incidentService.findWithinBounds(bounds);
+			@Valid @ParameterObject @ModelAttribute IncidentBounds bounds,
+			@AuthenticationPrincipal Jwt jwt) {
+		return incidentService.findWithinBounds(bounds, AuthTokens.subjectOf(jwt));
 	}
 
 	@GetMapping("/{id}")
@@ -246,4 +254,54 @@ public class IncidentController {
 	public List<StatusChangeResponse> history(@PathVariable Integer id, @AuthenticationPrincipal Jwt jwt) {
 		return incidentService.findHistory(id, AuthTokens.subjectOf(jwt));
 	}
+
+	@PostMapping(path = "/{id}/photos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@Operation(
+			summary = "Adjuntar fotografías a una incidencia (ciudadano autor o técnico)",
+			description = "Permite al ciudadano que registró la incidencia o a un técnico adjuntar hasta 3 fotografías en total (JPEG, PNG o WebP, máximo 5 MB cada una).")
+	@ApiResponses({
+			@ApiResponse(responseCode = "201", description = "Fotografías almacenadas."),
+			@ApiResponse(responseCode = "400", description = "El tipo, tamaño o número de fotografías no es válido.",
+					content = @Content(mediaType = "application/json",
+							schema = @Schema(implementation = ApiErrorResponse.class))),
+			@ApiResponse(responseCode = "403", description = "Sin permiso para adjuntar fotografías a esta incidencia.",
+					content = @Content(mediaType = "application/json",
+							schema = @Schema(implementation = ApiErrorResponse.class))),
+			@ApiResponse(responseCode = "404", description = "La incidencia no existe.",
+					content = @Content(mediaType = "application/json",
+							schema = @Schema(implementation = ApiErrorResponse.class)))
+	})
+	public ResponseEntity<List<IncidentPhotoResponse>> uploadPhotos(
+			@PathVariable Integer id,
+			@RequestParam(name = "photos", required = false) List<MultipartFile> photos,
+			@AuthenticationPrincipal Jwt jwt) {
+		List<IncidentPhotoResponse> uploaded = incidentService.uploadPhotos(id, photos, AuthTokens.subjectOf(jwt));
+		return ResponseEntity.status(HttpStatus.CREATED).body(uploaded);
+	}
+
+	@GetMapping("/{id}/photos/{photoId}")
+	@Operation(summary = "Descargar una fotografía de una incidencia",
+			description = "Los ciudadanos solo pueden descargar fotografías de sus incidencias.")
+	@ApiResponses({
+			@ApiResponse(responseCode = "200", description = "Contenido binario de la fotografía.",
+					content = {@Content(mediaType = "image/jpeg"), @Content(mediaType = "image/png"),
+							@Content(mediaType = "image/webp")}),
+			@ApiResponse(responseCode = "404", description = "La incidencia o la fotografía no existe.",
+					content = @Content(mediaType = "application/json",
+							schema = @Schema(implementation = ApiErrorResponse.class)))
+	})
+	public ResponseEntity<byte[]> downloadPhoto(
+			@PathVariable Integer id,
+			@PathVariable Integer photoId,
+			@AuthenticationPrincipal Jwt jwt) {
+		StoredPhotoContent photo = incidentService.loadPhoto(id, photoId, AuthTokens.subjectOf(jwt));
+		return ResponseEntity.ok()
+				.contentType(MediaType.parseMediaType(photo.contentType()))
+				.contentLength(photo.content().length)
+				.cacheControl(CacheControl.noCache().mustRevalidate())
+				.header(HttpHeaders.CONTENT_DISPOSITION, "inline")
+				.header("X-Content-Type-Options", "nosniff")
+				.body(photo.content());
+	}
+
 }

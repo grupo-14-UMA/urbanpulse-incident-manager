@@ -2,7 +2,7 @@
 status: accepted
 ---
 
-# ADR-0018: Ciclo de vida de la incidencia
+# ADR-0019: Ciclo de vida de la incidencia
 
 ## Contexto
 

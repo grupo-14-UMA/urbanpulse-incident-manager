@@ -1,7 +1,11 @@
 import { API_URL } from './config';
+import { fetch as expoFetch } from 'expo/fetch';
+import { File, Paths } from 'expo-file-system';
 
 const BASE_URL = typeof API_URL === 'string' ? API_URL.trim().replace(/\/+$/, '') : '';
 const REQUEST_TIMEOUT_MS = 10000;
+const PHOTO_UPLOAD_TIMEOUT_MS = 60000;
+const MAX_PHOTO_DOWNLOAD_BYTES = 5 * 1024 * 1024;
 const RETRY_ATTEMPTS = 3;
 const RETRY_DELAYS_MS = [1000, 3000];
 const RETRY_BUDGET_MS = 15000;
@@ -23,10 +27,20 @@ class ApiError extends Error {
   }
 }
 
-function logFailure(method, path, status, startedAt, kind, attempt) {
+function logFailure(method, path, status, startedAt, kind, attempt, cause) {
   const statusLabel = status ?? 'sin respuesta';
   const durationMs = Date.now() - startedAt;
-  console.warn('[api] ' + method + ' ' + path + ' -> ' + statusLabel + ' (' + durationMs + ' ms, ' + kind + ', intento ' + attempt + ')');
+  const causeName = typeof cause?.name === 'string' ? cause.name : '';
+  const causeMessage = typeof cause?.message === 'string' ? cause.message : '';
+  const causeDetail = [causeName, causeMessage]
+    .filter(Boolean)
+    .join(': ')
+    .replace(/(?:file|ph|content):\/\/\S+/gi, '<local-file>')
+    .slice(0, 120);
+  console.warn(
+    '[api] ' + method + ' ' + path + ' -> ' + statusLabel + ' (' + durationMs + ' ms, ' + kind +
+      (causeDetail ? ', ' + causeDetail : '') + ', intento ' + attempt + ')',
+  );
 }
 
 function getResponseErrorMessage(payload, status) {
@@ -57,6 +71,12 @@ function errorForResponse(payload, status, preserveUnauthorizedMessage) {
   if (status === 404) {
     return new ApiError(getResponseErrorMessage(payload, status) || 'Esta incidencia no existe.', { kind: 'notFound', status, payload });
   }
+  if (status === 413) {
+    return new ApiError(
+      'La foto supera el límite de 5 MB. Selecciona otra imagen o reduce su tamaño.',
+      { kind: 'invalid', status, payload },
+    );
+  }
   return new ApiError(getResponseErrorMessage(payload, status) || 'Revisa los datos e inténtalo de nuevo.', {
     kind: 'invalid',
     status,
@@ -86,7 +106,10 @@ async function requestOnce(
   {
     method = 'GET',
     body,
+    formData,
+    fetchImpl = fetch,
     signal: requestSignal,
+    timeoutMs = REQUEST_TIMEOUT_MS,
     authenticated = true,
     handleUnauthorized = true,
     preserveUnauthorizedMessage = false,
@@ -115,15 +138,19 @@ async function requestOnce(
     timeout = setTimeout(() => {
       timedOut = true;
       controller.abort();
-    }, REQUEST_TIMEOUT_MS);
-    response = await fetch(BASE_URL + path, {
+    }, timeoutMs);
+    response = await fetchImpl(BASE_URL + path, {
       method,
       headers: {
         Accept: 'application/json',
         ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
         ...(authenticated && accessToken ? { Authorization: 'Bearer ' + accessToken } : {}),
       },
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      ...(formData !== undefined
+        ? { body: formData }
+        : body === undefined
+          ? {}
+          : { body: JSON.stringify(body) }),
       signal: controller.signal,
     });
     responseText = await response.text();
@@ -132,7 +159,7 @@ async function requestOnce(
       throw cause;
     }
     const error = new ApiError(CONNECTION_ERROR, { kind: 'connection', cause });
-    logFailure(method, path, undefined, startedAt, 'connection', attempt);
+    logFailure(method, path, undefined, startedAt, timedOut ? 'timeout' : 'connection', attempt, cause);
     throw error;
   } finally {
     clearTimeout(timeout);
@@ -264,4 +291,128 @@ export async function createIncident({ title, description, latitude, longitude, 
 
   const incident = await request('/api/incidents', { method: 'POST', body });
   return expectIncident(incident);
+}
+
+export async function uploadIncidentPhoto(incidentId, photo) {
+  const file = new File(photo.uri);
+  const formData = new FormData();
+  formData.append('photos', file);
+
+  const payload = await request(
+    '/api/incidents/' + encodeURIComponent(String(incidentId)) + '/photos',
+    { method: 'POST', formData, fetchImpl: expoFetch, timeoutMs: PHOTO_UPLOAD_TIMEOUT_MS },
+  );
+  const uploaded = Array.isArray(payload) ? payload[0] : null;
+  if (!uploaded || typeof uploaded !== 'object' || typeof uploaded.url !== 'string') {
+    throw new ApiError(SERVER_ERROR, { kind: 'unexpected' });
+  }
+  return uploaded;
+}
+
+export function getIncidentPhotoSource(photoUrl) {
+  if (typeof photoUrl !== 'string' || !photoUrl.trim() || !BASE_URL) {
+    return null;
+  }
+  const trimmed = photoUrl.trim();
+  const isAbsolute = /^https?:\/\//i.test(trimmed);
+  const uri = isAbsolute
+    ? trimmed
+    : BASE_URL + (trimmed.startsWith('/') ? trimmed : '/' + trimmed);
+  if (isAbsolute) {
+    try {
+      if (new URL(uri).origin !== new URL(BASE_URL).origin) {
+        return null;
+      }
+    } catch {
+      return null;
+    }
+  }
+  return {
+    uri,
+    ...(accessToken ? { headers: { Authorization: 'Bearer ' + accessToken } } : {}),
+  };
+}
+
+export async function downloadIncidentPhoto(photoUrl, { signal } = {}) {
+  const source = getIncidentPhotoSource(photoUrl);
+  if (!source) {
+    throw new ApiError('La referencia de la foto no es válida.', { kind: 'unexpected' });
+  }
+
+  const path = photoUrl.trim().replace(/^https?:\/\/[^/]+/i, '').split('?', 1)[0];
+  const startedAt = Date.now();
+  let response;
+  try {
+    response = await expoFetch(source.uri, {
+      method: 'GET',
+      headers: {
+        Accept: 'image/jpeg, image/png, image/webp',
+        ...(source.headers ?? {}),
+      },
+      signal,
+    });
+  } catch (cause) {
+    if (signal?.aborted) {
+      throw cause;
+    }
+    const error = new ApiError(CONNECTION_ERROR, { kind: 'connection', cause });
+    logFailure('GET', path, undefined, startedAt, error.kind, 1, cause);
+    throw error;
+  }
+
+  if (!response.ok) {
+    const error = errorForResponse(null, response.status, false);
+    logFailure('GET', path, response.status, startedAt, error.kind, 1);
+    if (response.status === 401 && unauthorizedHandler) {
+      void unauthorizedHandler();
+    }
+    throw error;
+  }
+
+  const contentType = (response.headers.get('content-type') ?? '').split(';', 1)[0].trim().toLowerCase();
+  const extensions = {
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+  };
+  const extension = extensions[contentType];
+  if (!extension) {
+    throw new ApiError('El servidor devolvió una foto en un formato no compatible.', { kind: 'unexpected' });
+  }
+  const declaredSize = Number(response.headers.get('content-length'));
+  if (Number.isFinite(declaredSize) && declaredSize > MAX_PHOTO_DOWNLOAD_BYTES) {
+    throw new ApiError('La foto guardada supera el límite de 5 MB.', { kind: 'unexpected' });
+  }
+
+  let content;
+  try {
+    content = await response.arrayBuffer();
+  } catch (cause) {
+    throw new ApiError('No se pudo recibir la foto completa.', { kind: 'connection', cause });
+  }
+  if (!content.byteLength) {
+    throw new ApiError('El servidor devolvió una foto vacía.', { kind: 'unexpected' });
+  }
+  if (content.byteLength > MAX_PHOTO_DOWNLOAD_BYTES) {
+    throw new ApiError('La foto guardada supera el límite de 5 MB.', { kind: 'unexpected' });
+  }
+  console.info(`[photos] Descarga recibida: ${contentType}, ${content.byteLength} bytes.`);
+
+  const filename = `urbanpulse-incident-photo-${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
+  const file = new File(Paths.cache, filename);
+  try {
+    file.create({ overwrite: true });
+    await file.write(content);
+    console.info('[photos] Copia temporal de la foto preparada.');
+    return file;
+  } catch (cause) {
+    const causeName = typeof cause?.name === 'string' ? cause.name : 'Error';
+    console.warn(`[photos] No se pudo escribir la copia temporal (${causeName}).`);
+    try {
+      file.delete();
+    } catch {
+      // The file may not have been created.
+    }
+    throw new ApiError('No se pudo preparar la foto para mostrarla.', { kind: 'unexpected', cause });
+  }
 }

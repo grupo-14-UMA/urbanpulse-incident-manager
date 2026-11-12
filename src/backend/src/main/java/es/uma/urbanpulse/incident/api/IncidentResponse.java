@@ -1,6 +1,7 @@
 package es.uma.urbanpulse.incident.api;
 
 import java.time.Instant;
+import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 
@@ -33,5 +34,42 @@ public record IncidentResponse(
 		String priorityJustification,
 		@Schema(description = "Técnico asignado. Solo lo ven operadores y técnicos: es nulo para ciudadanos y en el mapa.",
 				nullable = true)
-		TechnicianResponse assignee) {
+		TechnicianResponse assignee,
+		@Schema(description = "Fotografías adjuntas a la incidencia (incluidas al consultar su detalle).")
+		List<IncidentPhotoResponse> photos) {
+
+	public IncidentResponse {
+		photos = photos == null ? List.of() : List.copyOf(photos);
+	}
+
+	public IncidentResponse(
+			Integer id,
+			String title,
+			String description,
+			double latitude,
+			double longitude,
+			Integer categoryId,
+			String categoryName,
+			IncidentStatus status,
+			Instant createdAt,
+			IncidentPriority priority,
+			String priorityJustification,
+			TechnicianResponse assignee) {
+		this(id, title, description, latitude, longitude, categoryId, categoryName, status, createdAt,
+				priority, priorityJustification, assignee, List.of());
+	}
+
+	public IncidentResponse(
+			Integer id,
+			String title,
+			String description,
+			double latitude,
+			double longitude,
+			Integer categoryId,
+			String categoryName,
+			IncidentStatus status,
+			Instant createdAt) {
+		this(id, title, description, latitude, longitude, categoryId, categoryName, status, createdAt,
+				null, null, null, List.of());
+	}
 }
