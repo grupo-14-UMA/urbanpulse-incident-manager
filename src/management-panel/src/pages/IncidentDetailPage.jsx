@@ -193,7 +193,7 @@ export default function IncidentDetailPage() {
           )}
           {history.kind === 'loaded' && history.entries.length > 0 && (
             <ol className="detail-history-list">
-              {history.entries.map((entry, index) => (
+              {history.entries.slice(-5).map((entry, index) => (
                 <li className="detail-history-entry" key={entry.changedAt + '-' + entry.newStatus + '-' + index}>
                   <span aria-hidden="true" className="detail-history-marker" />
                   <div className="detail-history-content">

@@ -68,7 +68,7 @@ Toda pantalla que carga datos distingue estos estados y nunca se queda en blanco
 | Error | El mensaje del tipo de error y, si corresponde, «Reintentar». |
 | No encontrado | Solo al cargar un elemento por su identificador: el texto propio de la pantalla. |
 
-Si falla una recarga y ya había datos, se conservan los anteriores y se muestra un aviso con «Reintentar». Pueden estar desactualizados, pero siguen siendo útiles. En una acción del operador, HTTP 409 muestra el mensaje de conflicto de la API y requiere recargar la incidencia; esas acciones no se reintentan automáticamente.
+Si falla una recarga y ya había datos, se conservan los anteriores y se muestra un aviso con «Reintentar». Pueden estar desactualizados, pero siguen siendo útiles. En una acción del operador, HTTP 409 muestra el campo `message` de la respuesta cuando es texto; si no existe, muestra un mensaje genérico que indica recargar la incidencia. Esos conflictos no se reintentan automáticamente.
 
 ## Qué se registra en el cliente
 
