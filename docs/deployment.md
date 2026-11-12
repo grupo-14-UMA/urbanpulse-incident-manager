@@ -37,7 +37,9 @@ docker compose up -d --build
 docker compose ps
 ```
 
-Compose construye la imagen del backend a partir de `src/backend/Dockerfile` y arranca PostgreSQL con PostGIS (`postgis/postgis`). El backend espera a que la base de datos esté lista antes de arrancar.
+Compose construye la imagen del backend y la del panel, y arranca PostgreSQL con PostGIS (`postgis/postgis`). El backend espera a que la base de datos esté lista antes de arrancar. El panel se compila en una etapa Node y se sirve con Nginx; el navegador lo abre en `http://localhost:8081`. Nginx sirve las rutas de React y reenvía `/api/` al backend dentro de la red de Compose.
+
+El panel también puede ejecutarse en modo desarrollo con Vite en `http://localhost:5173`. Para ese modo, establece `MANAGEMENT_PANEL_ORIGIN=http://localhost:5173` en `.env` y recrea el backend; el valor predeterminado autoriza el origen del panel servido por Compose (`http://localhost:8081`).
 
 Para detenerlo:
 
@@ -57,6 +59,8 @@ Compose lee las variables del fichero `.env` de la raíz:
 | `POSTGRES_PASSWORD` | Contraseña de la base de datos | `urbanpulse` |
 | `DB_PORT` | Puerto del equipo en el que se publica PostgreSQL | `5432` |
 | `SERVER_PORT` | Puerto del equipo en el que se publica el backend | `8080` |
+| `MANAGEMENT_PANEL_PORT` | Puerto del equipo en el que se publica el panel | `8081` |
+| `MANAGEMENT_PANEL_ORIGIN` | Origen permitido por CORS para el panel; por defecto sigue `MANAGEMENT_PANEL_PORT` | `http://localhost:8081` |
 
 Dentro de Compose el backend siempre se conecta a `db:5432` y escucha en el puerto `8080`; `DB_HOST` solo se usa al ejecutar el backend fuera de Docker.
 
@@ -64,8 +68,10 @@ El fichero `.env` no se versiona. Los valores por defecto solo sirven para el en
 
 ## Comprobaciones tras el despliegue
 
-- [ ] `docker compose ps` muestra `db` como `healthy` y `backend` en marcha.
+- [ ] `docker compose ps` muestra `db` como `healthy`, `backend` y `panel` en marcha.
+- [ ] El panel carga en `http://localhost:8081` y puede iniciar sesión y consultar la API.
 - [ ] Swagger UI carga en `http://localhost:8080/swagger-ui.html`.
+- [ ] `docker compose logs panel` muestra los logs de acceso de Nginx.
 - [ ] No hay errores en `docker compose logs backend`.
 
 ## Integración continua
