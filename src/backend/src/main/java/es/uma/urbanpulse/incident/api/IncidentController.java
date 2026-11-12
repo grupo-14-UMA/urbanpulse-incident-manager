@@ -35,6 +35,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 
 @RestController
 @Validated
@@ -123,6 +125,22 @@ public class IncidentController {
 	})
 	public IncidentResponse findById(@PathVariable Integer id, @AuthenticationPrincipal Jwt jwt) {
 		return incidentService.findById(id, AuthTokens.subjectOf(jwt));
+	}
+
+	@GetMapping("/assigned")
+	@Operation(summary = "Listar trabajos asignados al técnico actual")
+	@ApiResponses({
+			@ApiResponse(responseCode = "200", description = "Trabajos asignados abiertos."),
+			@ApiResponse(responseCode = "403", description = "Solo los técnicos pueden consultar sus trabajos.",
+					content = @Content(mediaType = "application/json",
+							schema = @Schema(implementation = ApiErrorResponse.class)))
+	})
+	public AssignedIncidentPageResponse assigned(
+			@RequestParam(defaultValue = "0") @Min(value = 0, message = "La página no puede ser negativa.") int page,
+			@RequestParam(defaultValue = "20") @Min(value = 1, message = "El tamaño debe estar entre 1 y 50.")
+			@Max(value = 50, message = "El tamaño debe estar entre 1 y 50.") int size,
+			@AuthenticationPrincipal Jwt jwt) {
+		return incidentService.findAssigned(AuthTokens.subjectOf(jwt), page, size);
 	}
 
 	@PostMapping("/{id}/validate")

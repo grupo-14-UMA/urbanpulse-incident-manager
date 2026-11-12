@@ -19,11 +19,14 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import es.uma.urbanpulse.auth.TokenSubject;
 import es.uma.urbanpulse.category.Category;
 import es.uma.urbanpulse.category.CategoryRepository;
 import es.uma.urbanpulse.incident.api.AssignIncidentRequest;
+import es.uma.urbanpulse.incident.api.AssignedIncidentPageResponse;
 import es.uma.urbanpulse.incident.api.ChangePriorityRequest;
 import es.uma.urbanpulse.incident.api.CreateIncidentRequest;
 import es.uma.urbanpulse.incident.api.IncidentAccessDeniedException;
@@ -50,6 +53,7 @@ public class IncidentService {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(IncidentService.class);
 	private static final int MAP_RESULT_LIMIT = 500;
+	static final int MAX_ASSIGNED_PAGE_SIZE = 50;
 	static final int MAX_PHOTOS_PER_INCIDENT = 3;
 
 	private static final GeometryFactory WGS84_GEOMETRY_FACTORY =
@@ -129,6 +133,23 @@ public class IncidentService {
 				.map(attachment -> toPhotoResponse(id, attachment))
 				.toList();
 		return toResponse(incident, caller, photos);
+	}
+
+	@Transactional(readOnly = true)
+	public AssignedIncidentPageResponse findAssigned(TokenSubject caller, int page, int size) {
+		if (caller.role() != Role.TECHNICIAN) {
+			throw new IncidentAccessDeniedException();
+		}
+		int boundedSize = Math.min(size, MAX_ASSIGNED_PAGE_SIZE);
+		Pageable request = PageRequest.of(page, boundedSize + 1);
+		List<Incident> loaded = incidentRepository.findByAssignee_IdAndStatusInOrderByCreatedAtDesc(
+				caller.userId(), IncidentStatus.ACTIVE, request);
+		boolean hasMore = loaded.size() > boundedSize;
+		List<IncidentResponse> incidents = loaded.stream()
+				.limit(boundedSize)
+				.map(incident -> toResponse(incident, caller))
+				.toList();
+		return new AssignedIncidentPageResponse(incidents, page, boundedSize, hasMore);
 	}
 
 	@Transactional
