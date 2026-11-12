@@ -107,8 +107,8 @@ export default function IncidentListPage() {
 
       <p className="list-limit-note" role="note">{categoryError && <span role="alert">{categoryError} </span>}
         {truncated
-          ? 'La API limita los resultados a 500 incidencias Registradas en Málaga. El filtro de estado solo puede mostrar Registrada con este endpoint; los filtros restantes y la paginación se calculan en el navegador.'
-          : 'El endpoint actual solo permite consultar incidencias Registradas en Málaga. Por eso, el filtro de estado solo ofrece Registrada y Todos; los demás estados requieren que la API de lista esté disponible. Los filtros restantes y la paginación se calculan en el navegador.'}
+          ? 'La API limita los resultados a 500 incidencias abiertas en Málaga (Rechazadas y Resueltas no aparecen); los filtros restantes y la paginación se calculan en el navegador.'
+          : 'El endpoint actual solo permite consultar incidencias abiertas en Málaga. Por eso, el filtro de estado no ofrece Rechazada ni Resuelta; esos estados requieren que la API de lista esté disponible. Los filtros restantes y la paginación se calculan en el navegador.'}
       </p>
 
       <div aria-label="Filtros de incidencias" className="incident-filters">

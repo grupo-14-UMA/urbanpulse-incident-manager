@@ -4,7 +4,9 @@ import java.time.Instant;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 
+import es.uma.urbanpulse.incident.IncidentPriority;
 import es.uma.urbanpulse.incident.IncidentStatus;
+import es.uma.urbanpulse.user.TechnicianResponse;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(description = "Incidencia devuelta por la API.")
@@ -24,5 +26,12 @@ public record IncidentResponse(
 				format = "date-time",
 				example = "2026-11-07T10:15:30.123Z")
 		@JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSX", timezone = "UTC")
-		Instant createdAt) {
+		Instant createdAt,
+		@Schema(description = "Prioridad manual. Nula si no tiene prioridad.", nullable = true)
+		IncidentPriority priority,
+		@Schema(description = "Justificación de la prioridad vigente.", nullable = true)
+		String priorityJustification,
+		@Schema(description = "Técnico asignado. Solo lo ven operadores y técnicos: es nulo para ciudadanos y en el mapa.",
+				nullable = true)
+		TechnicianResponse assignee) {
 }

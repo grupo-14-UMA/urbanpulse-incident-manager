@@ -14,6 +14,7 @@ public final class TestAccounts {
 
 	public static final String OPERATOR_EMAIL = "operador@urbanpulse.test";
 	public static final String TECHNICIAN_EMAIL = "tecnico1@urbanpulse.test";
+	public static final String TECHNICIAN_2_EMAIL = "tecnico2@urbanpulse.test";
 	public static final String SEEDED_PASSWORD = "urbanpulse-dev";
 
 	private TestAccounts() {
