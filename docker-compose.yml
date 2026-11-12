@@ -25,7 +25,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-urbanpulse}
       POSTGRES_USER: ${POSTGRES_USER:-urbanpulse}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-urbanpulse}
-      MANAGEMENT_PANEL_ORIGIN: ${MANAGEMENT_PANEL_ORIGIN:-http://localhost:5173}
+      MANAGEMENT_PANEL_ORIGIN: ${MANAGEMENT_PANEL_ORIGIN:-http://localhost:${MANAGEMENT_PANEL_PORT:-8081}}
       SERVER_PORT: 8080
       # Development-only secret. A real deployment sets its own JWT_SECRET.
       JWT_SECRET: ${JWT_SECRET:-dev-only-jwt-secret-change-me-in-any-deployment}
@@ -36,6 +36,14 @@ services:
     depends_on:
       db:
         condition: service_healthy
+
+  panel:
+    build:
+      context: ./src/management-panel
+    ports:
+      - "${MANAGEMENT_PANEL_PORT:-8081}:80"
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:
