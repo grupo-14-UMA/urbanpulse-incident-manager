@@ -38,6 +38,11 @@ public class SecurityConfiguration {
 				.requestMatchers(HttpMethod.POST, "/api/incidents").hasRole(Role.CITIZEN.name())
 				.requestMatchers(HttpMethod.POST, "/api/incidents/*/photos")
 				.hasAnyRole(Role.CITIZEN.name(), Role.TECHNICIAN.name())
+				.requestMatchers(HttpMethod.POST, "/api/incidents/*/validate", "/api/incidents/*/reject",
+						"/api/incidents/*/assign").hasRole(Role.OPERATOR.name())
+				.requestMatchers(HttpMethod.PUT, "/api/incidents/*/priority").hasRole(Role.OPERATOR.name())
+				.requestMatchers(HttpMethod.POST, "/api/incidents/*/start", "/api/incidents/*/resolve")
+					.hasRole(Role.TECHNICIAN.name())
 				.requestMatchers("/api/technicians/**").hasRole(Role.OPERATOR.name())
 				.anyRequest().authenticated())
 			.oauth2ResourceServer((resourceServer) -> resourceServer

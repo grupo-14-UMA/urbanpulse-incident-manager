@@ -30,8 +30,8 @@ class IncidentMapQueryTests {
 	private static final String MAP_BOUNDS =
 			"/api/incidents?west=-4.45&south=36.68&east=-4.38&north=36.77";
 	private static final int REPORTED_STATUS_ID = 1;
-	// Only REPORTED is defined by the MVP; other ids represent non-public, future statuses.
-	private static final int NON_REPORTED_STATUS_ID = 2;
+	private static final int VALIDATED_STATUS_ID = 2;
+	private static final int REJECTED_STATUS_ID = 3;
 
 	@Autowired
 	private RestTestClient client;
@@ -43,22 +43,24 @@ class IncidentMapQueryTests {
 
 	@BeforeEach
 	void clearIncidents() {
+		jdbcTemplate.update("DELETE FROM \"StatusChange\"");
 		jdbcTemplate.update("DELETE FROM \"Incident\"");
 		AuthResponse operator = login(this.client, OPERATOR_EMAIL);
 		this.authorization = bearer(operator);
 	}
 
 	@Test
-	void returnsOnlyVisibleReportedIncidents() {
+	void returnsOnlyVisibleOpenIncidents() {
 		insertIncident("visible", -4.42, 36.72, REPORTED_STATUS_ID);
 		insertIncident("outside", -4.50, 36.72, REPORTED_STATUS_ID);
-		insertIncident("non-reported", -4.42, 36.72, NON_REPORTED_STATUS_ID);
+		insertIncident("validated", -4.42, 36.72, VALIDATED_STATUS_ID);
+		insertIncident("rejected", -4.42, 36.72, REJECTED_STATUS_ID);
 
 		IncidentMapResponse response = loadMapResponse();
 
 		assertThat(response.incidents())
 				.extracting(IncidentResponse::title)
-				.containsExactly("visible");
+				.containsExactlyInAnyOrder("visible", "validated");
 		assertThat(response.truncated()).isFalse();
 	}
 

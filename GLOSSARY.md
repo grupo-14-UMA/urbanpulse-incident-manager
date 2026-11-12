@@ -17,8 +17,26 @@ Punto del mapa donde está el problema de una incidencia, expresado en coordenad
 _Evitar_: posición, ubicación, punto
 
 **Estado** (`Status`):
-Fase del ciclo de vida en la que se encuentra una incidencia. Toda incidencia empieza en **Registrada** (`REPORTED`), el estado que tiene en cuanto el ciudadano la registra.
+Fase del ciclo de vida en la que se encuentra una incidencia ([ADR-0018](docs/adr/0018-ciclo-de-vida-de-la-incidencia.md)). Toda incidencia empieza en **Registrada** (`REPORTED`), el estado que tiene en cuanto el ciudadano la registra. Después puede ser **Validada** (`VALIDATED`, un operador comprobó que es un problema real), **Rechazada** (`REJECTED`, un operador la descartó con un motivo; es final), **Asignada** (`ASSIGNED`, un operador la encargó a un técnico), **En curso** (`IN_PROGRESS`, el técnico asignado empezó el trabajo) o **Resuelta** (`RESOLVED`, el técnico asignado la terminó con una nota; es final).
 _Evitar_: situación, fase
+
+**Prioridad** (`Priority`):
+Urgencia con la que hay que atender una incidencia: Baja (`LOW`), Media (`MEDIUM`), Alta (`HIGH`) o Urgente (`URGENT`). La fija el operador, de forma manual y opcional, junto con una **Justificación** también opcional que explica el motivo. Una incidencia sin prioridad está «sin prioridad».
+_Evitar_: urgencia, importancia
+
+**Asignación** (`Assignment`):
+Técnico responsable de una incidencia, elegido por un operador. Una incidencia asignada no se reasigna.
+_Evitar_: encargo, derivación
+
+**Historial de estados** (`StatusChange`):
+Registro de cada cambio de estado de una incidencia: de qué estado a cuál, quién (por su rol, nunca por su nombre ante el ciudadano), cuándo y con qué motivo o nota. La primera entrada es el registro de la incidencia por el ciudadano.
+_Evitar_: log, auditoría
+
+**Motivo de rechazo**:
+Explicación obligatoria que escribe el operador al rechazar una incidencia, para que el ciudadano sepa por qué se descartó.
+
+**Nota de resolución**:
+Explicación obligatoria que escribe el técnico al resolver una incidencia y que documenta el trabajo hecho.
 
 **Fecha de registro** (`createdAt`):
 Instante en que el ciudadano registra una incidencia, el mismo en el que pasa a **Registrada**. Se refiere al mismo momento para cualquier cliente, esté donde esté.
