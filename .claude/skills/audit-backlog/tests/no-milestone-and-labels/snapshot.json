@@ -1,0 +1,88 @@
+{
+  "repo": "acme/backlog",
+  "milestones": [
+    {"number": 2, "title": "Entrega 2", "state": "OPEN"}
+  ],
+  "labels": ["🔍 triage", "✅ ready", "❓ question", "🚫 wontfix", "🗺️ epic", "area: ⚙️ core", "area: 🔧 repo"],
+  "collaborators": ["ana", "bea"],
+  "issues": [
+    {
+      "number": 30, "title": "feat: deliver the second version", "body": "The goal of the delivery.", "state": "OPEN",
+      "url": "https://github.com/acme/backlog/issues/30",
+      "labels": {"nodes": [{"name": "🗺️ epic"}, {"name": "✅ ready"}]},
+      "assignees": {"nodes": []},
+      "milestone": {"number": 2, "title": "Entrega 2", "state": "OPEN"},
+      "issueType": {"name": "Feature"},
+      "parent": null,
+      "subIssues": {"totalCount": 3, "nodes": [{"number": 32, "state": "OPEN"}, {"number": 33, "state": "OPEN"}, {"number": 35, "state": "OPEN"}]},
+      "blockedBy": {"totalCount": 0, "nodes": []},
+      "issueFieldValues": {"nodes": []}
+    },
+    {
+      "number": 31, "title": "docs: describe the release procedure",
+      "body": "## Description\n\nWhat and why.\n\n## Acceptance criteria\n\n- [ ] A new member releases following the guide.\n\n## Quality attributes\n\nNone apply: documentation only.\n",
+      "state": "OPEN", "url": "https://github.com/acme/backlog/issues/31",
+      "labels": {"nodes": [{"name": "✅ ready"}, {"name": "area: 🔧 repo"}]},
+      "assignees": {"nodes": [{"login": "bea"}]},
+      "milestone": null,
+      "issueType": {"name": "Task"},
+      "parent": null,
+      "subIssues": {"totalCount": 0, "nodes": []},
+      "blockedBy": {"totalCount": 0, "nodes": []},
+      "issueFieldValues": {"nodes": [{"name": "Low", "field": {"name": "Priority"}}, {"name": "Simple", "field": {"name": "Effort"}}]}
+    },
+    {
+      "number": 32, "title": "chore: tidy the scripts folder",
+      "body": "## Description\n\nCreated from the web without a state.\n",
+      "state": "OPEN", "url": "https://github.com/acme/backlog/issues/32",
+      "labels": {"nodes": [{"name": "area: 🔧 repo"}]},
+      "assignees": {"nodes": []},
+      "milestone": {"number": 2, "title": "Entrega 2", "state": "OPEN"},
+      "issueType": {"name": "Task"},
+      "parent": {"number": 30, "state": "OPEN", "milestone": {"number": 2}},
+      "subIssues": {"totalCount": 0, "nodes": []},
+      "blockedBy": {"totalCount": 0, "nodes": []},
+      "issueFieldValues": {"nodes": []}
+    },
+    {
+      "number": 33, "title": "feat: show the incident photos",
+      "body": "## Description\n\nWhat and why.\n\n## Acceptance criteria\n\n- [ ] The operator sees the photos of an incident.\n\n## Quality attributes\n\nThumbnails are bounded to 10 per incident.\n",
+      "state": "OPEN", "url": "https://github.com/acme/backlog/issues/33",
+      "labels": {"nodes": [{"name": "🔍 triage"}, {"name": "✅ ready"}, {"name": "area: ⚙️ core"}]},
+      "assignees": {"nodes": [{"login": "ana"}]},
+      "milestone": {"number": 2, "title": "Entrega 2", "state": "OPEN"},
+      "issueType": {"name": "Feature"},
+      "parent": {"number": 30, "state": "OPEN", "milestone": {"number": 2}},
+      "subIssues": {"totalCount": 0, "nodes": []},
+      "blockedBy": {"totalCount": 0, "nodes": []},
+      "issueFieldValues": {"nodes": [{"name": "Medium", "field": {"name": "Priority"}}, {"name": "Moderate", "field": {"name": "Effort"}}]}
+    },
+    {
+      "number": 34, "title": "feat: support fax notifications",
+      "body": "## Description\n\nDiscarded idea.\n",
+      "state": "OPEN", "url": "https://github.com/acme/backlog/issues/34",
+      "labels": {"nodes": [{"name": "🔍 triage"}, {"name": "🚫 wontfix"}]},
+      "assignees": {"nodes": []},
+      "milestone": null,
+      "issueType": {"name": "Feature"},
+      "parent": null,
+      "subIssues": {"totalCount": 0, "nodes": []},
+      "blockedBy": {"totalCount": 0, "nodes": []},
+      "issueFieldValues": {"nodes": []}
+    },
+    {
+      "number": 35, "title": "feat: export the incident list",
+      "body": "## Description\n\nWhat and why.\n\n## Acceptance criteria\n\n- [ ] The operator downloads a CSV.\n\n## Quality attributes\n\nNone apply: reuses the paginated list.\n",
+      "state": "OPEN", "url": "https://github.com/acme/backlog/issues/35",
+      "labels": {"nodes": [{"name": "✅ ready"}, {"name": "❓ question"}, {"name": "area: ⚙️ core"}]},
+      "assignees": {"nodes": [{"login": "ana"}]},
+      "milestone": {"number": 2, "title": "Entrega 2", "state": "OPEN"},
+      "issueType": {"name": "Feature"},
+      "parent": {"number": 30, "state": "OPEN", "milestone": {"number": 2}},
+      "subIssues": {"totalCount": 0, "nodes": []},
+      "blockedBy": {"totalCount": 0, "nodes": []},
+      "issueFieldValues": {"nodes": [{"name": "Medium", "field": {"name": "Priority"}}, {"name": "Simple", "field": {"name": "Effort"}}]}
+    }
+  ],
+  "warnings": []
+}

@@ -1,0 +1,9 @@
+[
+  {"check": "a", "issue": 31, "severity": "yellow", "field": "milestone"},
+  {"check": "a", "issue": 31, "severity": "yellow", "field": "epic"},
+  {"check": "a", "issue": 32, "severity": "red", "field": "state"},
+  {"check": "a", "issue": 33, "severity": "red", "field": "state"},
+  {"check": "e", "issue": 33, "severity": "red", "field": "state"},
+  {"check": "a", "issue": 34, "severity": "yellow", "field": "state"},
+  {"check": "a", "issue": 35, "severity": "red", "field": "state"}
+]

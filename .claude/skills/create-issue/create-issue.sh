@@ -8,6 +8,8 @@ set -euo pipefail
 READY="✅ ready"
 TRIAGE="🔍 triage"
 EPIC="🗺️ epic"
+WONTFIX="🚫 wontfix"
+QUESTION="❓ question"
 PREFIXES="feat|fix|docs|style|refactor|test|chore|ci|build|perf"
 
 # Org-level issue fields. This is the only place these ids live.
@@ -28,6 +30,8 @@ Usage:
   create-issue.sh update  N [--dry-run] [--state ready|triage] [--title T] [--body-file F] [fields]
   create-issue.sh promote N [--dry-run] [--title T] [--body-file F] [fields]
   create-issue.sh milestone [--dry-run] --title T [--due-on YYYY-MM-DD] [--description D]
+  create-issue.sh check   N [N…] [--json]
+  create-issue.sh check   --input SNAPSHOT [--json]
 
 Fields:
   --area KEY             an area label, by its last word or in full ("area: …")
@@ -40,12 +44,15 @@ Fields:
   --remove-blocked-by N  update only: drop a blocked-by link (repeatable)
 
 States:
-  ready   needs title, body with "## Acceptance criteria", area, priority, effort,
+  ready   needs title, body with "## Description", "## Acceptance criteria" and,
+          unless the prefix is fix, "## Quality attributes", area, priority, effort,
           assignee, milestone and epic. Labels: ✅ ready + the area.
-  triage  needs title and body; every other field is optional. Label: 🔍 triage.
+  triage  needs title and a body with "## Description"; every other field is
+          optional. Label: 🔍 triage.
   epic    needs title, body and milestone; takes no area, priority, effort or epic.
           Labels: 🗺️ epic + ✅ ready.
-The issue type comes from the title prefix: feat → Feature, fix → Bug, rest → Task.
+Every issue has at most one area label. The issue type comes from the title prefix:
+feat → Feature, fix → Bug, rest → Task.
 
 --batch FILE is a JSON array of objects with the field names above (state, title,
 area, priority, effort, assignee, milestone, epic, blocked_by) plus "body" (markdown)
@@ -60,12 +67,26 @@ stay epics. promote N is update N --state ready.
 
 milestone creates an open milestone and fails if one with that title already exists.
 
+check is read-only: it validates open issues against the state they are in (🗺️ epic →
+epic, else ✅ ready → ready, else 🔍 triage → triage; with neither, an error, and the
+issue is validated as triage). Besides the rules above it checks that the issue type
+matches the prefix and that the state labels don't contradict each other (both 🔍 triage
+and ✅ ready, neither, 🚫 wontfix on an open issue, ❓ question on a ready one).
+With numbers it reads those issues from GitHub. With --input it reads a snapshot from
+audit-backlog.sh gather and makes no GitHub calls.
+Output: "error: #N: message" per error, then "#N ok" per issue without errors (only the
+errors with --input). --json prints [{number, state, errors: [{field, message}]}], with
+state ready|triage|epic|none and field one of title, type, template, state, body, area,
+priority, effort, assignee, milestone, epic, blocked_by.
+Exit 0 when no issue has errors, 1 when one has, 2 on usage or network errors.
+
 --dry-run runs the read-only validation against GitHub and prints the writes it would
 make, without making any.
 EOF
 }
 
-die() { echo "error: $*" >&2; exit 1; }
+DIE_CODE=1 # check exits 2 on usage or network errors
+die() { echo "error: $*" >&2; exit "$DIE_CODE"; }
 
 DRY_RUN=0
 SPEC='{}'
@@ -126,17 +147,43 @@ normalize() {
 
 # ---------------------------------------------------------------- lookups
 
+# The lookups below are filled from GitHub (load_repo_data) or, with OFFLINE=1, entirely
+# from a snapshot (load_snapshot); validate() reads them the same way either way.
 LABELS="" MILESTONES="" CURRENT_MILESTONE=""
+OFFLINE=0
 declare -A COLLAB=() ISSUE=()
 
 load_repo_data() {
   command -v jq >/dev/null || die "jq is required"
   [[ $(gh issue edit --help 2>/dev/null) == *--add-blocked-by* ]] || die "gh 2.94+ is required (gh issue edit --add-blocked-by)"
-  REPO=$(gh repo view --json owner,name --jq '.owner.login + "/" + .name')
+  REPO=$(gh repo view --json owner,name --jq '.owner.login + "/" + .name') || die "cannot read the repository"
   OWNER=${REPO%/*} NAME=${REPO#*/}
-  LABELS=$(gh label list --limit 200 --json name --jq '.[].name')
-  MILESTONES=$(gh api "repos/$REPO/milestones?state=open&per_page=100" --jq 'sort_by(.number) | .[].title')
+  LABELS=$(gh label list --limit 200 --json name --jq '.[].name') || die "cannot read the labels"
+  MILESTONES=$(gh api "repos/$REPO/milestones?state=open&per_page=100" --jq 'sort_by(.number) | .[].title') || die "cannot read the milestones"
   CURRENT_MILESTONE=$(head -1 <<<"$MILESTONES")
+}
+
+# $1 a snapshot from audit-backlog.sh gather. Fills every lookup; no GitHub calls follow.
+load_snapshot() {
+  local f=$1 n v
+  command -v jq >/dev/null || die "jq is required"
+  [[ -f $f ]] || die "snapshot not found: $f"
+  jq -e 'type == "object" and (.issues | type == "array")' "$f" >/dev/null 2>&1 || die "invalid snapshot: $f"
+  OFFLINE=1
+  REPO=$(jq -r '.repo // ""' "$f")
+  OWNER=${REPO%/*} NAME=${REPO#*/}
+  LABELS=$(jq -r '.labels[]' "$f")
+  MILESTONES=$(jq -r '.milestones | map(select(.state == "OPEN")) | sort_by(.number) | .[].title' "$f")
+  CURRENT_MILESTONE=$(head -1 <<<"$MILESTONES")
+  while IFS= read -r n; do [[ -z $n ]] || COLLAB[$n]=1; done < <(jq -r '.collaborators[]' "$f")
+  # Open issues, then the parents and blockers they point to (open or closed).
+  while IFS=$'\t' read -r n v; do
+    [[ -n ${ISSUE[$n]+x} ]] || ISSUE[$n]=$v
+  done < <(jq -r '
+    def info: {state: (.state | ascii_downcase), pr: false, labels: [(.labels.nodes // [])[].name]};
+    (.issues[] | [.number, (info | tojson)]),
+    (.issues[] | (.parent // empty), (.blockedBy.nodes // [])[] | [.number, (info | tojson)])
+    | @tsv' "$f")
 }
 
 get() { jq -r --arg k "$1" '.[$k] // "" | tostring' <<<"$2"; }
@@ -157,7 +204,8 @@ area_label() {
 is_collaborator() {
   local u=$1
   if [[ -z ${COLLAB[$u]+x} ]]; then
-    if gh api "repos/$REPO/collaborators/$u" --silent 2>/dev/null; then COLLAB[$u]=1; else COLLAB[$u]=0; fi
+    if ((OFFLINE)); then COLLAB[$u]=0
+    elif gh api "repos/$REPO/collaborators/$u" --silent 2>/dev/null; then COLLAB[$u]=1; else COLLAB[$u]=0; fi
   fi
   [[ ${COLLAB[$u]} == 1 ]]
 }
@@ -166,7 +214,8 @@ is_collaborator() {
 issue_info() {
   local n=$1
   if [[ -z ${ISSUE[$n]+x} ]]; then
-    ISSUE[$n]=$(gh api "repos/$REPO/issues/$n" --jq '{state, pr: (.pull_request != null), labels: [.labels[].name]}' 2>/dev/null) || ISSUE[$n]=""
+    if ((OFFLINE)); then ISSUE[$n]=""
+    else ISSUE[$n]=$(gh api "repos/$REPO/issues/$n" --jq '{state, pr: (.pull_request != null), labels: [.labels[].name]}' 2>/dev/null) || ISSUE[$n]=""; fi
   fi
   [[ -n ${ISSUE[$n]} ]]
 }
@@ -197,25 +246,81 @@ fetch_issue() {
   gh api graphql -f query="$Q_ISSUE" -f owner="$OWNER" -f name="$NAME" -F n="$1" --jq '.data.repository.issue'
 }
 
+# jq: an issue as fetched (Q_ISSUE or the snapshot) → the spec validate() reads.
+JQ_SPEC='def issue_spec:
+  ([.issueFieldValues.nodes[] | select(.field) | {(.field.name): .name}] | add // {}) as $fv
+  | [.labels.nodes[].name | select(startswith("area: "))] as $areas
+  | {
+      title, body: (.body // ""), area: ($areas[0] // ""), area_labels: $areas,
+      priority: ($fv.Priority // ""), effort: ($fv.Effort // ""),
+      assignee: (.assignees.nodes[0].login // ""),
+      milestone: (.milestone.title // ""),
+      epic: ((.parent.number // "") | tostring),
+      blocked_by: [.blockedBy.nodes[].number | tostring]
+    };'
+
 # ---------------------------------------------------------------- validation
 
-ERRORS=()
-err() { ERRORS+=("$1"); }
+# ERRORS holds the text lines; ERR_FIELDS / ERR_MSGS one entry per field, for check --json.
+ERRORS=() ERR_FIELDS=() ERR_MSGS=()
+# $1 field, $2 message. Inside validate() the text line starts with "$who: ".
+err() { ERRORS+=("${who:+$who: }$2"); ERR_FIELDS+=("$1"); ERR_MSGS+=("$2"); }
+# One text line "$1 f1, f2", one entry per field "$1 f". $1 message start, rest fields.
+err_fields() {
+  local m=$1 f
+  shift
+  ERRORS+=("${who:+$who: }$m $(IFS=,; echo "$*" | sed 's/,/, /g')")
+  for f; do ERR_FIELDS+=("$f"); ERR_MSGS+=("$m $f"); done
+}
 BATCH_STATES=()
 
+has_heading() { grep -qE "^##[[:space:]]+$1[[:space:]]*\$" <<<"$2"; }
+
 # $1 normalised spec, $2 label for messages, $3 batch position (1-based; 0 outside a batch).
+# Only check puts issue_type (the current issue type) and labels (every current label)
+# in the spec; area_labels holds the current area labels when they are kept.
 validate() {
   local s=$1 who=$2 pos=$3
   local title state body area priority effort assignee milestone epic b
-  title=$(get title "$s") state=$(get state "$s") body=$(get body "$s")
-  area=$(get area "$s") priority=$(get priority "$s") effort=$(get effort "$s")
-  assignee=$(get assignee "$s") milestone=$(get milestone "$s") epic=$(get epic "$s")
+  local has_type itype n_areas has_labels labels blockers
+  IFS=$'\x1f' read -r title state area priority effort assignee milestone epic has_type itype n_areas has_labels < <(
+    jq -r '[.title, .state, .area, .priority, .effort, .assignee, .milestone, .epic,
+             has("issue_type"), .issue_type, ((.area_labels // []) | length), has("labels")]
+           | map(if . == null then "" else tostring end) | join("\u001f")' <<<"$s")
+  body=$(get body "$s")
+  labels=$(jq -r '(.labels // [])[]' <<<"$s")
+  blockers=$(jq -r '(.blocked_by // [])[]' <<<"$s")
 
-  [[ $state == ready || $state == triage || $state == epic ]] || err "$who: state must be ready, triage or epic"
+  [[ $state == ready || $state == triage || $state == epic ]] || err state "state must be ready, triage or epic"
   if [[ ! $title =~ ^($PREFIXES):\ [^[:space:]] || $title == *. ]]; then
-    err "$who: title must be '<type>: <description>' without a trailing period, type one of ${PREFIXES//|/, }"
+    err title "title must be '<type>: <description>' without a trailing period, type one of ${PREFIXES//|/, }"
   fi
-  [[ -n ${body//[[:space:]]/} ]] || err "$who: body is empty"
+  if [[ $has_type == true && $itype != "$(type_for "$title")" ]]; then
+    err type "issue type is ${itype:-not set}; the prefix '${title%%:*}' needs $(type_for "$title")"
+  fi
+  [[ -n ${body//[[:space:]]/} ]] || err body "body is empty"
+
+  if [[ $state != epic ]]; then
+    has_heading Description "$body" || err template "the body needs a '## Description' section"
+  fi
+  if [[ $state == ready ]]; then
+    has_heading "Acceptance criteria" "$body" || err template "a ready issue needs a '## Acceptance criteria' section in the body"
+    [[ ${title%%:*} == fix ]] || has_heading "Quality attributes" "$body" ||
+      err template "a ready issue needs a '## Quality attributes' section in the body"
+  fi
+  ((n_areas <= 1)) || err area "has several area labels; pass --area"
+
+  if [[ $has_labels == true ]]; then
+    local tri=0 rdy=0
+    grep -qxF -- "$TRIAGE" <<<"$labels" && tri=1
+    grep -qxF -- "$READY" <<<"$labels" && rdy=1
+    if [[ $state != epic ]]; then
+      ((!tri || !rdy)) || err state "has both $TRIAGE and $READY"
+      ((tri || rdy)) || err state "has neither $TRIAGE nor $READY"
+    fi
+    ! grep -qxF -- "$WONTFIX" <<<"$labels" || err state "is open but labelled $WONTFIX; close it"
+    [[ $state != ready ]] || ! grep -qxF -- "$QUESTION" <<<"$labels" || err state "is ready but labelled $QUESTION"
+  fi
 
   local required=() forbidden=()
   case $state in
@@ -226,7 +331,6 @@ validate() {
       [[ -n $assignee ]] || required+=(assignee)
       [[ -n $milestone ]] || required+=(milestone)
       [[ -n $epic ]] || required+=(epic)
-      grep -qE '^##[[:space:]]+Acceptance criteria[[:space:]]*$' <<<"$body" || err "$who: a ready issue needs a '## Acceptance criteria' section in the body"
       ;;
     epic)
       [[ -n $milestone ]] || required+=(milestone)
@@ -234,31 +338,31 @@ validate() {
       [[ -z $priority ]] || forbidden+=(priority)
       [[ -z $effort ]] || forbidden+=(effort)
       [[ -z $epic ]] || forbidden+=(epic)
-      ((${#forbidden[@]} == 0)) || err "$who: an epic takes no $(IFS=,; echo "${forbidden[*]}" | sed 's/,/, /g')"
+      ((${#forbidden[@]} == 0)) || err_fields "an epic takes no" "${forbidden[@]}"
       ;;
   esac
-  ((${#required[@]} == 0)) || err "$who: $([[ $state == epic ]] && echo "an epic" || echo "a $state issue") needs $(IFS=,; echo "${required[*]}" | sed 's/,/, /g')"
+  ((${#required[@]} == 0)) || err_fields "$([[ $state == epic ]] && echo "an epic" || echo "a $state issue") needs" "${required[@]}"
 
-  [[ -z $area ]] || area_label "$area" >/dev/null || err "$who: no label for area '$area'"
-  [[ -z $priority || " $PRIORITIES " == *" $priority "* ]] || err "$who: priority must be one of $PRIORITIES"
-  [[ -z $effort || " $EFFORTS " == *" $effort "* ]] || err "$who: effort must be one of $EFFORTS"
-  [[ -z $assignee ]] || is_collaborator "$assignee" || err "$who: $assignee is not a collaborator"
-  [[ -z $milestone ]] || grep -qxF -- "$milestone" <<<"$MILESTONES" || err "$who: no open milestone '$milestone'"
+  [[ -z $area ]] || area_label "$area" >/dev/null || err area "no label for area '$area'"
+  [[ -z $priority || " $PRIORITIES " == *" $priority "* ]] || err priority "priority must be one of $PRIORITIES"
+  [[ -z $effort || " $EFFORTS " == *" $effort "* ]] || err effort "effort must be one of $EFFORTS"
+  [[ -z $assignee ]] || is_collaborator "$assignee" || err assignee "$assignee is not a collaborator"
+  [[ -z $milestone ]] || grep -qxF -- "$milestone" <<<"$MILESTONES" || err milestone "no open milestone '$milestone'"
 
   if [[ $epic == @* ]]; then
     local k=${epic#@}
     if ((pos == 0)); then
-      err "$who: epic $epic only works inside a batch"
+      err epic "epic $epic only works inside a batch"
     elif ! [[ $k =~ ^[0-9]+$ ]] || ((k < 1 || k >= pos)); then
-      err "$who: epic $epic must point to an earlier item of the batch"
+      err epic "epic $epic must point to an earlier item of the batch"
     elif [[ ${BATCH_STATES[k - 1]} != epic ]]; then
-      err "$who: epic $epic points to a batch item that is not an epic"
+      err epic "epic $epic points to a batch item that is not an epic"
     fi
   elif [[ -n $epic ]]; then
     if ! [[ $epic =~ ^[0-9]+$ ]] || ! issue_info "$epic"; then
-      err "$who: epic #$epic does not exist"
+      err epic "epic #$epic does not exist"
     elif ! jq -e --arg l "$EPIC" '.state == "open" and (.labels | index($l))' <<<"${ISSUE[$epic]}" >/dev/null; then
-      err "$who: #$epic is not an open issue labelled $EPIC"
+      err epic "#$epic is not an open issue labelled $EPIC"
     fi
   fi
 
@@ -267,14 +371,14 @@ validate() {
     if [[ $b == @* ]]; then
       local k=${b#@}
       if ((pos == 0)); then
-        err "$who: blocked by $b only works inside a batch"
+        err blocked_by "blocked by $b only works inside a batch"
       elif ! [[ $k =~ ^[0-9]+$ ]] || ((k < 1 || k >= pos)); then
-        err "$who: blocked by $b must point to an earlier item of the batch"
+        err blocked_by "blocked by $b must point to an earlier item of the batch"
       fi
     elif ! [[ $b =~ ^[0-9]+$ ]] || ! issue_info "$b" || [[ $(jq -r .pr <<<"${ISSUE[$b]}") == true ]]; then
-      err "$who: blocked by #$b is not an existing issue"
+      err blocked_by "blocked by #$b is not an existing issue"
     fi
-  done < <(jq -r '(.blocked_by // [])[]' <<<"$s")
+  done <<<"$blockers"
 }
 
 fail_validation() {
@@ -530,29 +634,20 @@ cmd_update() { # $1 forced state ("" for none), $2 issue number, rest flags
   fi
 
   # Current values, overlaid by the given flags; an empty flag value removes the field.
-  local areas
+  # --area replaces every current area label, so they only count when it is not given.
+  local areas s
   areas=$(grep '^area: ' <<<"$labels" || true)
-  if [[ $(grep -c . <<<"$areas") -gt 1 ]] && ! jq -e 'has("area")' <<<"$flags" >/dev/null; then
-    err "#$n has several area labels; pass --area"
-  fi
-  local s
-  s=$(jq -n --argjson c "$cur" --argjson f "$flags" --arg area "$(head -1 <<<"$areas")" --arg state "$target" '
-    ([$c.issueFieldValues.nodes[] | select(.field) | {(.field.name): .name}] | add // {}) as $fv
-    | {
-        title: $c.title, body: $c.body, area: $area,
-        priority: ($fv.Priority // ""), effort: ($fv.Effort // ""),
-        assignee: ($c.assignees.nodes[0].login // ""),
-        milestone: ($c.milestone.title // ""),
-        epic: (($c.parent.number // "") | tostring)
-      }
-    + ($f | del(.state, .blocked_by, .remove_blocked_by))
+  s=$(jq -n --argjson c "$cur" --argjson f "$flags" --arg state "$target" "$JQ_SPEC"'
+    ($c | issue_spec) as $b
+    | $b + ($f | del(.state, .blocked_by, .remove_blocked_by))
     | .state = $state
-    | .blocked_by = (([$c.blockedBy.nodes[].number | tostring] + ($f.blocked_by // []) | unique) - ($f.remove_blocked_by // []))
+    | .blocked_by = (($b.blocked_by + ($f.blocked_by // []) | unique) - ($f.remove_blocked_by // []))
+    | if $f | has("area") then del(.area_labels) else . end
   ')
   validate "$s" "#$n" 0
   while read -r b; do
     [[ -z $b ]] || jq -e --arg b "$b" '[.blockedBy.nodes[].number | tostring] | index($b)' <<<"$cur" >/dev/null ||
-      err "#$n is not blocked by #$b"
+      err blocked_by "#$n is not blocked by #$b"
   done < <(jq -r '(.remove_blocked_by // [])[]' <<<"$flags")
   ((${#ERRORS[@]} == 0)) || fail_validation changed
   s=$(expected "$s" '[]')
@@ -639,6 +734,75 @@ cmd_update() { # $1 forced state ("" for none), $2 issue number, rest flags
   return 0
 }
 
+# ---------------------------------------------------------------- check
+
+# jq: an issue → its spec plus number, check_state (ready|triage|epic|none), issue_type
+# and labels. With no state label it is validated as triage.
+JQ_CHECK_SPEC="$JQ_SPEC"'
+  def check_spec($ready; $triage; $epic):
+    [.labels.nodes[].name] as $l
+    | (if $l | index($epic) then "epic" elif $l | index($ready) then "ready"
+       elif $l | index($triage) then "triage" else "none" end) as $st
+    | issue_spec + {number, check_state: $st, state: (if $st == "none" then "triage" else $st end),
+                    issue_type: .issueType.name, labels: $l};'
+
+cmd_check() {
+  DIE_CODE=2
+  local input="" json=0 nums=()
+  while (($#)); do
+    case $1 in
+      --input) (($# >= 2)) || die "--input needs a value"; input=$2; shift 2 ;;
+      --json) json=1; shift ;;
+      -h | --help) usage; exit 0 ;;
+      *) [[ $1 =~ ^#?[0-9]+$ ]] || die "usage: create-issue.sh check N [N…] [--json] | check --input SNAPSHOT [--json]"
+         nums+=("${1#\#}"); shift ;;
+    esac
+  done
+  if [[ -n $input && ${#nums[@]} -gt 0 ]] || [[ -z $input && ${#nums[@]} -eq 0 ]]; then
+    die "check takes issue numbers or --input, not both or neither"
+  fi
+
+  local specs n issue
+  if [[ -n $input ]]; then
+    load_snapshot "$input"
+    specs=$(jq -c --arg r "$READY" --arg t "$TRIAGE" --arg e "$EPIC" "$JQ_CHECK_SPEC"'
+      .issues[] | select(.state == "OPEN") | check_spec($r; $t; $e)' "$input")
+  else
+    load_repo_data
+    specs=""
+    for n in "${nums[@]}"; do
+      issue=$(fetch_issue "$n" 2>/dev/null) && [[ $issue != null ]] || die "issue #$n not found"
+      [[ $(jq -r .state <<<"$issue") == OPEN ]] || die "#$n is closed"
+      specs+=$(jq -c --arg r "$READY" --arg t "$TRIAGE" --arg e "$EPIC" "$JQ_CHECK_SPEC"'check_spec($r; $t; $e)' <<<"$issue")$'\n'
+    done
+  fi
+
+  local line st results=() oks=() failed=0 i pairs
+  while IFS= read -r line; do
+    [[ -n $line ]] || continue
+    n=$(jq -r .number <<<"$line") st=$(jq -r .check_state <<<"$line")
+    ERRORS=() ERR_FIELDS=() ERR_MSGS=()
+    validate "$line" "#$n" 0
+    ((${#ERRORS[@]} == 0)) || failed=1
+    if ((json)); then
+      pairs=()
+      for ((i = 0; i < ${#ERR_FIELDS[@]}; i++)); do pairs+=("${ERR_FIELDS[i]}" "${ERR_MSGS[i]}"); done
+      results+=("$(jq -cn --argjson n "$n" --arg st "$st" '$ARGS.positional as $p
+        | {number: $n, state: $st, errors: [range(0; $p | length; 2) as $i | {field: $p[$i], message: $p[$i + 1]}]}' --args "${pairs[@]}")")
+    else
+      for ((i = 0; i < ${#ERR_MSGS[@]}; i++)); do echo "error: #$n: ${ERR_MSGS[i]}"; done
+      ((${#ERRORS[@]})) || oks+=("#$n ok")
+    fi
+  done <<<"$specs"
+
+  if ((json)); then
+    printf '%s\n' "${results[@]}" | jq -s .
+  elif [[ -z $input ]]; then
+    ((${#oks[@]} == 0)) || printf '%s\n' "${oks[@]}"
+  fi
+  return "$failed"
+}
+
 # ---------------------------------------------------------------- milestone
 
 find_milestone() { # $1 title; prints the milestone (open or closed) as JSON, or nothing
@@ -685,6 +849,7 @@ case ${1:-} in
   update) shift; cmd_update "" "$@" ;;
   promote) shift; cmd_update ready "$@" ;;
   milestone) shift; cmd_milestone "$@" ;;
+  check) shift; cmd_check "$@" ;;
   -h | --help | "") usage ;;
   *) die "unknown command: $1 (see --help)" ;;
 esac
