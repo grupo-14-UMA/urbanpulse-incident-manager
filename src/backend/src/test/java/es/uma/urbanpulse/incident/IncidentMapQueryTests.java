@@ -1,6 +1,7 @@
 package es.uma.urbanpulse.incident;
 
 import static es.uma.urbanpulse.TestAccounts.OPERATOR_EMAIL;
+import static es.uma.urbanpulse.TestAccounts.TECHNICIAN_EMAIL;
 import static es.uma.urbanpulse.TestAccounts.bearer;
 import static es.uma.urbanpulse.TestAccounts.login;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -141,6 +142,30 @@ class IncidentMapQueryTests {
 	}
 
 	@Test
+	void technicianMapOnlyReturnsOpenIncidentsAssignedToThatTechnician() {
+		Integer technicianId = userId(TECHNICIAN_EMAIL);
+		Integer otherTechnicianId = userId("tecnico2@urbanpulse.test");
+		jdbcTemplate.update(
+				"INSERT INTO \"Incident\" (title, location, status_id, assignee_id) "
+						+ "VALUES ('asignada', ST_SetSRID(ST_MakePoint(-4.42, 36.72), 4326), 4, ?), "
+						+ "('asignada a otro', ST_SetSRID(ST_MakePoint(-4.42, 36.72), 4326), 4, ?), "
+						+ "('sin asignar', ST_SetSRID(ST_MakePoint(-4.42, 36.72), 4326), 1, NULL)",
+				technicianId, otherTechnicianId);
+
+		IncidentMapResponse response = client.get()
+				.uri(MAP_BOUNDS)
+				.header("Authorization", bearer(login(client, TECHNICIAN_EMAIL)))
+				.exchange()
+				.expectStatus()
+				.isOk()
+				.expectBody(IncidentMapResponse.class)
+				.returnResult()
+				.getResponseBody();
+
+		assertThat(response.incidents()).extracting(IncidentResponse::title).containsExactly("asignada");
+	}
+
+	@Test
 	void explainUsesTheGiSTIndexForASelectiveMapArea() {
 		insertSpatialGrid(20_000);
 		jdbcTemplate.execute("ANALYZE \"Incident\"");
@@ -177,6 +202,10 @@ class IncidentMapQueryTests {
 				"INSERT INTO \"Incident\" (title, location, status_id) "
 						+ "VALUES (?, ST_SetSRID(ST_MakePoint(?, ?), 4326), ?)",
 				title, longitude, latitude, statusId);
+	}
+
+	private Integer userId(String email) {
+		return jdbcTemplate.queryForObject("SELECT id FROM \"User\" WHERE email = ?", Integer.class, email);
 	}
 
 	private void insertReportedIncidents(int count) {

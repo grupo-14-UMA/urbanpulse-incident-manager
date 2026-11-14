@@ -102,7 +102,7 @@ La app consume el backend para cargar las incidencias propias y categorías, con
 
 Al abrirla, la aplicación muestra el inicio de sesión. Desde «Crear cuenta» se registra un ciudadano y se entra directamente al mapa. También se pueden usar las cuentas de desarrollo indicadas arriba: un técnico ve «Mis trabajos» (aún sin asignaciones) y un operador recibe el aviso de que debe usar el panel de gestión desde un ordenador. El botón «Cerrar sesión» borra la sesión del teléfono.
 
-El token y los datos básicos del usuario se guardan con el almacenamiento seguro del dispositivo. Cada reapertura intenta renovarlo con `POST /api/auth/refresh`; si ya no es válido, se borra y se muestra «Tu sesión ha caducado. Vuelve a iniciar sesión.». La aplicación nunca escribe tokens, contraseñas ni datos personales en la consola. Para ciudadanos, el backend limita el mapa, el detalle y la descarga de fotos a las incidencias que hayan registrado; operadores y técnicos pueden consultar todas.
+El token y los datos básicos del usuario se guardan con el almacenamiento seguro del dispositivo. Cada reapertura intenta renovarlo con `POST /api/auth/refresh`; si ya no es válido, se borra y se muestra «Tu sesión ha caducado. Vuelve a iniciar sesión.». La aplicación nunca escribe tokens, contraseñas ni datos personales en la consola. Para ciudadanos, el backend limita el mapa, el detalle y la descarga de fotos a las incidencias que hayan registrado. El mapa del técnico muestra únicamente las incidencias abiertas que tiene asignadas; el detalle y la descarga de fotos siguen las reglas de acceso correspondientes.
 
 En redes que aíslan a los dispositivos entre sí, como eduroam, el móvil no llega al portátil y Expo Go muestra «Something went wrong». En ese caso arranca con túnel (la primera vez pide instalar `@expo/ngrok`) o conecta el portátil al punto de acceso del móvil:
 
@@ -141,7 +141,7 @@ npm run dev
 
 En Windows PowerShell, usa `Copy-Item .env.example .env` en lugar de `cp`. Vite muestra la dirección local al arrancar (por defecto `http://localhost:5173`). El panel pide iniciar sesión antes de mostrar sus pantallas. Usa la cuenta de Operador de desarrollo de la tabla anterior (`operador@urbanpulse.test` / `urbanpulse-dev`). La página inicial muestra el mapa de OpenStreetMap centrado en Málaga, con marcadores agrupados y datos cargados desde la API para el área visible. La consulta se repite al terminar un movimiento o cambio de zoom; si la API limita la respuesta a 500, el mapa indica que se acerque.
 
-La ruta «Incidencias» consulta el listado paginado del backend y solicita seis filas por página. Los filtros de estado, categoría (incluidas las incidencias sin categoría), prioridad y fechas, la ordenación por fecha o prioridad y el recuento total se calculan en el servidor; también aparecen incidencias rechazadas y resueltas. El mapa permite filtrar por categoría y conserva la consulta acotada al área visible. El detalle muestra los datos del backend y la ubicación en un mapa.
+La ruta «Incidencias» consulta el listado paginado del backend y solicita seis filas por página. Los filtros de estado, categoría (incluidas las incidencias sin categoría), prioridad y fechas, la ordenación por fecha o prioridad y el recuento total se calculan en el servidor; también aparecen incidencias rechazadas y resueltas. El mapa permite filtrar por categoría y conserva la consulta acotada al área visible. El detalle muestra los datos del backend, la ubicación, hasta tres fotos adjuntas y los cinco cambios de estado más recientes. Según el estado, el operador puede validar o rechazar incidencias registradas, asignar incidencias validadas a un técnico y cambiar la prioridad de incidencias en gestión. El motivo del rechazo es obligatorio; ante un HTTP 409, el panel muestra el mensaje de la API cuando está disponible y recomienda recargar la incidencia.
 
 En Docker Compose, el navegador llama a `/api` en el mismo origen y Nginx reenvía esas solicitudes al backend. Con Vite, `VITE_API_URL` en `src/management-panel/.env` configura la URL base del backend y apunta por defecto a `http://localhost:8080`. El backend permite peticiones del origen indicado por `MANAGEMENT_PANEL_ORIGIN` solo en `/api/**`: para Vite, establece `MANAGEMENT_PANEL_ORIGIN=http://localhost:5173` en el `.env` de la raíz y recrea el backend con `docker compose up -d --force-recreate backend`; para Docker Compose, el origen predeterminado es `http://localhost:8081`.
 
@@ -179,10 +179,10 @@ cd src/backend
 
 Las pruebas arrancan la aplicación contra un contenedor `postgis/postgis` con Testcontainers, así que solo necesitan Docker en marcha, no una base de datos local. `src/backend/src/test/resources/config/application.yaml` les da su propio `JWT_SECRET` y activa las cuentas de desarrollo.
 
-La verificación de índices de la lista con un millón de incidencias sintéticas es optativa porque inserta y analiza un conjunto grande. Desde `src/backend`, ejecútala con:
+La verificación de rendimiento del listado inserta un millón de incidencias sintéticas, captura la consulta Hibernate que ejecuta `GET /api/incidents` y compara `EXPLAIN (ANALYZE, BUFFERS)` y su tiempo con los índices desactivados y activos. También comprueba los índices de filtros y alcance. Desde `src/backend`, ejecútala con:
 
 ```bash
-./mvnw -Durbanpulse.performance-tests=true -Dtest=IncidentListQueryPlanTests test
+./mvnw -Dtest=IncidentListQueryPlanTests test
 ```
 
-Comprueba mediante `EXPLAIN (ANALYZE, BUFFERS)` que los planes de fecha, estado, categoría, ciudadano, técnico y prioridad usan los índices correspondientes. La prueba normal del backend cubre permisos por rol, filtros, límites de página, orden y filtro de categoría del mapa.
+La prueba compara el plan y la duración del SELECT generado por el endpoint antes y después de crear los índices; además, verifica con `EXPLAIN (ANALYZE, BUFFERS)` los accesos por estado, categoría, ciudadano, técnico y prioridad. La prueba normal del backend cubre permisos por rol, filtros, límites de página, orden y filtro de categoría del mapa. La decisión está documentada en el [ADR-0020](adr/0020-paginacion-filtros-e-indices-de-incidencias.md).

@@ -6,6 +6,7 @@ import java.nio.file.NoSuchFileException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -109,16 +110,27 @@ public class IncidentService {
 	public IncidentMapResponse findWithinBounds(IncidentQueryParameters query, TokenSubject caller) {
 		IncidentBounds bounds = query.toBounds();
 		long queryStartedAt = System.nanoTime();
-		List<IncidentMapProjection> candidates = caller.role() == Role.CITIZEN
-				? incidentRepository.findWithinBoundsForReporter(
+		List<IncidentMapProjection> candidates;
+		if (caller.role() == Role.CITIZEN) {
+			candidates = incidentRepository.findWithinBoundsForReporter(
 						bounds.west(), bounds.south(), bounds.east(), bounds.north(),
 						IncidentStatus.activeIds(), caller.userId(), statusId(query), query.getCategoryId(),
 						query.isUncategorized(), priorityName(query), query.getCreatedAfter(), query.getCreatedBefore(),
-						MAP_RESULT_LIMIT + 1)
-				: incidentRepository.findWithinBounds(
+						MAP_RESULT_LIMIT + 1);
+		}
+		else if (caller.role() == Role.TECHNICIAN) {
+			candidates = incidentRepository.findWithinBoundsForAssignee(
+						bounds.west(), bounds.south(), bounds.east(), bounds.north(),
+						IncidentStatus.activeIds(), caller.userId(), statusId(query), query.getCategoryId(),
+						query.isUncategorized(), priorityName(query), query.getCreatedAfter(), query.getCreatedBefore(),
+						MAP_RESULT_LIMIT + 1);
+		}
+		else {
+			candidates = incidentRepository.findWithinBounds(
 						bounds.west(), bounds.south(), bounds.east(), bounds.north(),
 						IncidentStatus.activeIds(), statusId(query), query.getCategoryId(), query.isUncategorized(),
 						priorityName(query), query.getCreatedAfter(), query.getCreatedBefore(), MAP_RESULT_LIMIT + 1);
+		}
 		long queryDurationMs = (System.nanoTime() - queryStartedAt) / 1_000_000;
 		boolean truncated = candidates.size() > MAP_RESULT_LIMIT;
 		List<IncidentResponse> incidents = candidates.stream()
@@ -323,7 +335,8 @@ public class IncidentService {
 		if (!allowed) {
 			throw new IncidentAccessDeniedException();
 		}
-		return statusChangeRepository.findByIncidentIdOrderByChangedAtAscIdAsc(id).stream()
+		return statusChangeRepository.findTop5ByIncidentIdOrderByChangedAtDescIdDesc(id).stream()
+				.sorted(Comparator.comparing(StatusChange::getChangedAt).thenComparing(StatusChange::getId))
 				.map(change -> new StatusChangeResponse(
 						change.getPreviousStatus(),
 						change.getNewStatus(),
