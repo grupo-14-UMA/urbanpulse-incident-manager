@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - "services/api/**"
+      - "docs/site.v2/**"
+      - "compose.yaml"
 jobs:
   test:
     runs-on: ubuntu-latest

@@ -25,7 +25,7 @@ Usage: `/find-gaps [<milestone title>] [--report-only]`. With `--report-only` (h
 
 ### 1. Read the sources
 
-Read on every run the sources of what should exist (above) and the defining doc of every criterion (step 4). A criterion whose defining docs are all missing shows ❔ in its column and adds a line under `## Avisos`; you never make up its rule.
+Read on every run the sources of what should exist (above) and the defining doc of every criterion (step 4). A criterion whose defining docs are all missing shows ❔ in its column and adds a line under `## Avisos`; its rule comes only from that doc. Done when you can state, for every criterion, its rule as its defining doc writes it, and what the target delivery promises.
 
 ### 2. Gather and analyze
 
@@ -35,7 +35,7 @@ $G gather > <scratchpad>/gaps.json
 $G analyze <scratchpad>/gaps.json [--target "<milestone title>"]
 ```
 
-Pass `--target` only when the user named a milestone, exactly as given. On exit 2, show the error in Spanish and stop. `analyze` prints `{target, warnings, components, cells}`: `target` is `null` when no milestone is open, and then the report says `objetivo: ninguno`.
+Pass `--target` only when the user named a milestone, exactly as given. On exit 2, show the error in Spanish and stop. `analyze` prints `{target, warnings, components, cells}`: `target` is `null` when no milestone is open, and then the report says `objetivo: ninguno`. Done when `analyze` exits 0.
 
 ### 3. Settle the components
 
@@ -96,7 +96,7 @@ One proposed issue per gap: the 🔴 cells and the requirements without work, pl
 - **Pendiente para otra entrega**: the requirements, the rules or the roadmap ask for it, and the target epic does not. Optional requirements go here unless the epic asks for them. A gap the epic does not clearly cover goes here with "dudoso: el epic no lo menciona": a gap reaches Bloquea only through what the epic says.
 - **Mejora futura**: justified only by a measurement against a baseline (observability, load tests, caches, separating services), as `docs/requirements.md` → Pautas de diseño says.
 
-With no target there is no Bloquea class. Give each gap a Conventional Commits title in English and 2-4 lines of context in Spanish, and number the gaps across all classes.
+With no target there is no Bloquea class. Give each gap a Conventional Commits title in English and 2-4 lines of context in Spanish, and number the gaps across all classes. Done when every gap has a class, a number, a title and its context.
 
 ### 8. Report
 

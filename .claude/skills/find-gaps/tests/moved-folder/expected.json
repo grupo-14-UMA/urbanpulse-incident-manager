@@ -1,6 +1,32 @@
-{"target": "Entrega 1",
- "components": [{"name": "panel", "folders": ["apps/ops/panel"], "services": ["panel"], "helpers": []}],
+{
+ "target": "Entrega 1",
+ "components": [
+  {
+   "name": "panel",
+   "folders": [
+    "apps/ops/panel"
+   ],
+   "services": [
+    "panel"
+   ],
+   "helpers": []
+  }
+ ],
  "cells": [
-  {"component": "panel", "criterion": "ci", "value": "ok"},
-  {"component": "panel", "criterion": "local", "value": "ok"},
-  {"component": "panel", "criterion": "tests", "value": "gap"}]}
+  {
+   "component": "panel",
+   "criterion": "ci",
+   "value": "ok"
+  },
+  {
+   "component": "panel",
+   "criterion": "local",
+   "value": "ok"
+  },
+  {
+   "component": "panel",
+   "criterion": "tests",
+   "value": "ok"
+  }
+ ]
+}

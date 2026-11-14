@@ -17,8 +17,9 @@ gather   prints one JSON object {repo, milestones, issues, evidence, warnings}:
            issues      every issue, open and closed, with body, state, stateReason,
                        labels, milestone, issue type, parent and sub-issues;
            evidence    what the repo under DIR (default: the git top level) holds:
-             orchestration  each compose file and its services (build folder, image,
-                            depends_on with condition, restart);
+             orchestration  each compose file and its services (build folder and its
+                            source file count, image, depends_on with condition,
+                            restart);
              manifests      each folder with a manifest (package.json, pom.xml, …),
                             skipping dependency, build and hidden folders, with its
                             test, lint and build commands and its test files;
@@ -219,19 +220,22 @@ for path in compose_files:
             deps = [{"service": k, "condition": "service_started"} for k in dep]
         restart = s.get("restart")
         services.append({"name": name, "build": build, "image": s.get("image"),
+                         "code_files": None if build is None else sum(inside(f, build) for f in code_files),
                          "depends_on": deps, "restart": None if restart is None else str(restart)})
     orchestration.append({"file": rel(path), "services": services})
 
 # GitHub Actions workflows.
 CD = re.compile(r"(?:^|&&|;|\|\|)\s*cd\s+([^\s;&|]+)", re.M)
 PREFIX = re.compile(r"--prefix[ =]([^\s;&|]+)")
-def static_prefix(glob):
-    out = []
-    for part in glob.lstrip("!").split("/"):
+def glob_folder(glob):
+    """The folder a path filter or dependency path names: its part before any wildcard,
+    or the parent folder when the whole pattern is a file path."""
+    out, parts = [], glob.split("/")
+    for part in parts:
         if re.search(r"[*?\[{]", part):
-            break
+            return "/".join(out) or "."
         out.append(part)
-    return "/".join(out)
+    return os.path.dirname(glob) or "."
 
 def folders_of(run, wd):
     base = wd or "."
@@ -253,11 +257,9 @@ for f in sorted(os.listdir(wf_dir)) if os.path.isdir(wf_dir) else []:
     folders = set()
     for ev in on.values():
         if isinstance(ev, dict):
-            for key in ("paths",):
-                for p in ev.get(key) or []:
-                    pre = static_prefix(str(p))
-                    if pre and not str(p).startswith("!"):
-                        folders.add(norm(os.path.dirname(pre) if "." in os.path.basename(pre) else pre))
+            for p in ev.get("paths") or []:
+                if not str(p).startswith("!"):
+                    folders.add(norm(glob_folder(str(p))))
     wf_wd = ((data.get("defaults") or {}).get("run") or {}).get("working-directory")
     steps = []
     for job_id, job in (data.get("jobs") or {}).items():
@@ -267,7 +269,7 @@ for f in sorted(os.listdir(wf_dir)) if os.path.isdir(wf_dir) else []:
             st = st or {}
             for dep in str((st.get("with") or {}).get("cache-dependency-path") or "").split():
                 if "${{" not in dep:
-                    folders.add(norm(os.path.dirname(static_prefix(dep)) or "."))
+                    folders.add(norm(glob_folder(dep)))
             if "run" not in st:
                 continue
             wd = st.get("working-directory") or job_wd
@@ -355,7 +357,9 @@ cmd_gather() {
 PY_ANALYZE=$(cat <<'PY'
 import json, re, sys
 
-snap, target = json.load(open(sys.argv[1])), json.loads(sys.argv[2])
+with open(sys.argv[1], encoding="utf-8") as f:
+    snap = json.load(f)
+target = json.loads(sys.argv[2])
 ev = snap.get("evidence") or {}
 docs = set(ev.get("docs") or [])
 warnings = list(snap.get("warnings") or [])
@@ -480,12 +484,17 @@ def cell(c, crit, value, evidence):
     return {"component": c["name"], "criterion": crit, "value": value, "evidence": evidence}
 
 def has_code(c):
-    return bool(c["manifests"] or c["folders"])
+    """A manifest, a workflow folder, or a build folder holding source files."""
+    if c["manifests"] or (c["folders"] and not c["services"]):
+        return True
+    return any((by_service[s].get("code_files") or 0) > 0 for s in c["services"] if by_service[s]["build"])
 
 def no_code(c):
-    return f"no code of our own: runs image `{c['image']}`, with no build and no manifest"
+    if c["image"]:
+        return f"no code of our own: runs image `{c['image']}`, with no build and no manifest"
+    return f"no code of our own: {' or '.join(c['folders'])} has no manifest and no source files"
 
-STARTS = re.compile(r"\b(start|serve|dev|up)\b|:run\b")
+STARTS = re.compile(r"(?<![\w-])(start|serve|dev|up)(?![\w-])|:run\b")
 def local(c):
     if c["services"]:
         s = by_service[c["services"][0]]
@@ -527,7 +536,8 @@ def kinds(segment, manifest):
         goals = m.group(1).split()
         if set(goals) & {"compile", "test", "package", "verify", "install", "deploy"}:
             out.add("build")
-        if set(goals) & {"test", "package", "verify", "install", "deploy"} and "-DskipTests" not in goals:
+        skip = any(g.startswith(("-DskipTests", "-Dmaven.test.skip")) for g in goals)
+        if set(goals) & {"test", "package", "verify", "install", "deploy"} and not skip:
             out.add("test")
         if set(goals) & {"verify", "install", "deploy"} and ((manifest or {}).get("commands") or {}).get("lint"):
             out.add("lint")
@@ -545,6 +555,26 @@ def kinds(segment, manifest):
             out.add(k)
     return out
 
+def merged_manifest(c):
+    """The scripts and commands of every manifest of a component, the first one winning."""
+    ms = [m for m in manifests.values() if m["files"][0] in c["manifests"]]
+    if not ms:
+        return None
+    scripts, commands = {}, {}
+    for m in reversed(ms):
+        scripts.update(m.get("scripts") or {})
+        commands.update({k: v for k, v in (m.get("commands") or {}).items() if v})
+    return {"scripts": scripts, "commands": commands}
+
+def test_command(m):
+    """The manifest's test command, or an npm script that runs a test tool."""
+    if m["commands"].get("test"):
+        return m["commands"]["test"]
+    for name, body in (m.get("scripts") or {}).items():
+        if TOOLS["test"].search(body):
+            return f"npm run {name}"
+    return None
+
 def ci(c):
     if not has_code(c):
         return cell(c, "ci", "na", no_code(c))
@@ -552,7 +582,7 @@ def ci(c):
     wfs = [w for w in workflows if w["file"] in c["workflows"]]
     if not wfs:
         return cell(c, "ci", "gap", f"no workflow works on {where}")
-    manifest = next((m for m in manifests.values() if m["files"][0] in c["manifests"]), None)
+    manifest = merged_manifest(c)
     done, notes = {}, []
     for w in wfs:
         if "pull_request" not in w["events"] and "pull_request_target" not in w["events"]:
@@ -588,7 +618,7 @@ def tests(c):
     if not ms:
         return cell(c, "tests", "gap", f"no manifest in {' or '.join(c['folders'])}, so no test command")
     count = sum(m["test_file_count"] for m in ms)
-    cmds = [m["commands"]["test"] for m in ms if m["commands"].get("test")]
+    cmds = [test_command(m) for m in ms if test_command(m)]
     files = [f for m in ms for f in m["test_files"]][:3]
     have = f"{count} test files (e.g. {', '.join(f'`{f}`' for f in files)})" if count else "no test files"
     run = f"test command `{cmds[0]}`" if cmds else f"no test command in `{ms[0]['files'][0]}`"

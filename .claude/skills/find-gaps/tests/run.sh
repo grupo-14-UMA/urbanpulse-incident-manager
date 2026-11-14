@@ -17,6 +17,7 @@ GAPS="$HERE/../find-gaps.sh"
 PROJECT='{target: (.target.title // null),
   components: ([.components[] | {name, folders, services, helpers}] | sort_by(.name)),
   cells: ([.cells[] | {component, criterion, value}] | sort_by(.component, .criterion))}'
+SORT='{target, components: (.components | sort_by(.name)), cells: (.cells | sort_by(.component, .criterion))}'
 FAILED=0
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
@@ -42,7 +43,8 @@ run_analyze() {
     return
   fi
   jq "$PROJECT" "$TMP/out.json" >"$TMP/actual"
-  compare "$name" "$expected" "$TMP/actual"
+  jq "$SORT" "$expected" >"$TMP/expected"
+  compare "$name" "$TMP/expected" "$TMP/actual"
 }
 
 check_evidence() { # $1 case name, $2 evidence file
