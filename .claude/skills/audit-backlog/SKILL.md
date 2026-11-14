@@ -44,7 +44,7 @@ For every open `✅ ready` issue of the snapshot that is not a `🗺️ epic`, r
   - a new operation → logs or metrics.
 - **Quality attributes empty**: the section exists but holds only template comments, with no `None apply: <reason>`.
 
-The `## Proposal` section is optional and non-binding: its presence and content are always fine. `fix:` issues have no quality attributes section, so judge only their acceptance criteria. A missing section is already a check (a) finding.
+The `## Proposal` section is optional and non-binding: its presence and content are always fine. `fix:` issues have no quality attributes section, so judge only their acceptance criteria. When `## Quality attributes` is missing (already a check (a) finding), judge the cases against the rest of the body: report the ones nothing in it covers.
 
 Done when every ready non-epic issue has been read.
 
