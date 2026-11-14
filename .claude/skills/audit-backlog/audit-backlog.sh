@@ -130,7 +130,7 @@ def closure:
        elif $e.field == "state" and ($e.message | test("neither|both")) then fix("judgement"; "--state"; null)
        elif $e.field == "title" then fix("judgement"; "--title"; null)
        else none end) as $fix
-    | finding("a"; $i; $e.field; $e.message; []; $fix)
+    | finding("a"; $i; $e.field; $e.message; (if $fix.flag == "--epic" then [$fix.value | tonumber] else [] end); $fix)
   ] as $a
 
 # (c) broken dependencies
@@ -155,7 +155,7 @@ def closure:
        severity: (if any($members[]; $by[tostring].milestone.number == $target.number and $target != null) then "red" else "yellow" end),
        issue: $n, url: $by[$n | tostring].url, title: $by[$n | tostring].title,
        milestone: $by[$n | tostring].milestone.title, field: "blocked_by",
-       message: "dependency cycle: \($members | map("#\(.)") | join(" → "))", related: $members, fix: none}
+       message: "dependency cycle: \($members | map("#\(.)") | join(", "))", related: $members, fix: none}
   ] as $c_cycles
 
 # (d) orphans and epics
@@ -174,6 +174,7 @@ def closure:
               if $i.parent == null then fix("derivable"; "--epic"; ($es[0] | tostring)) else none end)
   ] as $d_out
 | [ $issues[] | . as $i | select($i.parent != null)
+    | select($i.milestone.state != "CLOSED") # a closed milestone is already an (a) finding
     | select($i.milestone == null or $i.parent.milestone.number != $i.milestone.number)
     | finding("d"; $i; "epic"; "its epic #\($i.parent.number) is in a different milestone"; [$i.parent.number]; none)
   ] as $d_parent
