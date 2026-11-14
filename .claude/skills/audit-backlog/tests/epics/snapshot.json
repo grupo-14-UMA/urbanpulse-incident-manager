@@ -1,0 +1,299 @@
+{
+  "repo": "acme/backlog",
+  "milestones": [
+    {
+      "number": 1,
+      "title": "Entrega 1",
+      "state": "OPEN"
+    },
+    {
+      "number": 2,
+      "title": "Entrega 2",
+      "state": "OPEN"
+    },
+    {
+      "number": 3,
+      "title": "Entrega 3",
+      "state": "OPEN"
+    },
+    {
+      "number": 0,
+      "title": "Entrega 0",
+      "state": "CLOSED"
+    }
+  ],
+  "labels": [
+    "🔍 triage",
+    "✅ ready",
+    "❓ question",
+    "🚫 wontfix",
+    "🗺️ epic",
+    "area: ⚙️ core"
+  ],
+  "collaborators": [
+    "ana"
+  ],
+  "issues": [
+    {
+      "number": 50,
+      "title": "feat: deliver the first version",
+      "body": "The goal of the delivery.",
+      "state": "OPEN",
+      "url": "https://github.com/acme/backlog/issues/50",
+      "labels": {
+        "nodes": [
+          {
+            "name": "🗺️ epic"
+          },
+          {
+            "name": "✅ ready"
+          }
+        ]
+      },
+      "assignees": {
+        "nodes": []
+      },
+      "milestone": {
+        "number": 1,
+        "title": "Entrega 1",
+        "state": "OPEN"
+      },
+      "issueType": {
+        "name": "Feature"
+      },
+      "parent": null,
+      "subIssues": {
+        "totalCount": 2,
+        "nodes": [
+          {
+            "number": 10,
+            "state": "CLOSED"
+          },
+          {
+            "number": 11,
+            "state": "CLOSED"
+          }
+        ]
+      },
+      "blockedBy": {
+        "totalCount": 0,
+        "nodes": []
+      },
+      "issueFieldValues": {
+        "nodes": []
+      }
+    },
+    {
+      "number": 52,
+      "title": "feat: deliver the third version",
+      "body": "The goal of the delivery.",
+      "state": "OPEN",
+      "url": "https://github.com/acme/backlog/issues/52",
+      "labels": {
+        "nodes": [
+          {
+            "name": "🗺️ epic"
+          },
+          {
+            "name": "✅ ready"
+          }
+        ]
+      },
+      "assignees": {
+        "nodes": []
+      },
+      "milestone": {
+        "number": 3,
+        "title": "Entrega 3",
+        "state": "OPEN"
+      },
+      "issueType": {
+        "name": "Feature"
+      },
+      "parent": null,
+      "subIssues": {
+        "totalCount": 1,
+        "nodes": [
+          {
+            "number": 54,
+            "state": "OPEN"
+          }
+        ]
+      },
+      "blockedBy": {
+        "totalCount": 0,
+        "nodes": []
+      },
+      "issueFieldValues": {
+        "nodes": []
+      }
+    },
+    {
+      "number": 53,
+      "title": "feat: harden the third version",
+      "body": "A second goal for the same delivery.",
+      "state": "OPEN",
+      "url": "https://github.com/acme/backlog/issues/53",
+      "labels": {
+        "nodes": [
+          {
+            "name": "🗺️ epic"
+          },
+          {
+            "name": "✅ ready"
+          }
+        ]
+      },
+      "assignees": {
+        "nodes": []
+      },
+      "milestone": {
+        "number": 3,
+        "title": "Entrega 3",
+        "state": "OPEN"
+      },
+      "issueType": {
+        "name": "Feature"
+      },
+      "parent": null,
+      "subIssues": {
+        "totalCount": 0,
+        "nodes": []
+      },
+      "blockedBy": {
+        "totalCount": 0,
+        "nodes": []
+      },
+      "issueFieldValues": {
+        "nodes": []
+      }
+    },
+    {
+      "number": 54,
+      "title": "feat: rate the technician",
+      "body": "## Description\n\nWhat and why.\n\n## Acceptance criteria\n\n- [ ] The citizen rates a closed incident.\n\n## Quality attributes\n\nThe rating is logged.\n",
+      "state": "OPEN",
+      "url": "https://github.com/acme/backlog/issues/54",
+      "labels": {
+        "nodes": [
+          {
+            "name": "✅ ready"
+          },
+          {
+            "name": "area: ⚙️ core"
+          }
+        ]
+      },
+      "assignees": {
+        "nodes": [
+          {
+            "login": "ana"
+          }
+        ]
+      },
+      "milestone": {
+        "number": 2,
+        "title": "Entrega 2",
+        "state": "OPEN"
+      },
+      "issueType": {
+        "name": "Feature"
+      },
+      "parent": {
+        "number": 52,
+        "state": "OPEN",
+        "milestone": {
+          "number": 3
+        }
+      },
+      "subIssues": {
+        "totalCount": 0,
+        "nodes": []
+      },
+      "blockedBy": {
+        "totalCount": 0,
+        "nodes": []
+      },
+      "issueFieldValues": {
+        "nodes": [
+          {
+            "name": "Low",
+            "field": {
+              "name": "Priority"
+            }
+          },
+          {
+            "name": "Simple",
+            "field": {
+              "name": "Effort"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 55,
+      "title": "feat: rate the citizen",
+      "body": "## Description\n\nWhat and why.\n\n## Acceptance criteria\n\n- [ ] The citizen rates a closed incident.\n\n## Quality attributes\n\nThe rating is logged.\n",
+      "state": "OPEN",
+      "url": "https://github.com/acme/backlog/issues/55",
+      "labels": {
+        "nodes": [
+          {
+            "name": "✅ ready"
+          },
+          {
+            "name": "area: ⚙️ core"
+          }
+        ]
+      },
+      "assignees": {
+        "nodes": [
+          {
+            "login": "ana"
+          }
+        ]
+      },
+      "milestone": {
+        "number": 0,
+        "title": "Entrega 0",
+        "state": "CLOSED"
+      },
+      "issueType": {
+        "name": "Feature"
+      },
+      "parent": {
+        "number": 52,
+        "state": "OPEN",
+        "milestone": {
+          "number": 3
+        }
+      },
+      "subIssues": {
+        "totalCount": 0,
+        "nodes": []
+      },
+      "blockedBy": {
+        "totalCount": 0,
+        "nodes": []
+      },
+      "issueFieldValues": {
+        "nodes": [
+          {
+            "name": "Low",
+            "field": {
+              "name": "Priority"
+            }
+          },
+          {
+            "name": "Simple",
+            "field": {
+              "name": "Effort"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "warnings": []
+}

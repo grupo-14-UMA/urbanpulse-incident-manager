@@ -1,0 +1,75 @@
+{
+  "repo": "acme/backlog",
+  "milestones": [
+    {"number": 1, "title": "Entrega 1", "state": "OPEN"},
+    {"number": 2, "title": "Entrega 2", "state": "OPEN"}
+  ],
+  "labels": ["🔍 triage", "✅ ready", "❓ question", "🚫 wontfix", "🗺️ epic", "area: ⚙️ core"],
+  "collaborators": ["ana"],
+  "issues": [
+    {
+      "number": 60, "title": "feat: deliver the first version", "body": "The goal of the delivery.", "state": "OPEN",
+      "url": "https://github.com/acme/backlog/issues/60",
+      "labels": {"nodes": [{"name": "🗺️ epic"}, {"name": "✅ ready"}]},
+      "assignees": {"nodes": []},
+      "milestone": {"number": 1, "title": "Entrega 1", "state": "OPEN"},
+      "issueType": {"name": "Feature"},
+      "parent": null,
+      "subIssues": {"totalCount": 1, "nodes": [{"number": 62, "state": "OPEN"}]},
+      "blockedBy": {"totalCount": 0, "nodes": []},
+      "issueFieldValues": {"nodes": []}
+    },
+    {
+      "number": 61, "title": "feat: deliver the second version", "body": "The goal of the delivery.", "state": "OPEN",
+      "url": "https://github.com/acme/backlog/issues/61",
+      "labels": {"nodes": [{"name": "🗺️ epic"}, {"name": "✅ ready"}]},
+      "assignees": {"nodes": []},
+      "milestone": {"number": 2, "title": "Entrega 2", "state": "OPEN"},
+      "issueType": {"name": "Feature"},
+      "parent": null,
+      "subIssues": {"totalCount": 2, "nodes": [{"number": 63, "state": "OPEN"}, {"number": 64, "state": "OPEN"}]},
+      "blockedBy": {"totalCount": 0, "nodes": []},
+      "issueFieldValues": {"nodes": []}
+    },
+    {
+      "number": 62, "title": "feat: close an incident",
+      "body": "## Description\n\nWhat and why.\n\n## Acceptance criteria\n\n- [ ] The operator closes an incident and the citizen sees it closed.\n\n## Quality attributes\n\nThe status change is logged.\n",
+      "state": "OPEN", "url": "https://github.com/acme/backlog/issues/62",
+      "labels": {"nodes": [{"name": "✅ ready"}, {"name": "area: ⚙️ core"}]},
+      "assignees": {"nodes": [{"login": "ana"}]},
+      "milestone": {"number": 1, "title": "Entrega 1", "state": "OPEN"},
+      "issueType": {"name": "Feature"},
+      "parent": {"number": 60, "state": "OPEN", "milestone": {"number": 1}},
+      "subIssues": {"totalCount": 0, "nodes": []},
+      "blockedBy": {"totalCount": 0, "nodes": []},
+      "issueFieldValues": {"nodes": [{"name": "High", "field": {"name": "Priority"}}]}
+    },
+    {
+      "number": 63, "title": "feat: reopen an incident",
+      "body": "## Description\n\nStill has open questions.\n",
+      "state": "OPEN", "url": "https://github.com/acme/backlog/issues/63",
+      "labels": {"nodes": [{"name": "🔍 triage"}, {"name": "area: ⚙️ core"}]},
+      "assignees": {"nodes": []},
+      "milestone": {"number": 2, "title": "Entrega 2", "state": "OPEN"},
+      "issueType": {"name": "Feature"},
+      "parent": {"number": 61, "state": "OPEN", "milestone": {"number": 2}},
+      "subIssues": {"totalCount": 0, "nodes": []},
+      "blockedBy": {"totalCount": 0, "nodes": []},
+      "issueFieldValues": {"nodes": []}
+    },
+    {
+      "number": 64, "title": "feat: merge duplicated incidents",
+      "body": "## Description\n\nWhat and why.\n\n## Acceptance criteria\n\n- [ ] The operator merges two incidents into one.\n\n## Quality attributes\n\nThe merge is logged.\n",
+      "state": "OPEN", "url": "https://github.com/acme/backlog/issues/64",
+      "labels": {"nodes": [{"name": "✅ ready"}, {"name": "area: ⚙️ core"}]},
+      "assignees": {"nodes": [{"login": "ana"}]},
+      "milestone": {"number": 2, "title": "Entrega 2", "state": "OPEN"},
+      "issueType": {"name": "Feature"},
+      "parent": {"number": 61, "state": "OPEN", "milestone": {"number": 2}},
+      "subIssues": {"totalCount": 0, "nodes": []},
+      "blockedBy": {"totalCount": 0, "nodes": []},
+      "issueFieldValues": {"nodes": [{"name": "Moderate", "field": {"name": "Effort"}}]}
+    }
+  ],
+  "warnings": []
+}

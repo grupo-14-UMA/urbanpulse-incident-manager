@@ -1,0 +1,6 @@
+[
+  {"check": "a", "issue": 10, "severity": "red", "field": "priority"},
+  {"check": "c", "issue": 11, "severity": "red", "field": "blocked_by"},
+  {"check": "d", "issue": 13, "severity": "red", "field": "epic"},
+  {"check": "d", "issue": 13, "severity": "red", "field": "epic"}
+]

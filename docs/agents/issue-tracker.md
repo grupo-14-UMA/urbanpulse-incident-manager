@@ -17,12 +17,17 @@ $S update <n> --milestone ""              # change fields, keep the state; "" re
 $S update <n> --state triage              # validated against the state it ends in
 $S promote <n> --body-file body.md        # update <n> --state ready
 $S milestone --title <title> [--due-on YYYY-MM-DD] [--description …]
+$S check <n> [<n>…] [--json]              # read-only: validate issues against their state
 $S --help                                 # every flag and the batch format
 ```
 
 The script validates every value against `CONTRIBUTING.md` → Crear un issue before the first write, sets the labels, assignee, milestone, issue type, parent epic, *blocked by* and the `Priority` / `Effort` issue fields, and then verifies each one. `--milestone current` is the open milestone with the lowest number. When a write fails it prints which steps were done and which are missing; finish the issue with `update <n>`. `--dry-run` runs only the read-only checks and prints the writes.
 
 Comments, closing and one-off labels go through `gh` directly (see below); checklist fields go through `update`.
+
+## Auditing the backlog
+
+The `audit-backlog` skill (`.claude/skills/audit-backlog/SKILL.md`) reviews the form of every open issue and offers fixes, which it applies only after approval and only through `create-issue.sh update`. Its helper `.claude/skills/audit-backlog/audit-backlog.sh` has `gather` (a snapshot of the open backlog in a few paginated GraphQL queries) and `analyze` (offline findings, reusing `create-issue.sh check --input`). `tests/run.sh` in the same folder runs the analysis against offline fixtures.
 
 ## Conventions
 
