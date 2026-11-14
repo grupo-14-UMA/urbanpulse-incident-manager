@@ -191,7 +191,7 @@ erDiagram
 
 La ubicación se almacena como `geometry(Point, 4326)` en PostGIS, usando WGS 84. La API expone las coordenadas como latitud y longitud y el backend las convierte al formato geoespacial de la base de datos ([ADR-0007](adr/0007-postgis-para-datos-geoespaciales.md)). `Incident.status_id` referencia la tabla `Status`, así que la base de datos rechaza estados desconocidos.
 
-La persistencia cubre las incidencias, su historial de estados (`StatusChange`), sus fotografías (`Attachment`), sus categorías, los usuarios y sus roles. `reporter_id` admite nulos solo porque las incidencias anteriores a la autenticación no tienen ciudadano; el servicio lo rellena siempre. El índice `(reporter_id, created_at)` de `Incident` respalda las consultas por autor, el índice `(incident_id, id)` de `Attachment` la carga ordenada de fotografías y el índice `(role_id, name, id)` de `User` el listado de técnicos. Asignaciones, activos urbanos e integraciones de contexto se incorporarán cuando se implementen sus requisitos.
+La persistencia cubre las incidencias, su historial de estados (`StatusChange`), sus fotografías (`Attachment`), sus categorías, los usuarios y sus roles. `reporter_id` admite nulos solo porque las incidencias anteriores a la autenticación no tienen ciudadano; el servicio lo rellena siempre. El índice `(reporter_id, created_at)` de `Incident` respalda las consultas por autor, el índice parcial `(assignee_id, created_at DESC, id DESC)` respalda la cola paginada de trabajos abiertos del técnico, el índice `(incident_id, id)` de `Attachment` la carga ordenada de fotografías y el índice `(role_id, name, id)` de `User` el listado de técnicos. Asignaciones, activos urbanos e integraciones de contexto se incorporarán cuando se implementen sus requisitos.
 
 ## Atributos de calidad
 
@@ -216,7 +216,7 @@ Cada escenario concreta un atributo en un caso medible (estímulo, entorno, resp
 | ID | Atributo | Estímulo | Entorno | Respuesta | Medida |
 | --- | --- | --- | --- | --- | --- |
 | EC01 | Rendimiento | Un ciudadano abre el mapa de la aplicación móvil. | Un millón de incidencias. | Ve las incidencias de la zona visible, no todas. | Menos de 5 s. |
-| EC02 | Rendimiento y escalabilidad | Un operador busca y filtra incidencias. | Un millón de incidencias. | Recibe resultados paginados y ordenados. | Se fijará con la línea base. |
+| EC02 | Rendimiento y escalabilidad | Un operador busca y filtra incidencias, o un técnico abre sus trabajos. | Un millón de incidencias. | Recibe resultados paginados y ordenados. | La medición reproducible de la cola del técnico compara `EXPLAIN (ANALYZE, BUFFERS)` con el índice parcial y con los escaneos de tabla desactivados; la línea base y el resultado quedan registrados en la PR que introduce la consulta. |
 | EC03 | Escalabilidad | Muchos ciudadanos registran incidencias a la vez. | Carga sostenida. | Todas se guardan sin errores. | La concurrencia y el percentil 95 de latencia se fijarán con la línea base. |
 | EC04 | Disponibilidad | Un ciudadano registra una incidencia. | Una fuente externa no responde. | Se guarda sin el enriquecimiento ([RF26](requirements.md)). | Ninguna incidencia perdida. |
 

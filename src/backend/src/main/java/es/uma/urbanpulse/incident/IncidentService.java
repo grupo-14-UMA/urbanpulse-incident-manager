@@ -393,6 +393,9 @@ public class IncidentService {
 			return;
 		}
 		if (caller.role() == Role.TECHNICIAN) {
+			if (!isUser(incident.getAssignee(), caller)) {
+				throw new AccessDeniedException("Technician is not the assignee of incident " + incident.getId());
+			}
 			return;
 		}
 		throw new AccessDeniedException("Role " + caller.role() + " cannot upload incident photos");

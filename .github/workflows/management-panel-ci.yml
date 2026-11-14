@@ -12,6 +12,7 @@ jobs:
   build:
     name: Build management panel
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Check out repository

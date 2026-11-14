@@ -1,6 +1,7 @@
 package es.uma.urbanpulse.incident;
 
 import static es.uma.urbanpulse.TestAccounts.OPERATOR_EMAIL;
+import static es.uma.urbanpulse.TestAccounts.TECHNICIAN_2_EMAIL;
 import static es.uma.urbanpulse.TestAccounts.TECHNICIAN_EMAIL;
 import static es.uma.urbanpulse.TestAccounts.bearer;
 import static es.uma.urbanpulse.TestAccounts.login;
@@ -306,21 +307,45 @@ class IncidentPhotoApiTests {
 
 	@Test
 	void technicianCanAttachResolutionPhoto() {
-		AuthResponse citizen = newCitizen(this.client);
-		IncidentResponse incident = createIncident(citizen);
-		AuthResponse technician = login(this.client, TECHNICIAN_EMAIL);
+		LifecycleDriver flow = new LifecycleDriver(this.client);
+		int incidentId = flow.inProgress();
 
 		MultiValueMap<String, Object> multipart = new LinkedMultiValueMap<>();
 		multipart.add("photos", filePart("reparacion.jpg", MediaType.IMAGE_JPEG, SAMPLE_JPEG));
 
 		this.client.post()
-				.uri("/api/incidents/{id}/photos", incident.id())
-				.header("Authorization", bearer(technician))
+				.uri("/api/incidents/{id}/photos", incidentId)
+				.header("Authorization", bearer(flow.technician))
 				.contentType(MediaType.MULTIPART_FORM_DATA)
 				.body(multipart)
 				.exchange()
-				.expectStatus()
-				.isCreated();
+				.expectStatus().isCreated()
+				.expectBody()
+				.jsonPath("$[0].contentType").isEqualTo("image/jpeg");
+
+		flow.get(incidentId, flow.technician)
+			.expectStatus().isOk()
+			.expectBody()
+			.jsonPath("$.status").isEqualTo("IN_PROGRESS")
+			.jsonPath("$.photos.length()").isEqualTo(1);
+	}
+
+	@Test
+	void technicianCannotAttachPhotosToAnIncidentAssignedToSomeoneElse() {
+		LifecycleDriver flow = new LifecycleDriver(this.client);
+		int incidentId = flow.inProgress();
+		AuthResponse otherTechnician = login(this.client, TECHNICIAN_2_EMAIL);
+
+		MultiValueMap<String, Object> multipart = new LinkedMultiValueMap<>();
+		multipart.add("photos", filePart("reparacion.jpg", MediaType.IMAGE_JPEG, SAMPLE_JPEG));
+
+		this.client.post()
+				.uri("/api/incidents/{id}/photos", incidentId)
+				.header("Authorization", bearer(otherTechnician))
+				.contentType(MediaType.MULTIPART_FORM_DATA)
+				.body(multipart)
+				.exchange()
+				.expectStatus().isForbidden();
 	}
 
 	@Test
