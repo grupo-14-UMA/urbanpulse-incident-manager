@@ -200,3 +200,7 @@ CREATE INDEX "idx_incident_category_id"
 
 CREATE INDEX "idx_attachment_incident_id_id"
   ON "Attachment" ("incident_id", "id");
+
+CREATE INDEX "idx_incident_active_assignee_created_at"
+  ON "Incident" ("assignee_id", "created_at" DESC, "id" DESC)
+  WHERE "status_id" IN (1, 2, 4, 5);
