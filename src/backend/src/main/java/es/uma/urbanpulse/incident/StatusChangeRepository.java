@@ -7,8 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface StatusChangeRepository extends JpaRepository<StatusChange, Long> {
 
-	/** The history of one incident, oldest first. Served by idx_status_change_incident_id_changed_at. */
+	/** The five most recent history entries, newest first. Served by idx_status_change_incident_id_changed_at. */
 	@EntityGraph(attributePaths = "changedBy")
-	List<StatusChange> findByIncidentIdOrderByChangedAtAscIdAsc(Integer incidentId);
+	List<StatusChange> findTop5ByIncidentIdOrderByChangedAtDescIdDesc(Integer incidentId);
 
 }
