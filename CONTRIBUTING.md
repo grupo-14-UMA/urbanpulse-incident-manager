@@ -95,7 +95,7 @@ Los issues, los epic y los milestones se crean con la skill [`create-issue`](.cl
 
 En la vista **Pendiente** del [tablero](#tablero-del-proyecto), las ideas aparecen en el grupo "No Milestone". Un issue de triage pasa a ready con la skill `create-issue`, tras una ronda corta de preguntas que resuelve lo que le falta.
 
-El **milestone actual** es el milestone abierto con el número más bajo: puede haber varios abiertos a la vez, porque la siguiente entrega se planifica mientras la actual sigue en marcha, y los milestones no llevan fecha obligatoria.
+El **milestone actual** es el milestone abierto con el número más bajo: puede haber varios abiertos a la vez, porque la siguiente entrega se planifica mientras la actual sigue en marcha, y los milestones no llevan fecha obligatoria. Cada milestone abierto tiene **un solo epic abierto**, que agrupa como sub-issues todos los issues de la entrega.
 
 ### Definición de listo
 
@@ -103,7 +103,7 @@ Un issue dice *qué* hay que hacer y *cómo se comprueba*. No obliga a una forma
 
 - **Qué y por qué**: el problema o el objetivo en 2-4 líneas.
 - **Criterios de aceptación observables**: lo que se puede ver o medir desde fuera ("el operador filtra por estado y recibe resultados paginados"), no "crear la función X en el fichero Y".
-- **Atributos de calidad** que apliquen (consulta acotada, índice, logs, métricas), como pide `AGENTS.md` → Quality attributes.
+- **Atributos de calidad** que apliquen (consulta acotada, índice, logs, métricas), como pide `AGENTS.md` → Quality attributes. Si no aplica ninguno, la sección lo dice con `None apply: <motivo>`.
 - **Fuera de alcance**, cuando ayude.
 - **Propuesta**, opcional: una primera idea de cómo podría hacerse. No es vinculante: quien lo implementa puede descartarla.
 - **Restricciones técnicas**, solo si ya están decididas (un ADR, una convención existente). El resto de decisiones de diseño son de quien lo implementa, que tiene que poder adaptarse cuando surjan problemas.
@@ -111,16 +111,20 @@ Un issue dice *qué* hay que hacer y *cómo se comprueba*. No obliga a una forma
 ### Lista de un issue ready
 
 - [ ] **Título** con el prefijo de [Conventional Commits](#convención-de-commits) (`feat: …`, `fix: …`, `docs: …`).
-- [ ] **Plantilla** de `.github/ISSUE_TEMPLATE/`: `feature_request.md` para `feat:`, `bug_report.md` para `fix:` y `task.md` para el resto, con la sección de criterios de aceptación.
+- [ ] **Plantilla** de `.github/ISSUE_TEMPLATE/`: `feature_request.md` para `feat:`, `bug_report.md` para `fix:` y `task.md` para el resto, con las secciones `## Description`, `## Acceptance criteria` y, salvo en `fix:`, `## Quality attributes`.
 - [ ] **Tipo** (*issue type*) según el prefijo: `fix:` → `Bug`, `feat:` → `Feature`, cualquier otro → `Task`.
 - [ ] **Estado**: la etiqueta `✅ ready`.
 - [ ] **Prioridad**: el campo `Priority` (ver [Prioridad y esfuerzo](#prioridad-y-esfuerzo)).
 - [ ] **Esfuerzo**: el campo `Effort`.
 - [ ] **Área**: una sola etiqueta `area: …`, la del área responsable del issue.
-- [ ] **Assignee**: el dueño de esa área (ver [Áreas de desarrollo](#áreas-de-desarrollo)).
+- [ ] **Assignee**: normalmente el dueño de esa área (ver [Áreas de desarrollo](#áreas-de-desarrollo)); puede ser quien vaya a hacerlo, aunque sea de otra área.
 - [ ] **Milestone** de la entrega (el [milestone actual](#estados), salvo que sea para la siguiente).
 - [ ] **Sub-issue** del epic de la entrega.
 - [ ] **Dependencias**: los issues que tienen que cerrarse antes, como *blocked by*.
+
+### Auditar el backlog
+
+La skill [`audit-backlog`](.claude/skills/audit-backlog/SKILL.md) revisa la forma de todo el backlog abierto: que cada issue tenga lo que pide su estado, que las dependencias no apunten a entregas posteriores ni a issues descartados, que cada issue de una entrega sea sub-issue de su epic y que no queden issues de triage en la entrega objetivo. Saca un informe ordenado por gravedad y solo cambia algo cuando se aprueba, siempre con `create-issue.sh update`. El Product Owner la ejecuta antes de cada reunión y al planificar una entrega (`/audit-backlog`, o `/audit-backlog Entrega 3` para auditar otra entrega que la actual). `create-issue.sh check <n>` valida un issue suelto sin cambiarlo, por ejemplo antes de pedir revisión.
 
 ## Etiquetas
 

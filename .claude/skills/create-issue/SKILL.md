@@ -14,7 +14,7 @@ Every issue reaches the tracker through `create-issue.sh`, next to this file; a 
 Read these from `CONTRIBUTING.md` on every run; they live only there:
 
 - The states (triage, ready, epic), the **definition of ready**, the ready checklist and the **current milestone** → "Crear un issue".
-- The area of an issue and its owner, who is the assignee → "Áreas de desarrollo".
+- The area of an issue and its owner, normally the assignee → "Áreas de desarrollo".
 - The `Priority` and `Effort` scales → "Prioridad y esfuerzo".
 
 Read labels, milestones and epics from the tracker. The body follows the template in `.github/ISSUE_TEMPLATE/` that matches the title prefix. `--milestone current` resolves to the current milestone. For *blocked by*, search the open issues whose work the new one needs first.
@@ -30,6 +30,7 @@ Pick the mode from the request:
 - **Promote**: an existing 🔍 triage issue → ✅ ready.
 - **Update**: change fields of an existing issue and keep its state (give an idea a milestone, send an issue back to the inbox with `--milestone ""`, fix a missing field).
 - **Delivery**: a new milestone and its epic, optionally with their issues in one batch.
+- **Check**: validate existing issues without changing them.
 
 A request for an issue with open questions that the user can't settle now becomes a triage issue, with the milestone when it belongs to a delivery.
 
@@ -37,7 +38,7 @@ Every mode ends the same way: run the command with `--dry-run` until it reports 
 
 ### Create
 
-1. Draft the title and body to the definition of ready: what and why, observable acceptance criteria, the quality attributes that apply, out of scope when it helps, and technical constraints only when already decided. A first idea of how to do it goes in the optional, non-binding Proposal section; the issue never requires a way of implementing it. Ask the user, briefly, for whatever you can't infer.
+1. Draft the title and body to the definition of ready: what and why, observable acceptance criteria, the quality attributes that apply (or `None apply: <reason>`), out of scope when it helps, and technical constraints only when already decided. A first idea of how to do it goes in the optional, non-binding Proposal section; the issue never requires a way of implementing it. Ask the user, briefly, for whatever you can't infer.
 2. Choose area, assignee, priority, effort, milestone, epic and *blocked by*.
 3. Run `create-issue.sh create --state ready` with every value.
 
@@ -63,6 +64,10 @@ Run `create-issue.sh update <n>` with only the fields that change. An empty valu
 1. Run `create-issue.sh milestone --title …`, with `--due-on` and `--description` when the user gives them.
 2. Create the epic with `--state epic` and that milestone: title, body (the delivery's goal) and milestone, and no area, priority, effort or parent epic.
 3. To create the epic with its issues, put the epic first in a batch and point the issues at it with `"epic": "@1"`; `"@k"` in `blocked_by` orders issues of the same batch.
+
+### Check
+
+Run `create-issue.sh check <n> [<n>…]`. It is read-only and validates each issue against the state it is in, with the same rules as `create` and `update` plus the issue type and contradictory state labels. Show the errors to the user in Spanish and offer the **Update** or **Promote** that fixes them; a whole-backlog review is the `audit-backlog` skill.
 
 ## When a write fails
 
