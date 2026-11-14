@@ -20,6 +20,7 @@ const USER_MESSAGES = {
   forbidden: 'No tienes permiso para hacer esto.',
   validation: 'Revisa los datos e inténtalo de nuevo.',
   notFound: 'No se encontró el recurso solicitado.',
+  conflict: 'La incidencia ha cambiado. Recárgala e inténtalo de nuevo.',
   unexpected: 'Algo ha fallado en UrbanPulse. Inténtalo de nuevo en unos minutos.',
 };
 
@@ -36,6 +37,10 @@ function authExpired() {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new Event('urbanpulse:session-expired'));
   }
+}
+
+function incidentPath(id) {
+  return '/api/incidents/' + encodeURIComponent(id);
 }
 
 export async function getIncidentsWithinBounds(bounds, { signal } = {}) {
@@ -61,12 +66,75 @@ export async function getCategories({ signal } = {}) {
 }
 
 export async function getIncidentById(id, { signal } = {}) {
-  return apiRequest('/api/incidents/' + encodeURIComponent(id), { signal });
+  return apiRequest(incidentPath(id), { signal });
+}
+
+export async function getIncidentHistory(id, { signal } = {}) {
+  const history = await apiRequest(incidentPath(id) + '/history', { signal });
+  if (!Array.isArray(history)) {
+    throw new Error('La API devolvió un historial no válido.');
+  }
+  return history;
+}
+
+export async function getIncidentPhoto(id, photoId, { signal } = {}) {
+  return apiRequest(incidentPath(id) + '/photos/' + encodeURIComponent(photoId), {
+    signal,
+    responseType: 'blob',
+    headers: { Accept: 'image/jpeg, image/png, image/webp' },
+  });
+}
+
+export async function getTechnicians({ limit = 200, signal } = {}) {
+  const boundedLimit = Math.min(Math.max(Number(limit) || 200, 1), 200);
+  const technicians = await apiRequest('/api/technicians?limit=' + boundedLimit, { signal });
+  if (!Array.isArray(technicians) || technicians.some((technician) =>
+    !technician || typeof technician.id !== 'number' || typeof technician.name !== 'string')) {
+    throw new Error('La API devolvió una lista de técnicos no válida.');
+  }
+  return technicians;
+}
+
+export async function validateIncident(id, request, { signal } = {}) {
+  return apiRequest(incidentPath(id) + '/validate', {
+    method: 'POST',
+    body: JSON.stringify(request),
+    signal,
+  });
+}
+
+export async function rejectIncident(id, reason, { signal } = {}) {
+  return apiRequest(incidentPath(id) + '/reject', {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+    signal,
+  });
+}
+
+export async function assignIncident(id, technicianId, { signal } = {}) {
+  return apiRequest(incidentPath(id) + '/assign', {
+    method: 'POST',
+    body: JSON.stringify({ technicianId }),
+    signal,
+  });
+}
+
+export async function changeIncidentPriority(id, priority, justification, { signal } = {}) {
+  return apiRequest(incidentPath(id) + '/priority', {
+    method: 'PUT',
+    body: JSON.stringify({ priority, justification }),
+    signal,
+  });
 }
 
 export async function apiRequest(path, options = {}) {
   const normalizedPath = path.startsWith('/') ? path : '/' + path;
-  const { skipAuth = false, headers: requestHeaders, ...fetchOptions } = options;
+  const {
+    skipAuth = false,
+    headers: requestHeaders,
+    responseType = 'json',
+    ...fetchOptions
+  } = options;
   const method = (fetchOptions.method || 'GET').toUpperCase();
   const startedAt = performance.now();
   const session = skipAuth ? null : getStoredSession();
@@ -98,6 +166,10 @@ export async function apiRequest(path, options = {}) {
     throw new ApiError(USER_MESSAGES.network, { kind: 'network' });
   }
 
+  if (responseType === 'blob' && response.ok) {
+    return response.blob();
+  }
+
   let payload = null;
   if (response.status !== 204) {
     try {
@@ -116,7 +188,8 @@ export async function apiRequest(path, options = {}) {
     const kind = response.status === 401 ? (isLogin ? 'credentials' : 'session')
       : response.status === 403 ? 'forbidden'
         : response.status === 400 ? 'validation'
-          : response.status >= 500 ? 'server' : 'unexpected';
+          : response.status === 409 ? 'conflict'
+            : response.status >= 500 ? 'server' : 'unexpected';
     logApiFailure({ method, path: normalizedPath, status: response.status, kind, hint: 'http-response', startedAt });
     if (response.status === 401) {
       if (session?.token && !isRefresh) authExpired();
@@ -136,7 +209,13 @@ export async function apiRequest(path, options = {}) {
       throw new ApiError(message, { kind: 'validation', status: 400, errors: payload?.errors || {} });
     }
     if (response.status === 404) {
-      throw new ApiError(USER_MESSAGES.notFound, { kind: 'notFound', status: 404 });
+      throw new ApiError(USER_MESSAGES.notFound, { kind: 'notFound', status: response.status });
+    }
+    if (response.status === 409) {
+      throw new ApiError(
+        typeof payload?.message === 'string' ? payload.message : USER_MESSAGES.conflict,
+        { kind: 'conflict', status: response.status },
+      );
     }
     if (response.status >= 500 || [502, 503, 504].includes(response.status)) {
       throw new ApiError(USER_MESSAGES.server, { kind: 'server', status: response.status });

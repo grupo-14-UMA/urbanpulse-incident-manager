@@ -6,6 +6,7 @@ import java.nio.file.NoSuchFileException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -281,7 +282,8 @@ public class IncidentService {
 		if (!allowed) {
 			throw new IncidentAccessDeniedException();
 		}
-		return statusChangeRepository.findByIncidentIdOrderByChangedAtAscIdAsc(id).stream()
+		return statusChangeRepository.findTop5ByIncidentIdOrderByChangedAtDescIdDesc(id).stream()
+				.sorted(Comparator.comparing(StatusChange::getChangedAt).thenComparing(StatusChange::getId))
 				.map(change -> new StatusChangeResponse(
 						change.getPreviousStatus(),
 						change.getNewStatus(),
