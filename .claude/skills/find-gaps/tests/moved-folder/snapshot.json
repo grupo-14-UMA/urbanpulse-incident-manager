@@ -1,0 +1,21 @@
+{
+  "repo": "acme/widgets",
+  "milestones": [{"number": 1, "title": "Entrega 1", "state": "OPEN", "description": ""}],
+  "issues": [],
+  "evidence": {
+    "orchestration": [{"file": "deploy/compose.yaml", "services": [
+      {"name": "panel", "build": "apps/ops/panel", "image": null, "depends_on": [], "restart": null}]}],
+    "manifests": [
+      {"folder": "apps/ops/panel", "files": ["apps/ops/panel/package.json"], "ecosystem": "npm",
+       "scripts": {"build": "vite build", "lint": "eslint .", "check": "vitest run"},
+       "commands": {"test": null, "lint": "npm run lint", "build": "npm run build"},
+       "test_files": ["apps/ops/panel/src/__tests__/list.jsx"], "test_file_count": 1}],
+    "workflows": [{"file": ".github/workflows/panel.yml", "name": "Panel", "events": ["pull_request", "push"],
+      "folders": ["apps/ops/panel"], "steps": [
+        {"job": "ci", "name": "All", "folders": ["apps/ops/panel"],
+         "run": "cd apps/ops/panel && npm ci && npm run lint && npm run check && npm run build"}]}],
+    "docs": ["README.md", "CONTRIBUTING.md", "AGENTS.md", "docs/development.md", "docs/deployment.md"],
+    "starts": []
+  },
+  "warnings": []
+}

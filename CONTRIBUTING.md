@@ -126,6 +126,12 @@ Un issue dice *qué* hay que hacer y *cómo se comprueba*. No obliga a una forma
 
 La skill [`audit-backlog`](.claude/skills/audit-backlog/SKILL.md) revisa la forma de todo el backlog abierto: que cada issue tenga lo que pide su estado, que las dependencias no apunten a entregas posteriores ni a issues descartados, que cada issue de una entrega sea sub-issue de su epic y que no queden issues de triage en la entrega objetivo. Saca un informe ordenado por gravedad y solo cambia algo cuando se aprueba, siempre con `create-issue.sh update`. El Product Owner la ejecuta antes de cada reunión y al planificar una entrega (`/audit-backlog`, o `/audit-backlog Entrega 3` para auditar otra entrega que la actual). `create-issue.sh check <n>` valida un issue suelto sin cambiarlo, por ejemplo antes de pedir revisión.
 
+### Buscar huecos
+
+La skill [`find-gaps`](.claude/skills/find-gaps/SKILL.md) busca el trabajo que le falta al sistema y que ningún issue recoge. Descubre los componentes en el repositorio (servicios de Docker Compose, carpetas con manifiesto y workflows), cruza cada uno con unos criterios (arranca en local, tiene CI y pruebas, registra logs, sigue la gestión de errores, la documentación lo describe tal como es y cumple los atributos de calidad) y lista los requisitos sin código ni issue. Cada hueco lleva su evidencia y se compara con el tracker: si un issue abierto ya lo cubre, no se propone otro, y si se descartó, no se vuelve a proponer. Los huecos se clasifican frente a la entrega objetivo (bloquea la entrega, pendiente para otra entrega o mejora futura) y solo se crean los que se aprueban, siempre con la skill `create-issue`.
+
+`audit-backlog` revisa la forma de los issues que ya existen; `find-gaps` busca el trabajo que no tiene issue. El Product Owner la ejecuta antes de planificar una entrega (`/find-gaps`, o `/find-gaps Entrega 3` para buscar huecos frente a otra entrega que la actual).
+
 ## Etiquetas
 
 | Etiqueta | Significado |

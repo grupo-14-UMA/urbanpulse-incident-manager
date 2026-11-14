@@ -1,0 +1,19 @@
+{"target": "Entrega 2",
+ "components": [
+  {"name": "api", "folders": ["src/api"], "services": ["api"], "helpers": ["init-storage", "migrate"]},
+  {"name": "db", "folders": [], "services": ["db"], "helpers": []},
+  {"name": "mobile", "folders": ["src/mobile"], "services": [], "helpers": []},
+  {"name": "worker", "folders": ["src/worker"], "services": [], "helpers": []}],
+ "cells": [
+  {"component": "api", "criterion": "ci", "value": "gap"},
+  {"component": "api", "criterion": "local", "value": "ok"},
+  {"component": "api", "criterion": "tests", "value": "ok"},
+  {"component": "db", "criterion": "ci", "value": "na"},
+  {"component": "db", "criterion": "local", "value": "ok"},
+  {"component": "db", "criterion": "tests", "value": "na"},
+  {"component": "mobile", "criterion": "ci", "value": "ok"},
+  {"component": "mobile", "criterion": "local", "value": "ok"},
+  {"component": "mobile", "criterion": "tests", "value": "ok"},
+  {"component": "worker", "criterion": "ci", "value": "gap"},
+  {"component": "worker", "criterion": "local", "value": "gap"},
+  {"component": "worker", "criterion": "tests", "value": "gap"}]}

@@ -1,0 +1,3 @@
+panel	ci	tests with `npm run check`
+panel	tests	no test command in `apps/ops/panel/package.json`
+panel	local	`deploy/compose.yaml`

@@ -1,0 +1,6 @@
+{"target": "Entrega 1",
+ "components": [{"name": "web", "folders": ["web"], "services": ["web"], "helpers": []}],
+ "cells": [
+  {"component": "web", "criterion": "ci", "value": "gap"},
+  {"component": "web", "criterion": "local", "value": "ok"},
+  {"component": "web", "criterion": "tests", "value": "gap"}]}

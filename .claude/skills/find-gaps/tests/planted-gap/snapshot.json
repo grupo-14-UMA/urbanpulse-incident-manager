@@ -1,0 +1,24 @@
+{
+  "repo": "acme/widgets",
+  "milestones": [
+    {"number": 1, "title": "Entrega 1", "state": "OPEN", "description": "First delivery."}
+  ],
+  "issues": [],
+  "evidence": {
+    "orchestration": [
+      {"file": "compose.yaml", "services": [
+        {"name": "api", "build": "services/api", "image": null, "depends_on": [], "restart": null}
+      ]}
+    ],
+    "manifests": [
+      {"folder": "services/api", "files": ["services/api/package.json"], "ecosystem": "npm",
+       "scripts": {"test": "jest"},
+       "commands": {"test": "npm test", "lint": null, "build": null},
+       "test_files": ["services/api/src/app.test.js"], "test_file_count": 1}
+    ],
+    "workflows": [],
+    "docs": ["README.md", "CONTRIBUTING.md", "AGENTS.md", "docs/development.md", "docs/deployment.md"],
+    "starts": []
+  },
+  "warnings": []
+}

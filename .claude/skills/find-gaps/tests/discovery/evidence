@@ -1,0 +1,4 @@
+api	ci	does not lint
+db	tests	no code of our own: runs image `postgres:17`
+mobile	local	`docs/development.md` starts it with `cd src/mobile` and `npx expo start`
+worker	ci	no workflow works on src/worker
