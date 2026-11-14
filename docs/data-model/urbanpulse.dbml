@@ -66,6 +66,9 @@ Table Incident {
   urban_context_id integer 
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
+  indexes {
+    (assignee_id, created_at, id) [name: 'idx_incident_active_assignee_created_at', note: 'Partial index for open technician work; status_id IN (1, 2, 4, 5).']
+  }
 }
 
 Table Status {

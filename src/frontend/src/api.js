@@ -283,6 +283,28 @@ export async function getIncident(id) {
   return expectIncident(incident);
 }
 
+export async function getAssignedIncidents({ page = 0, size = 20 } = {}) {
+	const payload = await request(`/api/incidents/assigned?page=${page}&size=${size}`);
+	if (!payload || !Array.isArray(payload.incidents) || typeof payload.hasMore !== 'boolean') {
+		throw new ApiError(SERVER_ERROR, { kind: 'unexpected' });
+	}
+	return {
+		...payload,
+		incidents: payload.incidents.map(expectIncident),
+	};
+}
+
+export async function startIncident(id) {
+	return expectIncident(await request(`/api/incidents/${encodeURIComponent(String(id))}/start`, { method: 'POST' }));
+}
+
+export async function resolveIncident(id, note) {
+	return expectIncident(await request(`/api/incidents/${encodeURIComponent(String(id))}/resolve`, {
+		method: 'POST',
+		body: { note },
+	}));
+}
+
 export async function createIncident({ title, description, latitude, longitude, categoryId }) {
   const body = { title, description, latitude, longitude };
   if (categoryId !== null && categoryId !== undefined) {
