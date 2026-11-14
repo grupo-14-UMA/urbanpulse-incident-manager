@@ -56,6 +56,42 @@ describe('mobile API client', () => {
     );
   });
 
+	 test('loads the authenticated technician assigned incidents', async () => {
+		global.fetch.mockResolvedValueOnce({
+			ok: true,
+			status: 200,
+			text: async () => JSON.stringify({
+				incidents: [{ id: 42, title: 'Farola', createdAt: '2026-11-12T10:00:00Z', status: 'ASSIGNED' }],
+				page: 0,
+				size: 20,
+				hasMore: false,
+			}),
+		});
+		const { getAssignedIncidents } = require('./api');
+
+		await expect(getAssignedIncidents()).resolves.toEqual(expect.objectContaining({
+			incidents: [expect.objectContaining({ id: 42, title: 'Farola', status: 'ASSIGNED' })],
+		}));
+		expect(global.fetch).toHaveBeenCalledWith(
+			apiUrl + '/api/incidents/assigned?page=0&size=20',
+			expect.objectContaining({ method: 'GET' }),
+		);
+	 });
+
+	test('starts and resolves an assigned incident with a note', async () => {
+		global.fetch
+			.mockResolvedValueOnce({ ok: true, status: 200, text: async () => JSON.stringify({ id: 42, createdAt: '2026-11-12T10:00:00Z', status: 'IN_PROGRESS' }) })
+			.mockResolvedValueOnce({ ok: true, status: 200, text: async () => JSON.stringify({ id: 42, createdAt: '2026-11-12T10:00:00Z', status: 'RESOLVED' }) });
+		const { startIncident, resolveIncident } = require('./api');
+
+		await expect(startIncident(42)).resolves.toMatchObject({ status: 'IN_PROGRESS' });
+		await expect(resolveIncident(42, 'Bombilla sustituida.')).resolves.toMatchObject({ status: 'RESOLVED' });
+		expect(global.fetch).toHaveBeenNthCalledWith(2, apiUrl + '/api/incidents/42/resolve', expect.objectContaining({
+			method: 'POST',
+			body: JSON.stringify({ note: 'Bombilla sustituida.' }),
+		}));
+	});
+
   test('exposes the backend error body for a non-success response', async () => {
     global.fetch.mockResolvedValueOnce({
       ok: false,

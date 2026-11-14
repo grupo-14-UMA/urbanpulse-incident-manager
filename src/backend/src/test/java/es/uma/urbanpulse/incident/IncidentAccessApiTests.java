@@ -8,6 +8,7 @@ import static es.uma.urbanpulse.TestAccounts.newCitizen;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Map;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
@@ -121,6 +122,23 @@ class IncidentAccessApiTests {
 			this.client.get().uri("/api/categories").header("Authorization", bearer(user)).exchange()
 				.expectStatus().isOk();
 		}
+	}
+
+	@Test
+	void technicianLoadsOnlyTheirAssignedOpenIncidents() {
+		LifecycleDriver flow = new LifecycleDriver(this.client);
+		int assignedId = flow.assigned();
+
+		this.client.get()
+			.uri("/api/incidents/assigned?page=0&size=1")
+			.header("Authorization", bearer(flow.technician))
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody()
+			.jsonPath("$.page").isEqualTo(0)
+			.jsonPath("$.size").isEqualTo(1)
+			.jsonPath("$.incidents[?(@.id == " + assignedId + ")].status")
+			.isEqualTo(List.of(IncidentStatus.ASSIGNED.name()));
 	}
 
 	@Test

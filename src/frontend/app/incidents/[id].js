@@ -8,13 +8,20 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { Image } from 'expo-image';
 import MapView, { Marker } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { downloadIncidentPhoto, getIncident, uploadIncidentPhoto } from '../../src/api';
+import {
+  downloadIncidentPhoto,
+  getIncident,
+  resolveIncident,
+  startIncident,
+  uploadIncidentPhoto,
+} from '../../src/api';
 import {
   MAX_INCIDENT_PHOTOS,
   pickPhotoFromCamera,
@@ -33,19 +40,22 @@ export default function IncidentDetailScreen() {
   if (status === 'restoring') {
     return <View style={styles.centered}><ActivityIndicator size="large" color={COLORS.primary} /></View>;
   }
-  if (status !== 'signedIn' || session.user.role !== 'CITIZEN') {
+  if (status !== 'signedIn' || !['CITIZEN', 'TECHNICIAN'].includes(session.user.role)) {
     return <Redirect href="/" />;
   }
 
-  return <IncidentDetailContent id={id} />;
+  return <IncidentDetailContent id={id} session={session} />;
 }
 
-function IncidentDetailContent({ id }) {
+function IncidentDetailContent({ id, session }) {
   const insets = useSafeAreaInsets();
   const { status: state, data: incident, error, reload } = useLoad(() => getIncident(id));
   const [pendingPhoto, setPendingPhoto] = useState(null);
   const [photoMessage, setPhotoMessage] = useState(null);
   const [photoUploading, setPhotoUploading] = useState(false);
+  const [resolutionNote, setResolutionNote] = useState('');
+  const [actionError, setActionError] = useState(null);
+  const [actionBusy, setActionBusy] = useState(false);
 
   async function choosePhoto(source) {
     if (photoUploading) return;
@@ -75,6 +85,38 @@ function IncidentDetailContent({ id }) {
       setPhotoMessage(photoError?.message || 'No se pudo subir la foto. Inténtalo de nuevo.');
     } finally {
       setPhotoUploading(false);
+    }
+  }
+
+  async function startWork() {
+    if (actionBusy) return;
+    setActionBusy(true);
+    setActionError(null);
+    try {
+      await startIncident(id);
+      await reload();
+    } catch (actionFailure) {
+      setActionError(actionFailure?.message || 'No se pudo empezar el trabajo.');
+    } finally {
+      setActionBusy(false);
+    }
+  }
+
+  async function resolveWork() {
+    const note = resolutionNote.trim();
+    if (!note || actionBusy) {
+      setActionError('Escribe una nota de resolución.');
+      return;
+    }
+    setActionBusy(true);
+    setActionError(null);
+    try {
+      await resolveIncident(id, note);
+      await reload();
+    } catch (actionFailure) {
+      setActionError(actionFailure?.message || 'No se pudo resolver el trabajo.');
+    } finally {
+      setActionBusy(false);
     }
   }
 
@@ -111,6 +153,7 @@ function IncidentDetailContent({ id }) {
 
   const coordinate = { latitude: incident.latitude, longitude: incident.longitude };
   const photos = Array.isArray(incident.photos) ? incident.photos : [];
+  const canWork = session.user.role === 'TECHNICIAN' && incident.assignee?.id === session.user.id;
 
   return (
     <ScrollView
@@ -136,6 +179,43 @@ function IncidentDetailContent({ id }) {
 
       <Text style={styles.label}>Estado</Text>
       <Text style={styles.value}>{statusLabel(incident.status)}</Text>
+
+      {canWork && incident.status === 'ASSIGNED' && (
+        <View style={styles.workActions}>
+          <Pressable
+            style={({ pressed }) => [styles.primaryButton, pressed && styles.buttonPressed]}
+            onPress={startWork}
+            disabled={actionBusy}
+            accessibilityRole="button"
+          >
+            {actionBusy ? <ActivityIndicator color={COLORS.onPrimary} /> : <Text style={styles.primaryButtonText}>Empezar trabajo</Text>}
+          </Pressable>
+        </View>
+      )}
+
+      {canWork && incident.status === 'IN_PROGRESS' && (
+        <View style={styles.workActions}>
+          <Text style={styles.label}>Nota de resolución</Text>
+          <TextInput
+            style={styles.resolutionInput}
+            value={resolutionNote}
+            onChangeText={setResolutionNote}
+            placeholder="Describe el trabajo realizado"
+            multiline
+            maxLength={1000}
+            editable={!actionBusy}
+          />
+          <Pressable
+            style={({ pressed }) => [styles.primaryButton, pressed && styles.buttonPressed]}
+            onPress={resolveWork}
+            disabled={actionBusy}
+            accessibilityRole="button"
+          >
+            {actionBusy ? <ActivityIndicator color={COLORS.onPrimary} /> : <Text style={styles.primaryButtonText}>Resolver trabajo</Text>}
+          </Pressable>
+        </View>
+      )}
+      {actionError && <Text style={styles.actionError}>{actionError}</Text>}
 
       <Text style={styles.label}>Fecha de registro</Text>
       <Text style={styles.value}>{new Date(incident.createdAt).toLocaleString('es-ES')}</Text>
@@ -394,6 +474,37 @@ const styles = StyleSheet.create({
   value: {
     fontSize: 16,
     color: COLORS.text,
+  },
+  workActions: {
+    marginTop: 8,
+    gap: 10,
+  },
+  primaryButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+    borderRadius: 8,
+    backgroundColor: COLORS.primary,
+  },
+  primaryButtonText: {
+    color: COLORS.onPrimary,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  resolutionInput: {
+    minHeight: 100,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 8,
+    color: COLORS.text,
+    backgroundColor: COLORS.surface,
+    textAlignVertical: 'top',
+  },
+  actionError: {
+    marginTop: 10,
+    color: COLORS.error,
+    fontSize: 14,
   },
   photoGrid: {
     flexDirection: 'row',

@@ -1,10 +1,10 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { getIncidentsWithinBounds } from '../src/api';
+import { getAssignedIncidents, getIncidentsWithinBounds } from '../src/api';
 import { IncidentCard } from '../src/IncidentCard';
 import { MALAGA_REGION, OSM_MAP_PROPS, OsmAttribution, OsmTiles } from '../src/map';
 import { COLORS } from '../src/theme';
@@ -207,7 +207,84 @@ function CitizenMapScreen() {
 }
 
 function TechnicianHome() {
-  return <RoleScreen title="Mis trabajos" message="Todavía no tienes trabajos asignados." />;
+  const router = useRouter();
+  const { signOut } = useAuth();
+  const [incidents, setIncidents] = useState([]);
+  const [state, setState] = useState('loading');
+  const [error, setError] = useState(null);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const loadAssignedIncidents = useCallback(async ({ nextPage = 0, append = false } = {}) => {
+    if (append) {
+      setLoadingMore(true);
+    } else {
+      setState('loading');
+    }
+    setError(null);
+    try {
+      const result = await getAssignedIncidents({ page: nextPage });
+      setIncidents((current) => append ? [...current, ...result.incidents] : result.incidents);
+      setPage(result.page);
+      setHasMore(result.hasMore);
+      setState('ready');
+    } catch (loadError) {
+      setError(loadError?.message || 'No se pudieron cargar tus trabajos.');
+      if (!append) setState('error');
+    } finally {
+      setLoadingMore(false);
+    }
+  }, []);
+
+  useFocusEffect(useCallback(() => {
+    loadAssignedIncidents();
+  }, [loadAssignedIncidents]));
+
+  return (
+    <View style={styles.roleScreen}>
+      <Pressable style={styles.roleSignOutButton} onPress={signOut} accessibilityRole="button">
+        <Text style={styles.roleSignOutButtonText}>Cerrar sesión</Text>
+      </Pressable>
+      <Text style={styles.roleTitle}>Mis trabajos</Text>
+      {state === 'loading' && <ActivityIndicator color={COLORS.primary} />}
+      {state === 'error' && (
+        <View style={styles.roleNotice}>
+          <Text style={styles.roleMessage}>{error}</Text>
+          <Pressable onPress={loadAssignedIncidents} accessibilityRole="button">
+            <Text style={styles.retryText}>Reintentar</Text>
+          </Pressable>
+        </View>
+      )}
+      {state === 'ready' && incidents.length === 0 && (
+        <Text style={styles.roleMessage}>Todavía no tienes trabajos asignados.</Text>
+      )}
+      {state === 'ready' && incidents.length > 0 && (
+        <ScrollView contentContainerStyle={styles.assignedList}>
+          {incidents.map((incident) => (
+            <IncidentCard
+              key={incident.id}
+              incident={incident}
+              onOpen={() => router.push(`/incidents/${incident.id}`)}
+              onClose={() => {}}
+            />
+          ))}
+          {hasMore && (
+            <Pressable
+              style={({ pressed }) => [styles.loadMoreButton, pressed && styles.buttonPressed]}
+              onPress={() => loadAssignedIncidents({ nextPage: page + 1, append: true })}
+              disabled={loadingMore}
+              accessibilityRole="button"
+            >
+              {loadingMore
+                ? <ActivityIndicator color={COLORS.onPrimary} />
+                : <Text style={styles.loadMoreButtonText}>Cargar más trabajos</Text>}
+            </Pressable>
+          )}
+        </ScrollView>
+      )}
+    </View>
+  );
 }
 
 function OperatorHome() {
@@ -336,6 +413,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 24,
     textAlign: 'center',
+  },
+  roleNotice: {
+    alignItems: 'center',
+    gap: 12,
+  },
+  assignedList: {
+    width: '100%',
+    gap: 12,
+    paddingVertical: 24,
+  },
+  loadMoreButton: {
+    alignItems: 'center',
+    borderRadius: 8,
+    paddingVertical: 12,
+    backgroundColor: COLORS.primary,
+  },
+  loadMoreButtonText: {
+    color: COLORS.onPrimary,
+    fontWeight: '600',
   },
   roleSignOutButton: {
     alignSelf: 'center',
