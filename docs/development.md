@@ -9,6 +9,7 @@ Cómo preparar el entorno, ejecutar el proyecto y probarlo en local. El flujo de
 - Java 21 (solo para ejecutar el backend fuera de Docker; el proyecto incluye Maven Wrapper)
 - Node.js 20.19+, 22.12+ o 24 LTS, y npm
 - La aplicación Expo Go en un móvil
+- Para las skills de agente de `.claude/skills/`: GitHub CLI (`gh`) 2.94+ y `jq`; `find-gaps` necesita además Python 3 con PyYAML (`pip install pyyaml` o el paquete `python3-yaml`)
 
 No hace falta instalar PostgreSQL: se ejecuta con Docker Compose.
 

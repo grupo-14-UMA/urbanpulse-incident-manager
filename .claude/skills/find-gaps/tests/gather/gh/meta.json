@@ -1,0 +1,3 @@
+{"data": {"repository": {"milestones": {"totalCount": 2, "nodes": [
+  {"number": 1, "title": "Entrega 1", "state": "CLOSED", "description": "First."},
+  {"number": 2, "title": "Entrega 2", "state": "OPEN", "description": "Second."}]}}}}

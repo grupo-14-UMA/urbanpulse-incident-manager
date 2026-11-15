@@ -1,0 +1,13 @@
+services:
+  api:
+    image: acme-api
+    build:
+      context: ./services/api
+    depends_on:
+      cache:
+        condition: service_healthy
+  cache:
+    image: redis:7
+  init:
+    image: acme-api
+    restart: "no"

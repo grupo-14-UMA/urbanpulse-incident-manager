@@ -1,0 +1,3 @@
+panel	ci	tests with `npm run check`
+panel	tests	test command `npm run check`
+panel	local	`deploy/compose.yaml`

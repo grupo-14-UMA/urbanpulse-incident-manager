@@ -29,6 +29,10 @@ Comments, closing and one-off labels go through `gh` directly (see below); check
 
 The `audit-backlog` skill (`.claude/skills/audit-backlog/SKILL.md`) reviews the form of every open issue and offers fixes, which it applies only after approval and only through `create-issue.sh update`. Its helper `.claude/skills/audit-backlog/audit-backlog.sh` has `gather` (a snapshot of the open backlog in a few paginated GraphQL queries) and `analyze` (offline findings, reusing `create-issue.sh check --input`). `tests/run.sh` in the same folder runs the analysis against offline fixtures.
 
+## Finding gaps
+
+The `find-gaps` skill (`.claude/skills/find-gaps/SKILL.md`) finds work the system lacks that no issue covers, and creates the gaps the user approves only through the `create-issue` skill; `--report-only` creates nothing. Its helper `.claude/skills/find-gaps/find-gaps.sh` has `gather` (every milestone and every open and closed issue in a few paginated GraphQL queries, plus the components, workflows, tests and docs found in the repo) and `analyze` (offline components and the `local`, `ci` and `tests` cells). `tests/run.sh` in the same folder runs both against offline fixtures and a fake `gh`.
+
 ## Conventions
 
 - **Create an issue**: the `create-issue` skill (see **Creating an issue** above).

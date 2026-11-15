@@ -1,0 +1,271 @@
+{
+  "evidence": {
+    "docs": [
+      "README.md",
+      "docs/development.md"
+    ],
+    "manifests": [
+      {
+        "commands": {
+          "build": null,
+          "lint": "npm run lint",
+          "test": "npm test"
+        },
+        "ecosystem": "npm",
+        "files": [
+          "services/api/package.json"
+        ],
+        "folder": "services/api",
+        "scripts": {
+          "lint": "eslint .",
+          "start": "node index.js",
+          "test": "jest"
+        },
+        "test_file_count": 2,
+        "test_files": [
+          "services/api/src/__tests__/index.js",
+          "services/api/src/app.test.js"
+        ]
+      },
+      {
+        "commands": {
+          "build": "go build ./...",
+          "lint": null,
+          "test": "go test ./..."
+        },
+        "ecosystem": "go",
+        "files": [
+          "tools/go.mod"
+        ],
+        "folder": "tools",
+        "scripts": {},
+        "test_file_count": 0,
+        "test_files": []
+      }
+    ],
+    "orchestration": [
+      {
+        "file": "compose.yaml",
+        "services": [
+          {
+            "build": "services/api",
+            "code_files": 3,
+            "depends_on": [
+              {
+                "condition": "service_healthy",
+                "service": "cache"
+              }
+            ],
+            "image": "acme-api",
+            "name": "api",
+            "restart": null
+          },
+          {
+            "build": null,
+            "code_files": null,
+            "depends_on": [],
+            "image": "redis:7",
+            "name": "cache",
+            "restart": null
+          },
+          {
+            "build": null,
+            "code_files": null,
+            "depends_on": [],
+            "image": "acme-api",
+            "name": "init",
+            "restart": "no"
+          }
+        ]
+      }
+    ],
+    "starts": [
+      {
+        "commands": [
+          "npm install",
+          "npm start"
+        ],
+        "doc": "docs/development.md",
+        "folder": "services/api"
+      }
+    ],
+    "workflows": [
+      {
+        "events": [
+          "pull_request"
+        ],
+        "file": ".github/workflows/api.yml",
+        "folders": [
+          "docs/site.v2",
+          "services/api",
+          "tools"
+        ],
+        "name": "API CI",
+        "steps": [
+          {
+            "folders": [
+              "services/api"
+            ],
+            "job": "test",
+            "name": "Install",
+            "run": "npm ci"
+          },
+          {
+            "folders": [
+              "services/api"
+            ],
+            "job": "test",
+            "name": "Test",
+            "run": "npm test"
+          },
+          {
+            "folders": [
+              "tools"
+            ],
+            "job": "test",
+            "name": "Tools",
+            "run": "cd tools && go vet ./..."
+          }
+        ]
+      }
+    ]
+  },
+  "issues": [
+    {
+      "body": "Goal.",
+      "issueType": {
+        "name": "Feature"
+      },
+      "labels": {
+        "nodes": [
+          {
+            "name": "🗺️ epic"
+          },
+          {
+            "name": "✅ ready"
+          }
+        ],
+        "totalCount": 2
+      },
+      "milestone": {
+        "number": 1,
+        "state": "CLOSED",
+        "title": "Entrega 1"
+      },
+      "number": 1,
+      "parent": null,
+      "state": "CLOSED",
+      "stateReason": "COMPLETED",
+      "subIssues": {
+        "nodes": [
+          {
+            "number": 2,
+            "state": "CLOSED"
+          }
+        ],
+        "totalCount": 101
+      },
+      "title": "feat: deliver the first version",
+      "url": "https://github.com/acme/widgets/issues/1"
+    },
+    {
+      "body": "Done.",
+      "issueType": {
+        "name": "Feature"
+      },
+      "labels": {
+        "nodes": [
+          {
+            "name": "✅ ready"
+          }
+        ],
+        "totalCount": 1
+      },
+      "milestone": {
+        "number": 1,
+        "state": "CLOSED",
+        "title": "Entrega 1"
+      },
+      "number": 2,
+      "parent": {
+        "number": 1
+      },
+      "state": "CLOSED",
+      "stateReason": "COMPLETED",
+      "subIssues": {
+        "nodes": [],
+        "totalCount": 0
+      },
+      "title": "feat: add the api",
+      "url": "https://github.com/acme/widgets/issues/2"
+    },
+    {
+      "body": "Maybe.",
+      "issueType": {
+        "name": "Task"
+      },
+      "labels": {
+        "nodes": [
+          {
+            "name": "🚫 wontfix"
+          }
+        ],
+        "totalCount": 1
+      },
+      "milestone": null,
+      "number": 3,
+      "parent": null,
+      "state": "CLOSED",
+      "stateReason": "NOT_PLANNED",
+      "subIssues": {
+        "nodes": [],
+        "totalCount": 0
+      },
+      "title": "chore: add a cache",
+      "url": "https://github.com/acme/widgets/issues/3"
+    },
+    {
+      "body": "Idea.",
+      "issueType": {
+        "name": "Task"
+      },
+      "labels": {
+        "nodes": [
+          {
+            "name": "🔍 triage"
+          }
+        ],
+        "totalCount": 1
+      },
+      "milestone": null,
+      "number": 4,
+      "parent": null,
+      "state": "OPEN",
+      "stateReason": null,
+      "subIssues": {
+        "nodes": [],
+        "totalCount": 0
+      },
+      "title": "test: cover the tools",
+      "url": "https://github.com/acme/widgets/issues/4"
+    }
+  ],
+  "milestones": [
+    {
+      "description": "First.",
+      "number": 1,
+      "state": "CLOSED",
+      "title": "Entrega 1"
+    },
+    {
+      "description": "Second.",
+      "number": 2,
+      "state": "OPEN",
+      "title": "Entrega 2"
+    }
+  ],
+  "repo": "acme/widgets",
+  "warnings": [
+    "#1: only the first 1 of 101 sub-issues were read"
+  ]
+}
