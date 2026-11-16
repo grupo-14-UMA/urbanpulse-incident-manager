@@ -1,4 +1,6 @@
 [
   {"check": "a", "issue": 62, "severity": "red", "field": "effort"},
-  {"check": "a", "issue": 64, "severity": "yellow", "field": "priority"}
+  {"check": "a", "issue": 64, "severity": "yellow", "field": "priority"},
+  {"check": "d", "issue": null, "severity": "yellow", "field": null},
+  {"check": "d", "issue": null, "severity": "yellow", "field": null}
 ]
