@@ -56,9 +56,9 @@ function endOfLocalDateExclusive(date) {
 export default function IncidentListPage() {
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [sort, setSort] = useState('date-desc');
-  const [page, setPage] = useState(0);
+  const [cursorHistory, setCursorHistory] = useState([null]);
   const [reloadKey, setReloadKey] = useState(0);
-  const [result, setResult] = useState({ incidents: [], page: 0, size: PAGE_SIZE, totalElements: 0, totalPages: 0 });
+  const [result, setResult] = useState({ incidents: [], size: PAGE_SIZE, hasMore: false, nextCursor: null });
   const [categoryOptions, setCategoryOptions] = useState([]);
   const [categoryError, setCategoryError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -67,10 +67,11 @@ export default function IncidentListPage() {
   const requestParameters = useMemo(() => {
     const [sortBy, sortDirection] = sort.split('-');
     return {
-      page,
       size: PAGE_SIZE,
       sortBy: sortBy === 'date' ? 'createdAt' : 'priority',
       sortDirection,
+      ...(cursorHistory[cursorHistory.length - 1]
+        ? { cursor: cursorHistory[cursorHistory.length - 1] } : {}),
       ...(filters.status ? { status: filters.status } : {}),
       ...(filters.categoryId === 'uncategorized'
         ? { uncategorized: true }
@@ -79,7 +80,7 @@ export default function IncidentListPage() {
       ...(filters.dateFrom ? { createdAfter: startOfLocalDate(filters.dateFrom) } : {}),
       ...(filters.dateTo ? { createdBefore: endOfLocalDateExclusive(filters.dateTo) } : {}),
     };
-  }, [filters, page, sort]);
+  }, [cursorHistory, filters, sort]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -116,24 +117,23 @@ export default function IncidentListPage() {
     () => [...categoryOptions].sort((left, right) => left.name.localeCompare(right.name, 'es')),
     [categoryOptions],
   );
-  const firstItem = result.totalElements === 0 ? 0 : result.page * PAGE_SIZE + 1;
-  const lastItem = Math.min((result.page + 1) * PAGE_SIZE, result.totalElements);
+  const pageNumber = cursorHistory.length;
 
   function updateFilter(event) {
     const { name, value } = event.target;
     setFilters((current) => ({ ...current, [name]: value }));
-    setPage(0);
+    setCursorHistory([null]);
   }
 
   function changeSort(event) {
     setSort(event.target.value);
-    setPage(0);
+    setCursorHistory([null]);
   }
 
   function clearFilters() {
     setFilters(EMPTY_FILTERS);
     setSort('date-desc');
-    setPage(0);
+    setCursorHistory([null]);
   }
 
   return (
@@ -209,7 +209,7 @@ export default function IncidentListPage() {
 
       <div className="incident-table-card">
         <div className="table-summary" aria-live="polite">
-          {loading ? 'Cargando incidencias…' : `${result.totalElements} incidencias · ${firstItem}–${lastItem}`}
+          {loading ? 'Cargando incidencias…' : `Página ${pageNumber} · ${result.incidents.length} incidencias`}
         </div>
 
         {error ? (
@@ -217,12 +217,12 @@ export default function IncidentListPage() {
             <p>{error}</p>
             <button className="auth-secondary" onClick={() => setReloadKey((current) => current + 1)} type="button">Reintentar</button>
           </div>
-        ) : loading && result.totalElements === 0 ? (
+        ) : loading && result.incidents.length === 0 ? (
           <div className="list-state" role="status">
             <span aria-hidden="true" className="auth-spinner" />
             <p>Cargando incidencias…</p>
           </div>
-        ) : result.totalElements === 0 ? (
+        ) : result.incidents.length === 0 ? (
           <div className="list-state" role="status">
             <span aria-hidden="true" className="placeholder-icon">⌕</span>
             <strong>No hay incidencias con esos filtros</strong>
@@ -266,12 +266,12 @@ export default function IncidentListPage() {
           </div>
         )}
 
-        {result.totalElements > 0 && !error && (
+        {result.incidents.length > 0 && !error && (
           <nav aria-label="Paginación de incidencias" className="list-pagination">
-            <span>Página {result.page + 1} de {result.totalPages}</span>
+            <span>Página {pageNumber}</span>
             <div>
-              <button aria-label="Página anterior" disabled={loading || result.page <= 0} onClick={() => setPage((current) => Math.max(0, current - 1))} type="button">← Anterior</button>
-              <button aria-label="Página siguiente" disabled={loading || result.page + 1 >= result.totalPages} onClick={() => setPage((current) => current + 1)} type="button">Siguiente →</button>
+              <button aria-label="Página anterior" disabled={loading || cursorHistory.length <= 1} onClick={() => setCursorHistory((current) => current.slice(0, -1))} type="button">← Anterior</button>
+              <button aria-label="Página siguiente" disabled={loading || !result.hasMore || !result.nextCursor} onClick={() => setCursorHistory((current) => [...current, result.nextCursor])} type="button">Siguiente →</button>
             </div>
           </nav>
         )}

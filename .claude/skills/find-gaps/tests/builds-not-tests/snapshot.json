@@ -1,0 +1,22 @@
+{
+  "repo": "acme/widgets",
+  "milestones": [{"number": 1, "title": "Entrega 1", "state": "OPEN", "description": ""}],
+  "issues": [],
+  "evidence": {
+    "orchestration": [{"file": "compose.yaml", "services": [
+      {"name": "web", "build": "web", "image": null, "depends_on": [], "restart": null}]}],
+    "manifests": [
+      {"folder": "web", "files": ["web/package.json"], "ecosystem": "npm",
+       "scripts": {"dev": "vite", "build": "vite build", "lint": "eslint ."},
+       "commands": {"test": null, "lint": "npm run lint", "build": "npm run build"},
+       "test_files": [], "test_file_count": 0}],
+    "workflows": [{"file": ".github/workflows/web.yml", "name": "Web", "events": ["pull_request"],
+      "folders": ["web"], "steps": [
+        {"job": "build", "name": "Install", "folders": ["web"], "run": "npm ci"},
+        {"job": "build", "name": "Lint", "folders": ["web"], "run": "npm run lint"},
+        {"job": "build", "name": "Build", "folders": ["web"], "run": "npm run build"}]}],
+    "docs": ["README.md", "CONTRIBUTING.md", "AGENTS.md", "docs/development.md", "docs/deployment.md"],
+    "starts": []
+  },
+  "warnings": []
+}

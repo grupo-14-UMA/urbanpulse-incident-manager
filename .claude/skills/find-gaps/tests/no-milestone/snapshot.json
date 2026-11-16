@@ -1,0 +1,7 @@
+{
+  "repo": "acme/widgets",
+  "milestones": [{"number": 1, "title": "Entrega 1", "state": "CLOSED", "description": ""}],
+  "issues": [],
+  "evidence": {"orchestration": [], "manifests": [], "workflows": [], "docs": ["README.md", "CONTRIBUTING.md", "AGENTS.md", "docs/development.md", "docs/deployment.md"], "starts": []},
+  "warnings": []
+}

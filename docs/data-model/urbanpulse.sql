@@ -53,6 +53,15 @@ CREATE TABLE "Incident" (
   "category_id" integer,
   "location" geometry(Point, 4326) NOT NULL,
   "priority" varchar(10),
+  "priority_rank" integer GENERATED ALWAYS AS (
+    CASE "priority"
+      WHEN 'LOW' THEN 1
+      WHEN 'MEDIUM' THEN 2
+      WHEN 'HIGH' THEN 3
+      WHEN 'URGENT' THEN 4
+      ELSE 0
+    END
+  ) STORED,
   "priority_justification" varchar(1000),
   "status_id" integer NOT NULL,
   "assignee_id" integer,
@@ -211,20 +220,14 @@ CREATE INDEX "idx_incident_assignee_created_at_id"
   ON "Incident" ("assignee_id", "created_at" DESC, "id" DESC);
 
 CREATE INDEX "idx_incident_priority_rank_created_at_id"
-  ON "Incident" (
-    (CASE "priority"
-      WHEN 'LOW' THEN 1
-      WHEN 'MEDIUM' THEN 2
-      WHEN 'HIGH' THEN 3
-      WHEN 'URGENT' THEN 4
-      ELSE 0
-    END) DESC,
-    "created_at" DESC,
-    "id" DESC
-  );
+  ON "Incident" ("priority_rank" DESC, "created_at" DESC, "id" DESC);
 
 CREATE INDEX "idx_incident_priority_created_at_id"
   ON "Incident" ("priority", "created_at" DESC, "id" DESC);
 
 CREATE INDEX "idx_attachment_incident_id_id"
   ON "Attachment" ("incident_id", "id");
+
+CREATE INDEX "idx_incident_active_assignee_created_at"
+  ON "Incident" ("assignee_id", "created_at" DESC, "id" DESC)
+  WHERE "status_id" IN (1, 2, 4, 5);

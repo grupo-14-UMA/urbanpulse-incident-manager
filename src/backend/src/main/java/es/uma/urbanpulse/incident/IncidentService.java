@@ -16,28 +16,31 @@ import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import es.uma.urbanpulse.auth.TokenSubject;
 import es.uma.urbanpulse.category.Category;
 import es.uma.urbanpulse.category.CategoryRepository;
 import es.uma.urbanpulse.incident.api.AssignIncidentRequest;
+import es.uma.urbanpulse.incident.api.AssignedIncidentPageResponse;
 import es.uma.urbanpulse.incident.api.ChangePriorityRequest;
 import es.uma.urbanpulse.incident.api.CreateIncidentRequest;
 import es.uma.urbanpulse.incident.api.IncidentAccessDeniedException;
 import es.uma.urbanpulse.incident.api.IncidentBounds;
+import es.uma.urbanpulse.incident.api.IncidentCursor;
 import es.uma.urbanpulse.incident.api.IncidentMapResponse;
+import es.uma.urbanpulse.incident.api.IncidentMapQueryParameters;
 import es.uma.urbanpulse.incident.api.IncidentNotFoundException;
 import es.uma.urbanpulse.incident.api.IncidentPageResponse;
 import es.uma.urbanpulse.incident.api.IncidentPhotoNotFoundException;
 import es.uma.urbanpulse.incident.api.IncidentPhotoResponse;
 import es.uma.urbanpulse.incident.api.IncidentQueryParameters;
+import es.uma.urbanpulse.incident.api.IncidentQueryFilters;
 import es.uma.urbanpulse.incident.api.IncidentResponse;
 import es.uma.urbanpulse.incident.api.InvalidCategoryException;
 import es.uma.urbanpulse.incident.api.InvalidIncidentPhotoException;
@@ -56,6 +59,7 @@ public class IncidentService {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(IncidentService.class);
 	private static final int MAP_RESULT_LIMIT = 500;
+	static final int MAX_ASSIGNED_PAGE_SIZE = 50;
 	static final int MAX_PHOTOS_PER_INCIDENT = 3;
 
 	private static final GeometryFactory WGS84_GEOMETRY_FACTORY =
@@ -107,7 +111,7 @@ public class IncidentService {
 	}
 
 	@Transactional(readOnly = true)
-	public IncidentMapResponse findWithinBounds(IncidentQueryParameters query, TokenSubject caller) {
+	public IncidentMapResponse findWithinBounds(IncidentMapQueryParameters query, TokenSubject caller) {
 		IncidentBounds bounds = query.toBounds();
 		long queryStartedAt = System.nanoTime();
 		List<IncidentMapProjection> candidates;
@@ -146,32 +150,33 @@ public class IncidentService {
 	@Transactional(readOnly = true)
 	public IncidentPageResponse findPage(IncidentQueryParameters query, TokenSubject caller) {
 		long queryStartedAt = System.nanoTime();
-		Sort.Direction direction = "asc".equals(query.getSortDirection())
-				? Sort.Direction.ASC : Sort.Direction.DESC;
-		Sort sort = "priority".equals(query.getSortBy())
-				? Sort.by(new Sort.Order(direction, "priorityRank"),
-						new Sort.Order(Sort.Direction.DESC, "createdAt"),
-						new Sort.Order(Sort.Direction.DESC, "id"))
-				: Sort.by(new Sort.Order(direction, "createdAt"),
-						new Sort.Order(Sort.Direction.DESC, "id"));
-		PageRequest pageable = PageRequest.of(query.getPage(), query.getSize(), sort);
-		Page<Incident> result = incidentRepository.findAll(IncidentListSpecification.forQuery(query, caller), pageable);
-		List<IncidentResponse> incidents = result.getContent().stream()
+		List<Incident> fetched = incidentRepository.findNextPage(
+				IncidentListSpecification.forQuery(query, caller), query.cursorPosition(),
+				query.getSortBy(), query.getSortDirection(), query.getSize() + 1);
+		boolean hasMore = fetched.size() > query.getSize();
+		List<Incident> page = fetched.stream().limit(query.getSize()).toList();
+		List<IncidentResponse> incidents = page.stream()
 				.map(incident -> toResponse(incident, caller))
 				.toList();
+		String nextCursor = hasMore
+				? cursorFor(page.get(page.size() - 1), query.getSortBy(), query.getSortDirection())
+				: null;
 		long queryDurationMs = (System.nanoTime() - queryStartedAt) / 1_000_000;
-		LOGGER.info("Loaded incident page for role {} user {} (page={}, size={}, results={}, total={}) in {} ms",
-				caller.role(), caller.userId(), query.getPage(), query.getSize(), incidents.size(),
-				result.getTotalElements(), queryDurationMs);
-		return new IncidentPageResponse(incidents, result.getNumber(), result.getSize(),
-				result.getTotalElements(), result.getTotalPages());
+		LOGGER.info("Loaded incident page for role {} user {} (size={}, results={}, hasMore={}) in {} ms",
+				caller.role(), caller.userId(), query.getSize(), incidents.size(), hasMore, queryDurationMs);
+		return new IncidentPageResponse(incidents, query.getSize(), hasMore, nextCursor);
 	}
 
-	private static Integer statusId(IncidentQueryParameters query) {
+	private static String cursorFor(Incident incident, String sortBy, String sortDirection) {
+		return new IncidentCursor(sortBy, sortDirection, incident.getCreatedAt(), incident.getId(),
+				incident.getPriorityRank() == null ? 0 : incident.getPriorityRank()).encode();
+	}
+
+	private static Integer statusId(IncidentQueryFilters query) {
 		return query.getStatus() == null ? null : query.getStatus().getId();
 	}
 
-	private static String priorityName(IncidentQueryParameters query) {
+	private static String priorityName(IncidentQueryFilters query) {
 		return query.getPriority() == null ? null : query.getPriority().name();
 	}
 
@@ -183,6 +188,23 @@ public class IncidentService {
 				.map(attachment -> toPhotoResponse(id, attachment))
 				.toList();
 		return toResponse(incident, caller, photos);
+	}
+
+	@Transactional(readOnly = true)
+	public AssignedIncidentPageResponse findAssigned(TokenSubject caller, int page, int size) {
+		if (caller.role() != Role.TECHNICIAN) {
+			throw new IncidentAccessDeniedException();
+		}
+		int boundedSize = Math.min(size, MAX_ASSIGNED_PAGE_SIZE);
+		Pageable request = PageRequest.of(page, boundedSize + 1);
+		List<Incident> loaded = incidentRepository.findByAssignee_IdAndStatusInOrderByCreatedAtDesc(
+				caller.userId(), IncidentStatus.ACTIVE, request);
+		boolean hasMore = loaded.size() > boundedSize;
+		List<IncidentResponse> incidents = loaded.stream()
+				.limit(boundedSize)
+				.map(incident -> toResponse(incident, caller))
+				.toList();
+		return new AssignedIncidentPageResponse(incidents, page, boundedSize, hasMore);
 	}
 
 	@Transactional
@@ -427,6 +449,9 @@ public class IncidentService {
 			return;
 		}
 		if (caller.role() == Role.TECHNICIAN) {
+			if (!isUser(incident.getAssignee(), caller)) {
+				throw new AccessDeniedException("Technician is not the assignee of incident " + incident.getId());
+			}
 			return;
 		}
 		throw new AccessDeniedException("Role " + caller.role() + " cannot upload incident photos");

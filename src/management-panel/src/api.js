@@ -51,7 +51,7 @@ export async function getIncidentsWithinBounds(bounds, { signal, filters = {} } 
     north: String(bounds.north),
   });
   appendIncidentFilters(query, filters);
-  const payload = await apiRequest('/api/incidents?' + query.toString(), { signal });
+  const payload = await apiRequest('/api/incidents/map?' + query.toString(), { signal });
   if (!payload || !Array.isArray(payload.incidents) || typeof payload.truncated !== 'boolean') {
     throw new Error('La API devolvió un resultado de mapa no válido.');
   }
@@ -67,8 +67,8 @@ export async function getIncidentPage(parameters, { signal } = {}) {
   }
   const payload = await apiRequest('/api/incidents?' + query.toString(), { signal });
   if (!payload || !Array.isArray(payload.incidents)
-      || !Number.isInteger(payload.page) || !Number.isInteger(payload.size)
-      || !Number.isInteger(payload.totalPages) || !Number.isInteger(payload.totalElements)) {
+      || !Number.isInteger(payload.size) || typeof payload.hasMore !== 'boolean'
+      || (payload.nextCursor !== null && typeof payload.nextCursor !== 'string')) {
     throw new Error('La API devolvió una página de incidencias no válida.');
   }
   return payload;

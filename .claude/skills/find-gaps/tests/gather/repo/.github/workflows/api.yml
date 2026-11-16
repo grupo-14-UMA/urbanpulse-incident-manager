@@ -1,0 +1,25 @@
+name: API CI
+on:
+  pull_request:
+    paths:
+      - "services/api/**"
+      - "docs/site.v2/**"
+      - "compose.yaml"
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          cache-dependency-path: services/api/package-lock.json
+      - name: Install
+        run: npm ci
+      - name: Test
+        run: npm test
+      - name: Tools
+        working-directory: .
+        run: cd tools && go vet ./...

@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Fake gh for tests/run.sh: logs each call to $FAKE_GH_LOG and answers from $FAKE_GH_DIR.
+echo "$1 $2" >>"$FAKE_GH_LOG"
+case "$1 $2" in
+  "repo view") echo "acme/widgets" ;;
+  "api graphql")
+    if [[ " $* " == *" --paginate "* ]]; then cat "$FAKE_GH_DIR/issues.json"; else cat "$FAKE_GH_DIR/meta.json"; fi ;;
+  *) echo "fake gh: unexpected call: $*" >&2; exit 1 ;;
+esac

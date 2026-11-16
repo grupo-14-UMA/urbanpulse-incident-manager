@@ -86,15 +86,17 @@ class IncidentListApiTests {
 		insertIncident("middle", REPORTED, firstCategoryId, "MEDIUM", null, null, Instant.parse("2026-01-02T00:00:00Z"));
 		insertIncident("new", REPORTED, firstCategoryId, "HIGH", null, null, Instant.parse("2026-01-03T00:00:00Z"));
 
-		IncidentPageResponse first = loadPage("?page=0&size=2&sortBy=createdAt&sortDirection=desc");
+		IncidentPageResponse first = loadPage("?size=2&sortBy=createdAt&sortDirection=desc");
 		assertThat(first.incidents()).extracting(IncidentResponse::title).containsExactly("new", "middle");
-		assertThat(first.page()).isZero();
 		assertThat(first.size()).isEqualTo(2);
-		assertThat(first.totalElements()).isEqualTo(3);
-		assertThat(first.totalPages()).isEqualTo(2);
+		assertThat(first.hasMore()).isTrue();
+		assertThat(first.nextCursor()).isNotBlank();
 
-		IncidentPageResponse second = loadPage("?page=1&size=2&sortBy=createdAt&sortDirection=desc");
+		IncidentPageResponse second = loadPage("?size=2&sortBy=createdAt&sortDirection=desc&cursor="
+				+ first.nextCursor());
 		assertThat(second.incidents()).extracting(IncidentResponse::title).containsExactly("old");
+		assertThat(second.hasMore()).isFalse();
+		assertThat(second.nextCursor()).isNull();
 
 		client.get().uri("/api/incidents?size=101").header("Authorization", operatorAuthorization)
 			.exchange().expectStatus().isBadRequest();
@@ -108,9 +110,14 @@ class IncidentListApiTests {
 		insertIncident("baja", REPORTED, firstCategoryId, "LOW", null, null, Instant.parse("2026-01-02T00:00:00Z"));
 		insertIncident("urgente", REPORTED, firstCategoryId, "URGENT", null, null, Instant.parse("2026-01-01T00:00:00Z"));
 
-		IncidentPageResponse response = loadPage("?sortBy=priority&sortDirection=desc");
-		assertThat(response.incidents()).extracting(IncidentResponse::title)
-				.containsExactly("urgente", "baja", "sin prioridad");
+		IncidentPageResponse first = loadPage("?size=2&sortBy=priority&sortDirection=desc");
+		assertThat(first.incidents()).extracting(IncidentResponse::title)
+				.containsExactly("urgente", "baja");
+		assertThat(first.hasMore()).isTrue();
+		IncidentPageResponse second = loadPage("?size=2&sortBy=priority&sortDirection=desc&cursor="
+				+ first.nextCursor());
+		assertThat(second.incidents()).extracting(IncidentResponse::title).containsExactly("sin prioridad");
+		assertThat(second.hasMore()).isFalse();
 	}
 
 	@Test
@@ -139,7 +146,7 @@ class IncidentListApiTests {
 
 	@Test
 	void validatesIncompleteMapBoundsAndConflictingCategoryFilters() {
-		client.get().uri("/api/incidents?west=-4.45").header("Authorization", operatorAuthorization)
+		client.get().uri("/api/incidents/map?west=-4.45").header("Authorization", operatorAuthorization)
 			.exchange().expectStatus().isBadRequest();
 		client.get().uri("/api/incidents?categoryId=" + firstCategoryId + "&uncategorized=true")
 			.header("Authorization", operatorAuthorization).exchange().expectStatus().isBadRequest();

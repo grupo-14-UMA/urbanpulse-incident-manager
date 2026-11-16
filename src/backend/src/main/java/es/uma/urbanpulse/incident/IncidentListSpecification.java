@@ -6,7 +6,7 @@ import java.util.List;
 import org.springframework.data.jpa.domain.Specification;
 
 import es.uma.urbanpulse.auth.TokenSubject;
-import es.uma.urbanpulse.incident.api.IncidentQueryParameters;
+import es.uma.urbanpulse.incident.api.IncidentQueryFilters;
 import es.uma.urbanpulse.user.Role;
 import jakarta.persistence.criteria.Predicate;
 
@@ -16,7 +16,7 @@ final class IncidentListSpecification {
 	private IncidentListSpecification() {
 	}
 
-	static Specification<Incident> forQuery(IncidentQueryParameters query, TokenSubject caller) {
+	static Specification<Incident> forQuery(IncidentQueryFilters query, TokenSubject caller) {
 		return (root, criteriaQuery, builder) -> {
 			List<Predicate> predicates = new ArrayList<>();
 			if (caller.role() == Role.CITIZEN) {

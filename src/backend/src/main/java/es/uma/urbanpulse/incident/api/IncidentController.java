@@ -29,12 +29,13 @@ import es.uma.urbanpulse.incident.IncidentService;
 import es.uma.urbanpulse.incident.StoredPhotoContent;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 
 @RestController
 @Validated
@@ -78,36 +79,40 @@ public class IncidentController {
 	}
 
 	@GetMapping
-	@Operation(
-			summary = "Listar incidencias o consultar el área visible del mapa",
-			description = "Sin límites del mapa devuelve una página (por defecto 20, máximo 100) con filtros por estado, categoría, prioridad y fecha. "
-					+ "Operadores ven todas; ciudadanos solo las propias; técnicos solo las asignadas. "
-					+ "Con los cuatro límites WGS 84 devuelve hasta 500 incidencias abiertas del área; admite los mismos filtros y truncated indica si hay más."
-	)
+	@Operation(summary = "Listar incidencias con filtros y cursor",
+			description = "Devuelve hasta 100 incidencias. Operadores ven todas; ciudadanos solo las propias; técnicos solo las asignadas. "
+					+ "Usa nextCursor para avanzar sin degradación en páginas profundas.")
 	@ApiResponses({
 			@ApiResponse(
 					responseCode = "200",
-					description = "Página de incidencias o incidencias encontradas en el área del mapa.",
-					content = @Content(
-							mediaType = "application/json",
-							schema = @Schema(oneOf = { IncidentPageResponse.class, IncidentMapResponse.class }),
-							examples = {
-								@ExampleObject(name = "Página", value = "{\"incidents\": [], \"page\": 0, \"size\": 20, \"totalElements\": 0, \"totalPages\": 0}"),
-								@ExampleObject(name = "Mapa", value = "{\"incidents\": [], \"truncated\": false}") })),
+					description = "Página de incidencias con cursor de continuación."),
 			@ApiResponse(
 					responseCode = "400",
-					description = "Los límites del área no son válidos.",
+					description = "Los filtros, el cursor o el orden no son válidos.",
 					content = @Content(
 							mediaType = "application/json",
 							schema = @Schema(implementation = ApiErrorResponse.class)))
 	})
-	public ResponseEntity<?> list(
+	public IncidentPageResponse list(
 			@Valid @ParameterObject @ModelAttribute IncidentQueryParameters query,
 			@AuthenticationPrincipal Jwt jwt) {
-		if (query.hasBounds()) {
-			return ResponseEntity.ok(incidentService.findWithinBounds(query, AuthTokens.subjectOf(jwt)));
-		}
-		return ResponseEntity.ok(incidentService.findPage(query, AuthTokens.subjectOf(jwt)));
+		return incidentService.findPage(query, AuthTokens.subjectOf(jwt));
+	}
+
+	@GetMapping("/map")
+	@Operation(summary = "Consultar las incidencias del área visible del mapa",
+			description = "Devuelve hasta 500 incidencias activas dentro del rectángulo WGS 84. "
+					+ "Admite filtros de estado, categoría, prioridad y fecha; truncated indica si hay más resultados.")
+	@ApiResponses({
+			@ApiResponse(responseCode = "200", description = "Incidencias encontradas en el área del mapa."),
+			@ApiResponse(responseCode = "400", description = "Los límites del área no son válidos.",
+					content = @Content(mediaType = "application/json",
+							schema = @Schema(implementation = ApiErrorResponse.class)))
+	})
+	public IncidentMapResponse map(
+			@Valid @ParameterObject @ModelAttribute IncidentMapQueryParameters query,
+			@AuthenticationPrincipal Jwt jwt) {
+		return incidentService.findWithinBounds(query, AuthTokens.subjectOf(jwt));
 	}
 
 	@GetMapping("/{id}")
@@ -129,6 +134,22 @@ public class IncidentController {
 	})
 	public IncidentResponse findById(@PathVariable Integer id, @AuthenticationPrincipal Jwt jwt) {
 		return incidentService.findById(id, AuthTokens.subjectOf(jwt));
+	}
+
+	@GetMapping("/assigned")
+	@Operation(summary = "Listar trabajos asignados al técnico actual")
+	@ApiResponses({
+			@ApiResponse(responseCode = "200", description = "Trabajos asignados abiertos."),
+			@ApiResponse(responseCode = "403", description = "Solo los técnicos pueden consultar sus trabajos.",
+					content = @Content(mediaType = "application/json",
+							schema = @Schema(implementation = ApiErrorResponse.class)))
+	})
+	public AssignedIncidentPageResponse assigned(
+			@RequestParam(defaultValue = "0") @Min(value = 0, message = "La página no puede ser negativa.") int page,
+			@RequestParam(defaultValue = "20") @Min(value = 1, message = "El tamaño debe estar entre 1 y 50.")
+			@Max(value = 50, message = "El tamaño debe estar entre 1 y 50.") int size,
+			@AuthenticationPrincipal Jwt jwt) {
+		return incidentService.findAssigned(AuthTokens.subjectOf(jwt), page, size);
 	}
 
 	@PostMapping("/{id}/validate")

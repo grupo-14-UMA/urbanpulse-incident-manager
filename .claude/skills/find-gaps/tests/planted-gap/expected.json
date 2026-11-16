@@ -1,0 +1,11 @@
+{
+  "target": "Entrega 1",
+  "components": [
+    {"name": "api", "folders": ["services/api"], "services": ["api"], "helpers": []}
+  ],
+  "cells": [
+    {"component": "api", "criterion": "ci", "value": "gap"},
+    {"component": "api", "criterion": "local", "value": "ok"},
+    {"component": "api", "criterion": "tests", "value": "ok"}
+  ]
+}

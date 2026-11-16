@@ -1,0 +1,224 @@
+{
+ "repo": "acme/widgets",
+ "milestones": [
+  {
+   "number": 1,
+   "title": "Entrega 1",
+   "state": "CLOSED",
+   "description": ""
+  },
+  {
+   "number": 2,
+   "title": "Entrega 2",
+   "state": "OPEN",
+   "description": ""
+  }
+ ],
+ "issues": [],
+ "evidence": {
+  "orchestration": [
+   {
+    "file": "docker-compose.yml",
+    "services": [
+     {
+      "name": "api",
+      "build": "src/api",
+      "image": "acme-api",
+      "depends_on": [
+       {
+        "service": "db",
+        "condition": "service_healthy"
+       },
+       {
+        "service": "migrate",
+        "condition": "service_completed_successfully"
+       }
+      ],
+      "restart": null
+     },
+     {
+      "name": "db",
+      "build": null,
+      "image": "postgres:17",
+      "depends_on": [],
+      "restart": null
+     },
+     {
+      "name": "init-storage",
+      "build": null,
+      "image": "acme-api",
+      "depends_on": [],
+      "restart": "no"
+     },
+     {
+      "name": "migrate",
+      "build": null,
+      "image": "flyway/flyway:11",
+      "depends_on": [
+       {
+        "service": "db",
+        "condition": "service_healthy"
+       }
+      ],
+      "restart": "no"
+     },
+     {
+      "name": "proxy",
+      "build": "deploy/proxy",
+      "image": null,
+      "code_files": 0,
+      "depends_on": [],
+      "restart": null
+     }
+    ]
+   }
+  ],
+  "manifests": [
+   {
+    "folder": "src/api",
+    "files": [
+     "src/api/pom.xml"
+    ],
+    "ecosystem": "maven",
+    "scripts": {},
+    "commands": {
+     "test": "./mvnw test",
+     "lint": null,
+     "build": "./mvnw package"
+    },
+    "test_files": [
+     "src/api/src/test/java/AppTest.java"
+    ],
+    "test_file_count": 1
+   },
+   {
+    "folder": "src/mobile",
+    "files": [
+     "src/mobile/package.json"
+    ],
+    "ecosystem": "npm",
+    "scripts": {
+     "start": "expo start",
+     "lint": "expo lint",
+     "test": "jest"
+    },
+    "commands": {
+     "test": "npm test",
+     "lint": "npm run lint",
+     "build": null
+    },
+    "test_files": [
+     "src/mobile/src/api.test.js"
+    ],
+    "test_file_count": 1
+   },
+   {
+    "folder": "src/worker",
+    "files": [
+     "src/worker/go.mod"
+    ],
+    "ecosystem": "go",
+    "scripts": {},
+    "commands": {
+     "test": "go test ./...",
+     "lint": null,
+     "build": "go build ./..."
+    },
+    "test_files": [],
+    "test_file_count": 0
+   }
+  ],
+  "workflows": [
+   {
+    "file": ".github/workflows/api.yml",
+    "name": "API",
+    "events": [
+     "pull_request"
+    ],
+    "folders": [
+     "src/api"
+    ],
+    "steps": [
+     {
+      "job": "verify",
+      "name": "Verify",
+      "folders": [
+       "src/api"
+      ],
+      "run": "./mvnw --batch-mode verify"
+     }
+    ]
+   },
+   {
+    "file": ".github/workflows/mobile.yml",
+    "name": "Mobile",
+    "events": [
+     "pull_request"
+    ],
+    "folders": [
+     "src/mobile"
+    ],
+    "steps": [
+     {
+      "job": "test",
+      "name": "Install",
+      "folders": [
+       "src/mobile"
+      ],
+      "run": "npm ci"
+     },
+     {
+      "job": "test",
+      "name": "Lint",
+      "folders": [
+       "src/mobile"
+      ],
+      "run": "npm run lint"
+     },
+     {
+      "job": "test",
+      "name": "Test",
+      "folders": [
+       "src/mobile"
+      ],
+      "run": "npm test -- --runInBand"
+     }
+    ]
+   },
+   {
+    "file": ".github/workflows/policy.yml",
+    "name": "Policy",
+    "events": [
+     "pull_request"
+    ],
+    "folders": [],
+    "steps": []
+   }
+  ],
+  "docs": [
+   "README.md",
+   "CONTRIBUTING.md",
+   "AGENTS.md",
+   "docs/development.md",
+   "docs/deployment.md"
+  ],
+  "starts": [
+   {
+    "doc": "docs/development.md",
+    "folder": "src/mobile",
+    "commands": [
+     "npm install",
+     "npx expo start"
+    ]
+   },
+   {
+    "doc": "docs/development.md",
+    "folder": "src/worker",
+    "commands": [
+     "npm install --save-dev x"
+    ]
+   }
+  ]
+ },
+ "warnings": []
+}

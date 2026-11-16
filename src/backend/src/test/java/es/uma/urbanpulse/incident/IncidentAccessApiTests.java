@@ -8,6 +8,7 @@ import static es.uma.urbanpulse.TestAccounts.newCitizen;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Map;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
@@ -30,9 +31,9 @@ import es.uma.urbanpulse.incident.api.IncidentResponse;
 class IncidentAccessApiTests {
 
 	private static final String MAP_BOUNDS =
-			"/api/incidents?west=-4.45&south=36.68&east=-4.38&north=36.77";
+			"/api/incidents/map?west=-4.45&south=36.68&east=-4.38&north=36.77";
 	private static final String ISOLATED_MAP_BOUNDS =
-			"/api/incidents?west=-0.001&south=-0.001&east=0.001&north=0.001";
+			"/api/incidents/map?west=-0.001&south=-0.001&east=0.001&north=0.001";
 
 	private static final Map<String, Object> NEW_INCIDENT = Map.of(
 			"title", "Farola fundida",
@@ -121,6 +122,23 @@ class IncidentAccessApiTests {
 			this.client.get().uri("/api/categories").header("Authorization", bearer(user)).exchange()
 				.expectStatus().isOk();
 		}
+	}
+
+	@Test
+	void technicianLoadsOnlyTheirAssignedOpenIncidents() {
+		LifecycleDriver flow = new LifecycleDriver(this.client);
+		int assignedId = flow.assigned();
+
+		this.client.get()
+			.uri("/api/incidents/assigned?page=0&size=1")
+			.header("Authorization", bearer(flow.technician))
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody()
+			.jsonPath("$.page").isEqualTo(0)
+			.jsonPath("$.size").isEqualTo(1)
+			.jsonPath("$.incidents[?(@.id == " + assignedId + ")].status")
+			.isEqualTo(List.of(IncidentStatus.ASSIGNED.name()));
 	}
 
 	@Test

@@ -5,7 +5,6 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 
-import org.hibernate.annotations.Formula;
 import org.locationtech.jts.geom.Point;
 
 import es.uma.urbanpulse.category.Category;
@@ -64,8 +63,8 @@ public class Incident {
 	@Column(name = "priority", length = 10)
 	private IncidentPriority priority;
 
-	/** Computed rank, backed by a matching expression index without storing another column. */
-	@Formula("CASE priority WHEN 'LOW' THEN 1 WHEN 'MEDIUM' THEN 2 WHEN 'HIGH' THEN 3 WHEN 'URGENT' THEN 4 ELSE 0 END")
+	/** Database-generated, stored sort key kept in sync with the priority enum. */
+	@Column(name = "priority_rank", insertable = false, updatable = false)
 	private Integer priorityRank;
 
 	@Column(name = "priority_justification", length = 1000)
@@ -156,6 +155,10 @@ public class Incident {
 
 	public IncidentPriority getPriority() {
 		return priority;
+	}
+
+	public Integer getPriorityRank() {
+		return priorityRank;
 	}
 
 	public String getPriorityJustification() {

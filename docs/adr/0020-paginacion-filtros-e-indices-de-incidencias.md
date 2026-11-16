@@ -11,14 +11,14 @@ El panel necesita buscar incidencias por estado, categoría, prioridad y fecha, 
 ## Opciones consideradas
 
 1. Mantener la carga espacial del mapa y filtrar y paginar en el navegador.
-2. Añadir un endpoint específico de búsqueda y conservar por separado el endpoint del mapa.
-3. Reutilizar `GET /api/incidents`, seleccionando listado paginado sin límites geográficos y consulta espacial cuando se proporcionan los cuatro límites.
+2. Usar una ruta para el listado paginado y otra para la consulta espacial del mapa.
+3. Reutilizar una sola ruta y seleccionar el modo según se proporcionen los cuatro límites del mapa.
 
 ## Decisión
 
-La misma ruta sirve dos modos acotados: sin límites devuelve una página con tamaño predeterminado de 20 y máximo de 100; con los cuatro límites WGS 84 devuelve hasta 500 incidencias abiertas del área visible. Ambos modos admiten los filtros compatibles. El listado permite ordenar por fecha o prioridad y aplica el ámbito del usuario antes de los filtros: operadores ven todas las incidencias, ciudadanos las propias y técnicos las asignadas. El mapa aplica el mismo ámbito por rol en la consulta SQL.
+Se elige la opción 2 para mantener un contrato estable por ruta: `GET /api/incidents` devuelve el listado filtrado y `GET /api/incidents/map` consulta el área visible. El listado devuelve hasta 100 resultados (20 por defecto), ordena por fecha o prioridad y avanza mediante un cursor de clave, sin `OFFSET` ni recuento total. El cursor incluye las claves de orden y está ligado al campo y dirección de ordenación. Ambos endpoints aplican el ámbito del usuario antes de los filtros: operadores ven todas las incidencias, ciudadanos las propias y técnicos las asignadas.
 
-Se usan índices compuestos que comienzan por los campos de filtro o alcance y continúan con fecha e identificador para ordenar resultados estables. La prioridad se ordena con una expresión indexada derivada de su enum; no se almacena una columna calculada redundante. La prueba de rendimiento inserta un millón de filas, captura el SQL de listado producido por Hibernate al llamar al endpoint y compara su plan y tiempo de ejecución con los índices desactivados y activos. Las consultas de estado, categoría, autor, técnico y prioridad también verifican sus índices con `EXPLAIN (ANALYZE, BUFFERS)`.
+Se usan índices compuestos que comienzan por los campos de filtro o alcance y continúan con fecha e identificador para ordenar resultados estables. `priority_rank` es una columna generada y almacenada en la base de datos a partir de `priority`; Hibernate ordena por ese campo físico y el índice de prioridad lo incluye. La prueba de rendimiento inserta un millón de filas, captura el SQL de listado producido por Hibernate al llamar al endpoint y compara su plan y tiempo de ejecución con los índices ausentes y presentes. Las consultas de estado, categoría, autor, técnico y prioridad también verifican sus índices con `EXPLAIN (ANALYZE, BUFFERS)`.
 
 ## Consecuencias
 
@@ -26,5 +26,5 @@ Se usan índices compuestos que comienzan por los campos de filtro o alcance y c
 - \+ Los límites espaciales y la consulta de lista conservan respuestas acotadas; la autorización por rol se aplica en el servidor.
 - \+ Los índices respaldan el orden y los filtros comunes y se comprueban sobre un conjunto sintético de un millón de incidencias.
 - − Los índices ocupan espacio y añaden coste a las escrituras; deben revisarse si los patrones de consulta cambian.
-- − La paginación usa offset; páginas muy profundas pueden requerir una estrategia distinta si las mediciones de producción lo justifican.
+- − La navegación por cursor solo permite avanzar y volver por cursores que conserve el cliente; no ofrece salto directo a una página arbitraria ni un recuento total.
 - − La prueba de rendimiento tarda más que las pruebas funcionales porque crea un millón de filas.

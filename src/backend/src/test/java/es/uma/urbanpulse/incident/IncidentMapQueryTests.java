@@ -21,7 +21,6 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 import es.uma.urbanpulse.PostgisContainerConfiguration;
 import es.uma.urbanpulse.auth.AuthResponse;
 import es.uma.urbanpulse.incident.api.IncidentMapResponse;
-import es.uma.urbanpulse.incident.api.IncidentPageResponse;
 import es.uma.urbanpulse.incident.api.IncidentResponse;
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
@@ -30,7 +29,7 @@ import es.uma.urbanpulse.incident.api.IncidentResponse;
 class IncidentMapQueryTests {
 
 	private static final String MAP_BOUNDS =
-			"/api/incidents?west=-4.45&south=36.68&east=-4.38&north=36.77";
+			"/api/incidents/map?west=-4.45&south=36.68&east=-4.38&north=36.77";
 	private static final int REPORTED_STATUS_ID = 1;
 	private static final int VALIDATED_STATUS_ID = 2;
 	private static final int REJECTED_STATUS_ID = 3;
@@ -67,30 +66,23 @@ class IncidentMapQueryTests {
 	}
 
 	@Test
-	void returnsAPaginatedPageWhenMapBoundsAreOmitted() {
-		IncidentPageResponse response = client.get()
-				.uri("/api/incidents")
+	void requiresBoundsOnTheDedicatedMapEndpoint() {
+		client.get()
+				.uri("/api/incidents/map")
 				.header("Authorization", this.authorization)
 				.exchange()
 				.expectStatus()
-				.isOk()
-				.expectBody(IncidentPageResponse.class)
-				.returnResult()
-				.getResponseBody();
-
-		assertThat(response.page()).isZero();
-		assertThat(response.size()).isEqualTo(20);
-		assertThat(response.totalElements()).isZero();
+				.isBadRequest();
 	}
 
 	@Test
 	void rejectsInvertedOutOfRangeAndMalformedBounds() {
 		for (String invalidQuery : List.of(
-				"/api/incidents?west=-4.38&south=36.68&east=-4.45&north=36.77",
-				"/api/incidents?west=-4.45&south=36.77&east=-4.38&north=36.68",
-				"/api/incidents?west=-181&south=36.68&east=-4.38&north=36.77",
-				"/api/incidents?west=-4.45&south=36.68&east=-4.38&north=95",
-				"/api/incidents?west=invalid&south=36.68&east=-4.38&north=36.77")) {
+				"/api/incidents/map?west=-4.38&south=36.68&east=-4.45&north=36.77",
+				"/api/incidents/map?west=-4.45&south=36.77&east=-4.38&north=36.68",
+				"/api/incidents/map?west=-181&south=36.68&east=-4.38&north=36.77",
+				"/api/incidents/map?west=-4.45&south=36.68&east=-4.38&north=95",
+				"/api/incidents/map?west=invalid&south=36.68&east=-4.38&north=36.77")) {
 			String body = client.get()
 					.uri(invalidQuery)
 					.header("Authorization", this.authorization)

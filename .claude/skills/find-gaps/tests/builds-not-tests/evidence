@@ -1,0 +1,3 @@
+web	ci	builds with `npm run build`
+web	ci	does not test
+web	tests	no test files; no test command

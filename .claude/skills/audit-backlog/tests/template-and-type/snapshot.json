@@ -1,0 +1,88 @@
+{
+  "repo": "acme/backlog",
+  "milestones": [
+    {"number": 2, "title": "Entrega 2", "state": "OPEN"}
+  ],
+  "labels": ["🔍 triage", "✅ ready", "❓ question", "🚫 wontfix", "🗺️ epic", "area: ⚙️ core", "area: 🔧 repo"],
+  "collaborators": ["ana", "bea"],
+  "issues": [
+    {
+      "number": 70, "title": "feat: deliver the second version", "body": "The goal of the delivery.", "state": "OPEN",
+      "url": "https://github.com/acme/backlog/issues/70",
+      "labels": {"nodes": [{"name": "🗺️ epic"}, {"name": "✅ ready"}]},
+      "assignees": {"nodes": []},
+      "milestone": {"number": 2, "title": "Entrega 2", "state": "OPEN"},
+      "issueType": {"name": "Feature"},
+      "parent": null,
+      "subIssues": {"totalCount": 3, "nodes": [{"number": 71, "state": "OPEN"}, {"number": 72, "state": "OPEN"}, {"number": 73, "state": "OPEN"}]},
+      "blockedBy": {"totalCount": 0, "nodes": []},
+      "issueFieldValues": {"nodes": []}
+    },
+    {
+      "number": 71, "title": "feat: search incidents by address",
+      "body": "## Description\n\nWhat and why.\n\n## Acceptance criteria\n\n- [ ] The operator finds an incident by its street.\n\n## Quality attributes\n\nResults are paginated and the search uses an index.\n",
+      "state": "OPEN", "url": "https://github.com/acme/backlog/issues/71",
+      "labels": {"nodes": [{"name": "✅ ready"}, {"name": "area: ⚙️ core"}]},
+      "assignees": {"nodes": [{"login": "ana"}]},
+      "milestone": {"number": 2, "title": "Entrega 2", "state": "OPEN"},
+      "issueType": {"name": "Task"},
+      "parent": {"number": 70, "state": "OPEN", "milestone": {"number": 2}},
+      "subIssues": {"totalCount": 0, "nodes": []},
+      "blockedBy": {"totalCount": 0, "nodes": []},
+      "issueFieldValues": {"nodes": [{"name": "Medium", "field": {"name": "Priority"}}, {"name": "Moderate", "field": {"name": "Effort"}}]}
+    },
+    {
+      "number": 72, "title": "chore: rotate the backend logs",
+      "body": "## Description\n\nWhat and why.\n\n## Acceptance criteria\n\n- [ ] Log files older than 7 days are gone.\n",
+      "state": "OPEN", "url": "https://github.com/acme/backlog/issues/72",
+      "labels": {"nodes": [{"name": "✅ ready"}, {"name": "area: 🔧 repo"}]},
+      "assignees": {"nodes": [{"login": "bea"}]},
+      "milestone": {"number": 2, "title": "Entrega 2", "state": "OPEN"},
+      "issueType": {"name": "Task"},
+      "parent": {"number": 70, "state": "OPEN", "milestone": {"number": 2}},
+      "subIssues": {"totalCount": 0, "nodes": []},
+      "blockedBy": {"totalCount": 0, "nodes": []},
+      "issueFieldValues": {"nodes": [{"name": "Low", "field": {"name": "Priority"}}, {"name": "Simple", "field": {"name": "Effort"}}]}
+    },
+    {
+      "number": 73, "title": "fix: show the right incident count",
+      "body": "## Description\n\nThe counter is off by one.\n\n## Acceptance criteria\n\n- [ ] Following the steps to reproduce gives the expected result.\n",
+      "state": "OPEN", "url": "https://github.com/acme/backlog/issues/73",
+      "labels": {"nodes": [{"name": "✅ ready"}, {"name": "area: ⚙️ core"}]},
+      "assignees": {"nodes": [{"login": "ana"}]},
+      "milestone": {"number": 2, "title": "Entrega 2", "state": "OPEN"},
+      "issueType": {"name": "Bug"},
+      "parent": {"number": 70, "state": "OPEN", "milestone": {"number": 2}},
+      "subIssues": {"totalCount": 0, "nodes": []},
+      "blockedBy": {"totalCount": 0, "nodes": []},
+      "issueFieldValues": {"nodes": [{"name": "High", "field": {"name": "Priority"}}, {"name": "Simple", "field": {"name": "Effort"}}]}
+    },
+    {
+      "number": 74, "title": "feat: share incidents between areas",
+      "body": "## Description\n\nAn idea that touches two areas.\n",
+      "state": "OPEN", "url": "https://github.com/acme/backlog/issues/74",
+      "labels": {"nodes": [{"name": "🔍 triage"}, {"name": "area: ⚙️ core"}, {"name": "area: 🔧 repo"}]},
+      "assignees": {"nodes": []},
+      "milestone": null,
+      "issueType": {"name": "Feature"},
+      "parent": null,
+      "subIssues": {"totalCount": 0, "nodes": []},
+      "blockedBy": {"totalCount": 0, "nodes": []},
+      "issueFieldValues": {"nodes": []}
+    },
+    {
+      "number": 75, "title": "docs: explain the map colours",
+      "body": "Created from the web without the template.",
+      "state": "OPEN", "url": "https://github.com/acme/backlog/issues/75",
+      "labels": {"nodes": [{"name": "🔍 triage"}]},
+      "assignees": {"nodes": []},
+      "milestone": null,
+      "issueType": {"name": "Task"},
+      "parent": null,
+      "subIssues": {"totalCount": 0, "nodes": []},
+      "blockedBy": {"totalCount": 0, "nodes": []},
+      "issueFieldValues": {"nodes": []}
+    }
+  ],
+  "warnings": []
+}

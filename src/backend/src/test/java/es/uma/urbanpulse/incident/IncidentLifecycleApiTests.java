@@ -402,7 +402,7 @@ class IncidentLifecycleApiTests {
 
 	@Test
 	void mapKeepsOpenIncidentsAndDropsRejectedAndResolved() {
-		String bounds = "/api/incidents?west=-4.4217&south=36.7195&east=-4.4215&north=36.7197";
+		String bounds = "/api/incidents/map?west=-4.4217&south=36.7195&east=-4.4215&north=36.7197";
 		int validated = this.flow.validated();
 		int assigned = this.flow.assigned();
 		int inProgress = this.flow.inProgress();
