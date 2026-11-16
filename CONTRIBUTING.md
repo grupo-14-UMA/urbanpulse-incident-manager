@@ -95,7 +95,7 @@ Los issues, los epic y los milestones se crean con la skill [`create-issue`](.cl
 
 En la vista **Pendiente** del [tablero](#tablero-del-proyecto), las ideas aparecen en el grupo "No Milestone". Un issue de triage pasa a ready con la skill `create-issue`, tras una ronda corta de preguntas que resuelve lo que le falta.
 
-El **milestone actual** es el milestone abierto con el número más bajo: puede haber varios abiertos a la vez, porque la siguiente entrega se planifica mientras la actual sigue en marcha, y los milestones no llevan fecha obligatoria. Cada milestone abierto tiene **un solo epic abierto**, que agrupa como sub-issues todos los issues de la entrega.
+El **milestone actual** es el milestone abierto con el número más bajo: puede haber varios abiertos a la vez, porque la siguiente entrega se planifica mientras la actual sigue en marcha, y los milestones no llevan fecha obligatoria. Cada milestone abierto tiene **un solo epic abierto**, que agrupa como sub-issues todos los issues de la entrega, y un **issue de release** (`chore: release vX.Y.Z`), con el que se cierra la entrega (ver [docs/deployment.md](docs/deployment.md#versionado)). Todo issue de la entrega bloquea su issue de release: al meter un issue en un milestone con release se enlaza como *blocking* (`create-issue.sh … --blocks <release>`), y al moverlo a otro milestone o devolverlo a la bandeja de entrada el enlace se mueve o se quita (`--remove-blocks`).
 
 ### Definición de listo
 
@@ -124,13 +124,25 @@ Un issue dice *qué* hay que hacer y *cómo se comprueba*. No obliga a una forma
 
 ### Auditar el backlog
 
-La skill [`audit-backlog`](.claude/skills/audit-backlog/SKILL.md) revisa la forma de todo el backlog abierto: que cada issue tenga lo que pide su estado, que las dependencias no apunten a entregas posteriores ni a issues descartados, que cada issue de una entrega sea sub-issue de su epic y que no queden issues de triage en la entrega objetivo. Saca un informe ordenado por gravedad y solo cambia algo cuando se aprueba, siempre con `create-issue.sh update`. El Product Owner la ejecuta antes de cada reunión y al planificar una entrega (`/audit-backlog`, o `/audit-backlog Entrega 3` para auditar otra entrega que la actual). `create-issue.sh check <n>` valida un issue suelto sin cambiarlo, por ejemplo antes de pedir revisión.
+La skill [`audit-backlog`](.claude/skills/audit-backlog/SKILL.md) revisa la forma de todo el backlog abierto: que cada issue tenga lo que pide su estado, que las dependencias no apunten a entregas posteriores ni a issues descartados, que cada issue de una entrega sea sub-issue de su epic y bloquee su issue de release, que cada milestone abierto tenga issue de release y que no queden issues de triage en la entrega objetivo. Saca un informe ordenado por gravedad y solo cambia algo cuando se aprueba, siempre con `create-issue.sh update`. El Product Owner la ejecuta antes de cada reunión y al planificar una entrega (`/audit-backlog`, o `/audit-backlog Entrega 3` para auditar otra entrega que la actual). `create-issue.sh check <n>` valida un issue suelto sin cambiarlo, por ejemplo antes de pedir revisión.
 
 ### Buscar huecos
 
 La skill [`find-gaps`](.claude/skills/find-gaps/SKILL.md) busca el trabajo que le falta al sistema y que ningún issue recoge. Descubre los componentes en el repositorio (servicios de Docker Compose, carpetas con manifiesto y workflows), cruza cada uno con unos criterios (arranca en local, tiene CI y pruebas, registra logs, sigue la gestión de errores, la documentación lo describe tal como es y cumple los atributos de calidad) y lista los requisitos sin código ni issue. Cada hueco lleva su evidencia y se compara con el tracker: si un issue abierto ya lo cubre, no se propone otro, y si se descartó, no se vuelve a proponer. Los huecos se clasifican frente a la entrega objetivo (bloquea la entrega, pendiente para otra entrega o mejora futura) y solo se crean los que se aprueban, siempre con la skill `create-issue`.
 
 `audit-backlog` revisa la forma de los issues que ya existen; `find-gaps` busca el trabajo que no tiene issue. El Product Owner la ejecuta antes de planificar una entrega (`/find-gaps`, o `/find-gaps Entrega 3` para buscar huecos frente a otra entrega que la actual).
+
+### Planificar una entrega
+
+Las entregas se planifican por adelantado, mientras la actual sigue abierta, y se refinan varias veces a medida que surgen ideas. El Product Owner lo hace con la skill [`plan-milestone`](.claude/skills/plan-milestone/SKILL.md): `/plan-milestone` trabaja sobre el siguiente milestone abierto después del actual (o crea la siguiente `Entrega N` si no hay ninguno) y `/plan-milestone Entrega 3` sobre ese milestone.
+
+1. **Reúne** los huecos de `find-gaps`, la bandeja de entrada (ideas de triage sin milestone), los issues de triage abiertos y lo que queda de la entrega actual.
+2. **Propone el alcance** antes de escribir nada: el objetivo de la entrega y por qué, lo que entra y lo que se queda fuera, cada cosa con su motivo, y solo si tiene sentido los issues de la entrega actual que encajan mejor en esta. El Product Owner lo corrige punto por punto y decide la fecha de entrega, que puede no tener.
+3. **Concreta los issues** en una sola ronda de preguntas para toda la entrega: cómo se dividen, su orden (*blocked by*), área, responsable, prioridad y esfuerzo. Avisa cuando una persona recibe muchos más issues que el resto, sin repartirlos por su cuenta. Lo que no se puede decidir aún queda como issue de triage con el milestone.
+4. **Escribe el plan** tras la aprobación: el milestone con el objetivo como descripción, el epic con el objetivo, lo que entra y lo que se queda fuera, los issues `✅ ready` y el issue de release bloqueado por todos ellos. Las ideas y los issues que se mueven se actualizan, nunca se duplican.
+5. **Audita** la entrega con `audit-backlog`.
+
+Una idea descartada solo se cierra (como *not planned*) cuando el Product Owner dice que no se hará nunca; la antigüedad no la cierra. Las dependencias pueden apuntar a issues de la entrega actual, nunca al revés. Al volver a ejecutarla sobre una entrega que ya existe, parte del objetivo del epic, propone solo lo nuevo y actualiza el epic.
 
 ## Etiquetas
 
