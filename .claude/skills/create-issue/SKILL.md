@@ -19,6 +19,8 @@ Read these from `CONTRIBUTING.md` on every run; they live only there:
 
 Read labels, milestones and epics from the tracker. The body follows the template in `.github/ISSUE_TEMPLATE/` that matches the title prefix. `--milestone current` resolves to the current milestone. For *blocked by*, search the open issues whose work the new one needs first.
 
+**Release link**: a delivery is finished through its release issue (`chore: release vX.Y.Z`), so every issue that goes into a milestone with a release issue blocks it (`--blocks <release>`, or `"blocks"` in a batch). Moving an issue to another milestone moves the link (`--remove-blocks <old release> --blocks <new release>`); sending it back to the inbox removes it (`--remove-blocks <old release>`). Look for the release issue of the milestone in the tracker before every create or update that sets or changes a milestone.
+
 Write every body to a file in the scratchpad and pass it with `--body-file`. Checklist fields change only through the script: `update <n>` for any of them, in any state. `gh issue edit` stays for one-off actions (a comment, closing, an extra label).
 
 ## Modes
@@ -29,7 +31,7 @@ Pick the mode from the request:
 - **Idea**: loose notes, possibly several topics, not for the current milestone yet → 🔍 triage issues with no milestone.
 - **Promote**: an existing 🔍 triage issue → ✅ ready.
 - **Update**: change fields of an existing issue and keep its state (give an idea a milestone, send an issue back to the inbox with `--milestone ""`, fix a missing field).
-- **Delivery**: a new milestone and its epic, optionally with their issues in one batch.
+- **Delivery**: a new milestone and its epic, optionally with their issues in one batch. Planning the whole delivery (scope, issues and release) is the `plan-milestone` skill.
 - **Check**: validate existing issues without changing them.
 
 A request for an issue with open questions that the user can't settle now becomes a triage issue, with the milestone when it belongs to a delivery.
@@ -63,7 +65,7 @@ Run `create-issue.sh update <n>` with only the fields that change. An empty valu
 
 1. Run `create-issue.sh milestone --title …`, with `--due-on` and `--description` when the user gives them.
 2. Create the epic with `--state epic` and that milestone: title, body (the delivery's goal) and milestone, and no area, priority, effort or parent epic.
-3. To create the epic with its issues, put the epic first in a batch and point the issues at it with `"epic": "@1"`; `"@k"` in `blocked_by` orders issues of the same batch.
+3. To create the epic with its issues, put the epic first in a batch and point the issues at it with `"epic": "@1"`; `"@k"` in `blocked_by` orders issues of the same batch, and `"@k"` in `blocks` makes an earlier item wait for this one.
 
 ### Check
 

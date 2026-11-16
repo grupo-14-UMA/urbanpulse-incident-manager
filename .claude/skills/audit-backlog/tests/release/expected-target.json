@@ -1,0 +1,4 @@
+[
+  {"check": "c", "issue": 82, "severity": "yellow", "field": "blocks"},
+  {"check": "d", "issue": null, "severity": "yellow", "field": null}
+]

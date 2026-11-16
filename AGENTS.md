@@ -27,7 +27,7 @@ If a concern is deferred, propose a follow-up issue (title and body) and create 
 
 ### Issue tracker
 
-Issues live in GitHub Issues (`gh` CLI). See `docs/agents/issue-tracker.md`. Create and promote issues with the `create-issue` skill.
+Issues live in GitHub Issues (`gh` CLI). See `docs/agents/issue-tracker.md`. Create and promote issues with the `create-issue` skill; `create-issue.sh --blocks <release>` links an issue to the release issue of its milestone, and `--remove-blocks` drops that link when the issue moves. Plan a delivery (milestone, epic, issues and release issue) with the `plan-milestone` skill.
 
 ### Triage labels
 

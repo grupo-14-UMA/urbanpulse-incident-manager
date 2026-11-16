@@ -68,7 +68,7 @@ Print in the terminal, in Spanish, exactly this layout:
 …
 ```
 
-- Check headings: (a) Campos por estado, (b) Issues ready flojas, (c) Dependencias rotas, (d) Huérfanas y epics, (e) Preguntas abiertas en la entrega.
+- Check headings: (a) Campos por estado, (b) Issues ready flojas, (c) Dependencias rotas, (d) Huérfanas y epics, (e) Preguntas abiertas en la entrega. (c) includes an issue that does not block the release issue of its milestone; (d) includes an open milestone with no release issue.
 - Order: 🔴 (red), 🟡 (yellow), ⚪ (check b); inside each level, by check; leave out empty levels and checks.
 - Milestone-level findings show the milestone title instead of an issue link.
 - With no target (no open milestone), the title says `objetivo: ninguno` and there is no 🔴 level.
@@ -81,7 +81,7 @@ Only when some finding has `fix.kind` `derivable` or `judgement`.
 
 1. Group the fixes by issue.
 2. **Skip an issue** whose check (a) findings also include a fix-`none` one with field `template`, `body`, `area` (several areas) or `blocked_by`, or a `state` finding for `🚫 wontfix` or `❓ question`: `update` rejects it until a person fixes that. Tell the user which issues are skipped and why.
-3. **Derivable fixes**: one list with issue, flag, value and reason ("área core → su dueño", "único epic de Entrega 2", "el prefijo feat → Feature"). Fill `--assignee` with the owner of the issue's area from "Áreas de desarrollo". A `type` fix has no flag: any `update` sets the type from the prefix. Ask once: apply all, all except some, or none.
+3. **Derivable fixes**: one list with issue, flag, value and reason ("área core → su dueño", "único epic de Entrega 2", "el prefijo feat → Feature", "la release de Entrega 2"). Fill `--assignee` with the owner of the issue's area from "Áreas de desarrollo". A `type` fix has no flag: any `update` sets the type from the prefix. Ask once: apply all, all except some, or none.
 4. **Judgement fixes**: one issue at a time, propose a value with a one-line reason from `CONTRIBUTING.md`:
    - priority: the Priority table and what depends on the issue (the `blockedBy` of other issues);
    - effort: the Effort table;
@@ -94,4 +94,4 @@ Only when some finding has `fix.kind` `derivable` or `judgement`.
 5. **Apply**, per issue with at least one approved fix: one `create-issue.sh update <n>` with every approved flag of that issue (a type fix alone is `update <n>` with no flags). Run it with `--dry-run` first; if it fails validation, report the error and move on without retrying. Otherwise run it for real. Done when `verify` shows only ✓.
 6. **End** with the issues changed (with URLs) and the ones that failed, with the reason.
 
-Findings with fix `none` (bodies, acceptance criteria, dependencies, closing an epic, promoting a triage issue) are reported only: the user rewrites or closes them, through `create-issue` when it is a checklist field.
+Findings with fix `none` (bodies, acceptance criteria, dependencies, closing an epic, promoting a triage issue, creating a missing release issue) are reported only: the user rewrites or closes them, through `create-issue` when it is a checklist field.

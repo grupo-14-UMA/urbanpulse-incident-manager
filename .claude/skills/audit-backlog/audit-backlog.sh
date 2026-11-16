@@ -19,13 +19,15 @@ Usage:
 
 gather   prints one JSON object with the repo, every milestone (open and closed), the
          labels, the assignable users and every open issue, with its labels, assignees,
-         milestone, issue type, parent, sub-issues, blocked-by and issue fields. A
+         milestone, issue type, parent, sub-issues, blocked-by, blocking and issue fields. A
          truncated nested list adds a line to "warnings".
 
 analyze  reads a snapshot, makes no GitHub calls and prints {target, warnings, findings}.
          The target delivery is the --target milestone, or the open milestone with the
          lowest number. Check (a) comes from `create-issue.sh check --input`; checks (c),
-         (d) and (e) are computed here. Exit 0 when the analysis ran, 2 on errors.
+         (d) and (e) are computed here. The release issue of a milestone is its open
+         issue titled "chore: release vX.Y.Z"; every other open issue of the milestone
+         except the epic must block it. Exit 0 when the analysis ran, 2 on errors.
 EOF
 }
 
@@ -54,6 +56,7 @@ Q_ISSUES='query($owner: String!, $name: String!, $endCursor: String) { repositor
       parent { number state milestone { number } }
       subIssues(first: 100) { totalCount nodes { number state } }
       blockedBy(first: 50) { totalCount nodes { number state stateReason labels(first: 30) { nodes { name } } milestone { number } } }
+      blocking(first: 50) { totalCount nodes { number } }
       issueFieldValues(first: 10) { nodes { ... on IssueFieldSingleSelectValue { name field { ... on IssueFieldCommon { name } } } } }
     }
   }
@@ -81,7 +84,7 @@ cmd_gather() {
       warnings: (
         cut("milestones"; $r.milestones) + cut("labels"; $r.labels) + cut("collaborators"; $r.assignableUsers)
         + [$issues[] | . as $i
-            | (cut("sub-issues"; .subIssues) + cut("blocked-by issues"; .blockedBy))[]
+            | (cut("sub-issues"; .subIssues) + cut("blocked-by issues"; .blockedBy) + cut("blocked issues"; .blocking))[]
             | "#\($i.number): \(.)"]
       )
     }'
@@ -94,6 +97,7 @@ cmd_gather() {
 JQ_ANALYZE='
 def names: [(.labels.nodes // [])[].name];
 def is_epic: names | index($epic) != null;
+def is_release: .title | test("^chore: release v[0-9]+\\.[0-9]+\\.[0-9]+$");
 def sev(m): if $target != null and m == $target.number then "red" else "yellow" end;
 def finding(chk; i; field; msg; related; fix):
   {check: chk, severity: sev(i.milestone.number), issue: i.number, url: i.url, title: i.title,
@@ -113,6 +117,10 @@ def closure:
 | ($open | map({key: (.number | tostring),
                 value: [. as $m | $issues[] | select(is_epic and .milestone.number == $m.number) | .number]})
   | from_entries) as $E
+# The release issue of each open milestone: its open "chore: release vX.Y.Z" with the lowest number.
+| ($open | map({key: (.number | tostring),
+                value: ([. as $m | $issues[] | select(is_release and .milestone.number == $m.number)] | .[0])})
+  | from_entries) as $R
 
 # (a) fields per state, from create-issue.sh check
 | [ $c[] | . as $r | $by[$r.number | tostring] as $i | $r.errors[]
@@ -157,6 +165,14 @@ def closure:
        milestone: $by[$n | tostring].milestone.title, field: "blocked_by",
        message: "dependency cycle: \($members | map("#\(.)") | join(", "))", related: $members, fix: none}
   ] as $c_cycles
+| [ $issues[] | . as $i | select($i.milestone != null and (is_epic | not) and (is_release | not))
+    | ($R[$i.milestone.number | tostring] // null) as $r
+    | select($r != null)
+    | select(([(.blocking.nodes // [])[].number] | index($r.number)) == null
+             and ([$r.blockedBy.nodes[].number] | index($i.number)) == null)
+    | finding("c"; $i; "blocks"; "does not block #\($r.number), the release issue of its milestone"; [$r.number];
+              fix("derivable"; "--blocks"; ($r.number | tostring)))
+  ] as $c_release
 
 # (d) orphans and epics
 | [ $open[] | . as $m | $E[$m.number | tostring] as $es
@@ -166,6 +182,10 @@ def closure:
     | {check: "d", severity: sev($m.number), issue: null, url: null, title: null, milestone: $m.title,
        field: null, message: ., related: $es, fix: none}
   ] as $d_ms
+| [ $open[] | select($R[.number | tostring] == null)
+    | {check: "d", severity: "yellow", issue: null, url: null, title: null, milestone: .title,
+       field: null, message: "milestone has no release issue (chore: release vX.Y.Z)", related: [], fix: none}
+  ] as $d_release
 | [ $issues[] | select(is_epic | not) | . as $i | select($i.milestone != null)
     | ($E[$i.milestone.number | tostring] // []) as $es
     | select(($es | length) == 1 and $i.parent.number != $es[0])
@@ -193,7 +213,7 @@ def closure:
 | {
     target: $target,
     warnings: ($s.warnings // []),
-    findings: ($a + $c_deps + $c_cycles + $d_ms + $d_out + $d_parent + $d_done + $e
+    findings: ($a + $c_deps + $c_cycles + $c_release + $d_ms + $d_release + $d_out + $d_parent + $d_done + $e
                | sort_by((if .severity == "red" then 0 else 1 end), .check, (.issue // 0)))
   }
 '
