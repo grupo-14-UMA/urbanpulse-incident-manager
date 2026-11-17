@@ -153,8 +153,8 @@ SELECT nextval(pg_get_serial_sequence('"Incident"', 'id'))::integer AS incident_
        assignee_id,
        priority,
        CASE WHEN priority IS NULL THEN NULL ELSE 'Prioridad sintética asignada durante la validación.' END AS priority_justification,
-       cluster.latitude + (latitude_offset - 0.5) * 0.0012 AS latitude,
-       cluster.longitude + (longitude_offset - 0.5) * 0.0016 AS longitude,
+       cluster.latitude + (latitude_offset - 0.5) * 0.01 AS latitude,
+       cluster.longitude + (longitude_offset - 0.5) * 0.01 AS longitude,
        created_at,
        updated_at,
        CASE status_id
@@ -245,5 +245,8 @@ UNION ALL
 SELECT incident_id, 5, 6, assignee_id, updated_at, 'Reparación sintética completada.'
 FROM synthetic_incident_rows
 WHERE status_id = 6;
+
+ANALYZE "Incident";
+ANALYZE "StatusChange";
 
 COMMIT;
