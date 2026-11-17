@@ -53,6 +53,24 @@ CREATE TABLE "Incident" (
   "category_id" integer,
   "location" geometry(Point, 4326) NOT NULL,
   "priority" varchar(10),
+  "priority_rank" integer GENERATED ALWAYS AS (
+    CASE "priority"
+      WHEN 'LOW' THEN 1
+      WHEN 'MEDIUM' THEN 2
+      WHEN 'HIGH' THEN 3
+      WHEN 'URGENT' THEN 4
+      ELSE 5
+    END
+  ) STORED,
+  "priority_rank_desc" integer GENERATED ALWAYS AS (
+    CASE "priority"
+      WHEN 'LOW' THEN 1
+      WHEN 'MEDIUM' THEN 2
+      WHEN 'HIGH' THEN 3
+      WHEN 'URGENT' THEN 4
+      ELSE 0
+    END
+  ) STORED,
   "priority_justification" varchar(1000),
   "status_id" integer NOT NULL,
   "assignee_id" integer,
@@ -195,8 +213,29 @@ ALTER TABLE "UrbanContext" ADD FOREIGN KEY ("type_context_id") REFERENCES "Conte
 CREATE INDEX "idx_incident_location_gist"
   ON "Incident" USING GIST ("location");
 
-CREATE INDEX "idx_incident_category_id"
-  ON "Incident" ("category_id");
+CREATE INDEX "idx_incident_created_at_id"
+  ON "Incident" ("created_at" DESC, "id" DESC);
+
+CREATE INDEX "idx_incident_status_created_at_id"
+  ON "Incident" ("status_id", "created_at" DESC, "id" DESC);
+
+CREATE INDEX "idx_incident_category_created_at_id"
+  ON "Incident" ("category_id", "created_at" DESC, "id" DESC);
+
+CREATE INDEX "idx_incident_reporter_created_at_id"
+  ON "Incident" ("reporter_id", "created_at" DESC, "id" DESC);
+
+CREATE INDEX "idx_incident_assignee_created_at_id"
+  ON "Incident" ("assignee_id", "created_at" DESC, "id" DESC);
+
+CREATE INDEX "idx_incident_priority_rank_created_at_id"
+  ON "Incident" ("priority_rank_desc" DESC, "created_at" DESC, "id" DESC);
+
+CREATE INDEX "idx_incident_priority_rank_asc_created_at_id"
+  ON "Incident" ("priority_rank" ASC, "created_at" ASC, "id" ASC);
+
+CREATE INDEX "idx_incident_priority_created_at_id"
+  ON "Incident" ("priority", "created_at" DESC, "id" DESC);
 
 CREATE INDEX "idx_attachment_incident_id_id"
   ON "Attachment" ("incident_id", "id");

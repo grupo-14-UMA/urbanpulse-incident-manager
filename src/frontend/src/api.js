@@ -268,7 +268,7 @@ export async function getIncidentsWithinBounds(bounds, { signal } = {}) {
   ]
     .map(([name, value]) => `${name}=${encodeURIComponent(String(value))}`)
     .join('&');
-  const payload = await request(`/api/incidents?${query}`, { signal });
+  const payload = await request(`/api/incidents/map?${query}`, { signal });
   if (!payload || !Array.isArray(payload.incidents) || typeof payload.truncated !== 'boolean') {
     throw new ApiError('El backend devolvió un resultado de mapa no válido.');
   }

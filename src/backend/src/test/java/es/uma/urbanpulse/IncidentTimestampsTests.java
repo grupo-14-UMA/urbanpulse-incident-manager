@@ -66,7 +66,7 @@ class IncidentTimestampsTests {
 		assertThat(found.get("createdAt")).isEqualTo(createdAt);
 
 		IncidentMapResponse listed = this.client.get()
-			.uri("/api/incidents?west=-4.5&south=36.6&east=-4.3&north=36.8")
+			.uri("/api/incidents/map?west=-4.5&south=36.6&east=-4.3&north=36.8")
 			.header("Authorization", authorization)
 			.exchange()
 			.expectStatus()
