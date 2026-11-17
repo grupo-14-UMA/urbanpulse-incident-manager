@@ -78,6 +78,94 @@ describe('mobile API client', () => {
 		);
 	 });
 
+	 test('loads the first page of the citizen incidents with the default size', async () => {
+		global.fetch.mockResolvedValueOnce({
+			ok: true,
+			status: 200,
+			text: async () => JSON.stringify({
+				incidents: [
+					{ id: 42, title: 'Farola', createdAt: '2026-11-12T10:00:00Z', status: 'REJECTED' },
+					{ id: 41, title: 'Bache', createdAt: '2026-11-11T10:00:00Z', status: 'REPORTED' },
+				],
+				page: 0,
+				size: 20,
+				hasMore: false,
+			}),
+		});
+		const { getMyIncidents } = require('./api');
+
+		await expect(getMyIncidents()).resolves.toEqual({
+			incidents: [
+				expect.objectContaining({ id: 42, status: 'REJECTED' }),
+				expect.objectContaining({ id: 41, status: 'REPORTED' }),
+			],
+			page: 0,
+			size: 20,
+			hasMore: false,
+		});
+		expect(global.fetch).toHaveBeenCalledWith(
+			apiUrl + '/api/incidents/mine?page=0&size=20',
+			expect.objectContaining({ method: 'GET' }),
+		);
+	 });
+
+	test('sends the requested page and size of the citizen incidents', async () => {
+		global.fetch.mockResolvedValueOnce({
+			ok: true,
+			status: 200,
+			text: async () => JSON.stringify({ incidents: [], page: 2, size: 50, hasMore: false }),
+		});
+		const { getMyIncidents } = require('./api');
+
+		await expect(getMyIncidents({ page: 2, size: 50 })).resolves.toMatchObject({ page: 2, size: 50 });
+		expect(global.fetch).toHaveBeenCalledWith(
+			apiUrl + '/api/incidents/mine?page=2&size=50',
+			expect.objectContaining({ method: 'GET' }),
+		);
+	});
+
+	test('rejects a citizen incidents response without incidents or hasMore', async () => {
+		global.fetch
+			.mockResolvedValueOnce({ ok: true, status: 200, text: async () => JSON.stringify({ page: 0, size: 20 }) })
+			.mockResolvedValueOnce({ ok: true, status: 200, text: async () => JSON.stringify({ incidents: [] }) });
+		const { getMyIncidents } = require('./api');
+
+		await expect(getMyIncidents()).rejects.toMatchObject({ kind: 'unexpected' });
+		await expect(getMyIncidents()).rejects.toMatchObject({ kind: 'unexpected' });
+	});
+
+	test('loads the status history of an incident', async () => {
+		global.fetch.mockResolvedValueOnce({
+			ok: true,
+			status: 200,
+			text: async () => JSON.stringify([
+				{ previousStatus: null, newStatus: 'REPORTED', changedAt: '2026-11-12T10:00:00.123Z', actorRole: 'CITIZEN', note: null },
+				{ previousStatus: 'REPORTED', newStatus: 'REJECTED', changedAt: '2026-11-13T10:00:00.123Z', actorRole: 'OPERATOR', note: 'Duplicada.' },
+			]),
+		});
+		const { getIncidentHistory } = require('./api');
+
+		await expect(getIncidentHistory(42)).resolves.toEqual([
+			expect.objectContaining({ newStatus: 'REPORTED' }),
+			expect.objectContaining({ newStatus: 'REJECTED', note: 'Duplicada.' }),
+		]);
+		expect(global.fetch).toHaveBeenCalledWith(
+			apiUrl + '/api/incidents/42/history',
+			expect.objectContaining({ method: 'GET' }),
+		);
+	});
+
+	test('rejects an incident history that is not an array', async () => {
+		global.fetch.mockResolvedValueOnce({
+			ok: true,
+			status: 200,
+			text: async () => JSON.stringify({ history: [] }),
+		});
+		const { getIncidentHistory } = require('./api');
+
+		await expect(getIncidentHistory(42)).rejects.toMatchObject({ kind: 'unexpected' });
+	});
+
 	test('starts and resolves an assigned incident with a note', async () => {
 		global.fetch
 			.mockResolvedValueOnce({ ok: true, status: 200, text: async () => JSON.stringify({ id: 42, createdAt: '2026-11-12T10:00:00Z', status: 'IN_PROGRESS' }) })

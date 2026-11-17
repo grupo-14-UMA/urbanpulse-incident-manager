@@ -283,6 +283,21 @@ export async function getIncident(id) {
   return expectIncident(incident);
 }
 
+export async function getMyIncidents({ page = 0, size = 20 } = {}) {
+  const payload = await request(`/api/incidents/mine?page=${page}&size=${size}`);
+  if (!payload || !Array.isArray(payload.incidents) || typeof payload.hasMore !== 'boolean') {
+    throw new ApiError(SERVER_ERROR, { kind: 'unexpected' });
+  }
+  return {
+    ...payload,
+    incidents: payload.incidents.map(expectIncident),
+  };
+}
+
+export async function getIncidentHistory(id) {
+  return expectArray(await request('/api/incidents/' + encodeURIComponent(String(id)) + '/history'));
+}
+
 export async function getAssignedIncidents({ page = 0, size = 20 } = {}) {
 	const payload = await request(`/api/incidents/assigned?page=${page}&size=${size}`);
 	if (!payload || !Array.isArray(payload.incidents) || typeof payload.hasMore !== 'boolean') {

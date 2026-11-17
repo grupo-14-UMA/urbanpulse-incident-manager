@@ -13,6 +13,7 @@ import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTe
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.client.RestTestClient;
 
 import es.uma.urbanpulse.PostgisContainerConfiguration;
@@ -25,6 +26,9 @@ class IncidentHistoryApiTests {
 
 	@Autowired
 	private RestTestClient client;
+
+	@Autowired
+	private JdbcTemplate jdbcTemplate;
 
 	private LifecycleDriver flow;
 
@@ -58,6 +62,24 @@ class IncidentHistoryApiTests {
 			.jsonPath("$[2].newStatus").isEqualTo("ASSIGNED")
 			.jsonPath("$[3].newStatus").isEqualTo("IN_PROGRESS")
 			.jsonPath("$[4].newStatus").isEqualTo("RESOLVED");
+	}
+
+	@Test
+	void everyEntryIsReturnedEvenWhenTheLifecycleExceedsFive() {
+		int id = this.flow.resolved();
+		// A synthetic sixth entry, newer than the resolution, proves nothing is capped at five.
+		this.jdbcTemplate.update("""
+				INSERT INTO "StatusChange" ("incident_id", "previous_status_id", "new_status_id", "changed_by_id", "changed_at", "note")
+				VALUES (?, 6, 2, (SELECT id FROM "User" WHERE email = 'tecnico1@urbanpulse.test'),
+					now() + interval '1 hour', 'Reabierta por revisión.')
+				""", id);
+
+		this.flow.history(id, this.flow.citizen).expectStatus().isOk().expectBody()
+			.jsonPath("$.length()").isEqualTo(6)
+			.jsonPath("$[0].newStatus").isEqualTo("REPORTED")
+			.jsonPath("$[5].previousStatus").isEqualTo("RESOLVED")
+			.jsonPath("$[5].newStatus").isEqualTo("VALIDATED")
+			.jsonPath("$[5].note").isEqualTo("Reabierta por revisión.");
 	}
 
 	@Test

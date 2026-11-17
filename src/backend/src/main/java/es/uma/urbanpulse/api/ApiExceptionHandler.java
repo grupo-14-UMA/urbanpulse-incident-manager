@@ -19,6 +19,8 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
+import jakarta.validation.ConstraintViolationException;
+
 import es.uma.urbanpulse.auth.EmailAlreadyRegisteredException;
 import es.uma.urbanpulse.auth.InvalidCredentialsException;
 import es.uma.urbanpulse.auth.InvalidSessionException;
@@ -52,6 +54,16 @@ public class ApiExceptionHandler {
 		exception.getParameterValidationResults().forEach(result -> result.getResolvableErrors()
 				.forEach(error -> errors.putIfAbsent(
 						result.getMethodParameter().getParameterName(), error.getDefaultMessage())));
+		return ResponseEntity.badRequest()
+				.body(new ApiErrorResponse(INVALID_REQUEST_MESSAGE, errors));
+	}
+
+	/** The @Validated controller proxy reports invalid query parameters with this exception. */
+	@ExceptionHandler(ConstraintViolationException.class)
+	public ResponseEntity<ApiErrorResponse> handleConstraintViolation(ConstraintViolationException exception) {
+		Map<String, String> errors = new LinkedHashMap<>();
+		exception.getConstraintViolations().forEach(violation -> errors.putIfAbsent(
+				parameterName(violation.getPropertyPath()), violation.getMessage()));
 		return ResponseEntity.badRequest()
 				.body(new ApiErrorResponse(INVALID_REQUEST_MESSAGE, errors));
 	}
@@ -136,5 +148,11 @@ public class ApiExceptionHandler {
 		return ResponseEntity.status(HttpStatus.CONFLICT)
 				.body(new ApiErrorResponse(
 						"Otra persona ha cambiado esta incidencia. Recárgala e inténtalo de nuevo.", Map.of()));
+	}
+
+	private static String parameterName(jakarta.validation.Path propertyPath) {
+		String path = propertyPath.toString();
+		int lastNode = path.lastIndexOf('.');
+		return lastNode < 0 ? path : path.substring(lastNode + 1);
 	}
 }

@@ -11,9 +11,9 @@ import { COLORS } from '../src/theme';
 import { AuthenticationScreen } from '../src/AuthenticationScreen';
 import { useAuth } from '../src/AuthContext';
 
-// Distance from the bottom safe area to the "+ Nueva incidencia" button.
+// Distance from the bottom safe area to the bottom action buttons.
 const BUTTON_BOTTOM = 32;
-// The card sits above the button so the button is always visible and usable.
+// The card sits above the buttons so they are always visible and usable.
 const CARD_BOTTOM = BUTTON_BOTTOM + 64;
 
 export default function HomeScreen() {
@@ -191,17 +191,30 @@ function CitizenMapScreen() {
           style={[styles.card, { bottom: insets.bottom + CARD_BOTTOM }]}
         />
       )}
-      <Pressable
-        style={({ pressed }) => [
-          styles.newIncidentButton,
-          { bottom: insets.bottom + BUTTON_BOTTOM },
-          pressed && styles.newIncidentButtonPressed,
-        ]}
-        onPress={() => router.push('/incidents/new')}
-        accessibilityRole="button"
-      >
-        <Text style={styles.newIncidentButtonText}>+ Nueva incidencia</Text>
-      </Pressable>
+      <View style={[styles.mapActions, { bottom: insets.bottom + BUTTON_BOTTOM }]}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.mapActionButton,
+            styles.myIncidentsButton,
+            pressed && styles.myIncidentsButtonPressed,
+          ]}
+          onPress={() => router.push('/incidents/mine')}
+          accessibilityRole="button"
+        >
+          <Text style={styles.myIncidentsButtonText} numberOfLines={1}>Mis incidencias</Text>
+        </Pressable>
+        <Pressable
+          style={({ pressed }) => [
+            styles.mapActionButton,
+            styles.newIncidentButton,
+            pressed && styles.newIncidentButtonPressed,
+          ]}
+          onPress={() => router.push('/incidents/new')}
+          accessibilityRole="button"
+        >
+          <Text style={styles.newIncidentButtonText} numberOfLines={1}>+ Nueva incidencia</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -360,25 +373,48 @@ const styles = StyleSheet.create({
     left: 16,
     right: 16,
   },
-  newIncidentButton: {
+  mapActions: {
     position: 'absolute',
-    alignSelf: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderRadius: 28,
-    backgroundColor: COLORS.primary,
+    left: 16,
+    right: 16,
+    flexDirection: 'row',
+    gap: 10,
+  },
+  mapActionButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+    paddingVertical: 12,
+    borderRadius: 24,
     elevation: 4,
     shadowColor: '#000',
     shadowOpacity: 0.25,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
   },
+  myIncidentsButton: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+  },
+  myIncidentsButtonPressed: {
+    backgroundColor: COLORS.surfaceMuted,
+  },
+  myIncidentsButtonText: {
+    color: COLORS.primary,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  newIncidentButton: {
+    backgroundColor: COLORS.primary,
+  },
   newIncidentButtonPressed: {
     backgroundColor: COLORS.primaryPressed,
   },
   newIncidentButtonText: {
     color: COLORS.onPrimary,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
   },
   signOutButton: {

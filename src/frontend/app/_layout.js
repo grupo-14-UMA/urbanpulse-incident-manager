@@ -12,6 +12,7 @@ export default function RootLayout() {
     <AuthProvider>
       <Stack screenOptions={{ headerTransparent: Platform.OS === 'ios' }}>
         <Stack.Screen name="index" options={{ title: 'UrbanPulse' }} />
+        <Stack.Screen name="incidents/mine" options={{ title: 'Mis incidencias' }} />
         <Stack.Screen name="incidents/new" options={{ title: 'Nueva incidencia' }} />
         <Stack.Screen name="incidents/[id]" options={{ title: 'Incidencia' }} />
       </Stack>

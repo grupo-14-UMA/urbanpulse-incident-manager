@@ -6,7 +6,6 @@ import java.nio.file.NoSuchFileException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -28,6 +27,7 @@ import es.uma.urbanpulse.category.Category;
 import es.uma.urbanpulse.category.CategoryRepository;
 import es.uma.urbanpulse.incident.api.AssignIncidentRequest;
 import es.uma.urbanpulse.incident.api.AssignedIncidentPageResponse;
+import es.uma.urbanpulse.incident.api.CitizenIncidentPageResponse;
 import es.uma.urbanpulse.incident.api.ChangePriorityRequest;
 import es.uma.urbanpulse.incident.api.CreateIncidentRequest;
 import es.uma.urbanpulse.incident.api.IncidentAccessDeniedException;
@@ -60,6 +60,7 @@ public class IncidentService {
 	private static final Logger LOGGER = LoggerFactory.getLogger(IncidentService.class);
 	private static final int MAP_RESULT_LIMIT = 500;
 	static final int MAX_ASSIGNED_PAGE_SIZE = 50;
+	static final int MAX_MINE_PAGE_SIZE = 50;
 	static final int MAX_PHOTOS_PER_INCIDENT = 3;
 
 	private static final GeometryFactory WGS84_GEOMETRY_FACTORY =
@@ -209,6 +210,28 @@ public class IncidentService {
 		return new AssignedIncidentPageResponse(incidents, page, boundedSize, hasMore);
 	}
 
+	/** One bounded page of the incidents reported by the citizen, newest first, every status included. */
+	@Transactional(readOnly = true)
+	public CitizenIncidentPageResponse findMine(TokenSubject caller, int page, int size) {
+		if (caller.role() != Role.CITIZEN) {
+			throw new IncidentAccessDeniedException();
+		}
+		long queryStartedAt = System.nanoTime();
+		int boundedSize = Math.min(size, MAX_MINE_PAGE_SIZE);
+		Pageable request = FetchAheadPageRequest.fetchAhead(page, boundedSize);
+		List<Incident> loaded = incidentRepository.findByReporter_IdOrderByCreatedAtDescIdDesc(
+				caller.userId(), request);
+		boolean hasMore = loaded.size() > boundedSize;
+		List<IncidentResponse> incidents = loaded.stream()
+				.limit(boundedSize)
+				.map(incident -> toResponse(incident, caller))
+				.toList();
+		long queryDurationMs = (System.nanoTime() - queryStartedAt) / 1_000_000;
+		LOGGER.info("Loaded {} incidents reported by citizen {} (page={}, hasMore={}) in {} ms",
+				incidents.size(), caller.userId(), page, hasMore, queryDurationMs);
+		return new CitizenIncidentPageResponse(incidents, page, boundedSize, hasMore);
+	}
+
 	@Transactional
 	public List<IncidentPhotoResponse> uploadPhotos(
 			Integer incidentId,
@@ -346,7 +369,7 @@ public class IncidentService {
 		return toResponse(incident, caller);
 	}
 
-	/** The history of an incident, oldest first. Never exposes who made a change, only their role. */
+	/** The complete history of an incident, oldest first. Never exposes who made a change, only their role. */
 	@Transactional(readOnly = true)
 	public List<StatusChangeResponse> findHistory(Integer id, TokenSubject caller) {
 		Incident incident = incidentRepository.findById(id)
@@ -359,8 +382,7 @@ public class IncidentService {
 		if (!allowed) {
 			throw new IncidentAccessDeniedException();
 		}
-		return statusChangeRepository.findTop5ByIncidentIdOrderByChangedAtDescIdDesc(id).stream()
-				.sorted(Comparator.comparing(StatusChange::getChangedAt).thenComparing(StatusChange::getId))
+		return statusChangeRepository.findByIncidentIdOrderByChangedAtAscIdAsc(id).stream()
 				.map(change -> new StatusChangeResponse(
 						change.getPreviousStatus(),
 						change.getNewStatus(),
