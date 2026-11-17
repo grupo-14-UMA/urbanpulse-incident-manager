@@ -75,9 +75,11 @@ docker compose up -d db backend
 node scripts/generate-synthetic-incidents.mjs 1000000
 ```
 
-El número se puede cambiar entre 1 y 5.000.000 por ejecución. El comando muestra cuánto tardó la carga. Inserta incidencias en barrios de Málaga, categorías opcionales, fechas, prioridades, cuentas ciudadanas sintéticas, técnicos asignados y el historial coherente de transiciones. No genera fotografías. Puedes iniciar sesión como el primer ciudadano sintético con `ciudadano.sintetico.000001@urbanpulse.test` y la contraseña `urbanpulse-dev` para consultar sus incidencias desde la aplicación móvil. Las cuentas sintéticas usan el mismo hash de contraseña que las cuentas locales de desarrollo.
+El número se puede cambiar entre 1 y 5.000.000 por ejecución. El comando informa el tiempo total de la carga en segundos. Inserta incidencias en barrios de Málaga, categorías opcionales, fechas, prioridades, cuentas ciudadanas sintéticas, técnicos asignados y el historial coherente de transiciones. No genera fotografías. Puedes iniciar sesión como el primer ciudadano sintético con `ciudadano.sintetico.000001@urbanpulse.test` y la contraseña `urbanpulse-dev` para consultar sus incidencias desde la aplicación móvil. Las cuentas sintéticas usan el mismo hash de contraseña que las cuentas locales de desarrollo.
 
-La operación es explícita y acumulativa: no se ejecuta al arrancar la aplicación ni borra datos existentes; repetirla añade otro lote. La generación corre en PostgreSQL con SQL por lotes para evitar crear entidades JPA una por una ([ADR-0021](adr/0021-carga-sintetica-por-lotes-con-postgresql.md)).
+Para comprobar los clientes con el conjunto cargado, abre el panel en `http://localhost:8081`, inicia sesión como `operador@urbanpulse.test` / `urbanpulse-dev` y revisa el mapa y la lista de incidencias, incluida la navegación a la página siguiente. En la aplicación móvil, inicia sesión con el ciudadano sintético indicado arriba y comprueba el mapa, una incidencia propia y su detalle. La carga es acumulativa; ambos clientes consultan las mismas incidencias mediante los endpoints acotados de mapa y listado.
+
+La operación es explícita y acumulativa: no se ejecuta al arrancar la aplicación ni borra datos existentes; repetirla añade otro lote. La generación corre en PostgreSQL con SQL por lotes para evitar crear entidades JPA una por una ([ADR-0021](adr/0021-carga-sintetica-por-lotes-con-postgresql.md)). La [línea base de un millón de filas](benchmarks/synthetic-incident-load.md) registra una medición reproducible del tiempo de carga y el entorno utilizado.
 
 ### Autenticación y cuentas de desarrollo
 
@@ -163,7 +165,7 @@ En Docker Compose, el navegador llama a `/api` en el mismo origen y Nginx reenv�
 
 ```bash
 cd src/frontend
-npx expo lint
+npm run lint
 ```
 
 ### Pruebas de la aplicación móvil
