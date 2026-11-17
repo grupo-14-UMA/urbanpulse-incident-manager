@@ -151,4 +151,11 @@ public interface IncidentRepository extends JpaRepository<Incident, Integer>, Jp
 	@EntityGraph(attributePaths = { "category", "assignee" })
 	List<Incident> findByAssignee_IdAndStatusInOrderByCreatedAtDesc(
 			Integer assigneeId, List<IncidentStatus> statuses, Pageable pageable);
+
+	/**
+	 * Citizen "my incidents" query, every status included. The deterministic order
+	 * (created_at DESC, id DESC) is served by idx_incident_reporter_created_at_id.
+	 */
+	@EntityGraph(attributePaths = { "category", "assignee" })
+	List<Incident> findByReporter_IdOrderByCreatedAtDescIdDesc(Integer reporterId, Pageable pageable);
 }

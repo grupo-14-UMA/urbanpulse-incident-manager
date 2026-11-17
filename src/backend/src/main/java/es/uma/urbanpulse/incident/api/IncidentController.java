@@ -162,6 +162,24 @@ public class IncidentController {
 		return incidentService.findAssigned(AuthTokens.subjectOf(jwt), page, size);
 	}
 
+	@GetMapping("/mine")
+	@Operation(summary = "Listar las incidencias registradas por el ciudadano actual",
+			description = "Devuelve todas las incidencias del ciudadano del token, incluidas las rechazadas y resueltas, "
+					+ "de la más reciente a la más antigua. El ciudadano se toma siempre del token; no se acepta userId.")
+	@ApiResponses({
+			@ApiResponse(responseCode = "200", description = "Página de incidencias del ciudadano."),
+			@ApiResponse(responseCode = "403", description = "Solo los ciudadanos pueden consultar sus incidencias.",
+					content = @Content(mediaType = "application/json",
+							schema = @Schema(implementation = ApiErrorResponse.class)))
+	})
+	public CitizenIncidentPageResponse mine(
+			@RequestParam(defaultValue = "0") @Min(value = 0, message = "La página no puede ser negativa.") int page,
+			@RequestParam(defaultValue = "20") @Min(value = 1, message = "El tamaño debe estar entre 1 y 50.")
+			@Max(value = 50, message = "El tamaño debe estar entre 1 y 50.") int size,
+			@AuthenticationPrincipal Jwt jwt) {
+		return incidentService.findMine(AuthTokens.subjectOf(jwt), page, size);
+	}
+
 	@PostMapping("/{id}/validate")
 	@Operation(summary = "Validar una incidencia (solo operadores)",
 			description = "REPORTED pasa a VALIDATED. Puede fijar la prioridad en el mismo paso. "
