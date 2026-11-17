@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   downloadIncidentPhoto,
   getIncident,
+  getIncidentHistory,
   resolveIncident,
   startIncident,
   uploadIncidentPhoto,
@@ -29,6 +30,7 @@ import {
 } from '../../src/incidentPhotos';
 import { categoryLabel, statusLabel } from '../../src/labels';
 import { OSM_MAP_PROPS, OsmAttribution, OsmTiles, STREET_DELTA } from '../../src/map';
+import { StatusHistory } from '../../src/StatusHistory';
 import { COLORS } from '../../src/theme';
 import { useAuth } from '../../src/AuthContext';
 import { useLoad } from '../../src/useLoad';
@@ -50,6 +52,10 @@ export default function IncidentDetailScreen() {
 function IncidentDetailContent({ id, session }) {
   const insets = useSafeAreaInsets();
   const { status: state, data: incident, error, reload } = useLoad(() => getIncident(id));
+  const isCitizen = session.user.role === 'CITIZEN';
+  // Fired together with the incident, but with an independent state and retry:
+  // a failed history never hides the detail.
+  const history = useLoad(() => (isCitizen ? getIncidentHistory(id) : null));
   const [pendingPhoto, setPendingPhoto] = useState(null);
   const [photoMessage, setPhotoMessage] = useState(null);
   const [photoUploading, setPhotoUploading] = useState(false);
@@ -179,6 +185,15 @@ function IncidentDetailContent({ id, session }) {
 
       <Text style={styles.label}>Estado</Text>
       <Text style={styles.value}>{statusLabel(incident.status)}</Text>
+
+      {isCitizen && (
+        <StatusHistory
+          changes={Array.isArray(history.data) ? history.data : []}
+          loading={history.status === 'loading'}
+          error={history.error}
+          onRetry={history.reload}
+        />
+      )}
 
       {canWork && incident.status === 'ASSIGNED' && (
         <View style={styles.workActions}>
