@@ -23,6 +23,14 @@ When designing an issue, implementing it or reviewing a change, check for:
 
 If a concern is deferred, propose a follow-up issue (title and body) and create it only after the user confirms.
 
+## Design docs
+
+Every second-phase functionality (`docs/requirements.md` → Funcionalidades de la segunda fase) and every architecturally significant change (splitting services, asynchronous messaging, storage, authentication) is designed first in a design doc in `docs/design-docs/`; see its README.
+
+- Write no code for it, and make no implementation issue `✅ ready`, until its design doc is `Aceptado`. The only issue before that is writing the doc.
+- The team makes the design decisions. Research, lay out alternatives with trade-offs and evidence, recommend one and ask; never present a proposal as decided, in the doc, an issue or the chat.
+- What the professor handed out for the project is summarised in `docs/course/`: read it before designing observability, load tests or a design doc.
+
 ## Agent skills
 
 ### Issue tracker
