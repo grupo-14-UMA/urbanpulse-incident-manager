@@ -10,10 +10,11 @@ Create issues, epics and milestones, and change the checklist fields of an issue
 S=.claude/skills/create-issue/create-issue.sh
 $S create --dry-run --state ready --title "feat: …" --body-file body.md \
   --area <area> --priority High --effort Simple --assignee <owner> \
-  --milestone current --epic <epic> --blocked-by <n>,<n>
+  --milestone current --epic <epic> --blocked-by <n>,<n> --blocks <release>
 $S create --state epic --title "feat: …" --body-file goal.md --milestone <milestone>
 $S create --batch issues.json             # several issues (and their epic), all validated first
 $S update <n> --milestone ""              # change fields, keep the state; "" removes a field
+$S update <n> --milestone "Entrega 3" --remove-blocks <old release> --blocks <new release>
 $S update <n> --state triage              # validated against the state it ends in
 $S promote <n> --body-file body.md        # update <n> --state ready
 $S milestone --title <title> [--due-on YYYY-MM-DD] [--description …]
@@ -21,17 +22,21 @@ $S check <n> [<n>…] [--json]              # read-only: validate issues against
 $S --help                                 # every flag and the batch format
 ```
 
-The script validates every value against `CONTRIBUTING.md` → Crear un issue before the first write, sets the labels, assignee, milestone, issue type, parent epic, *blocked by* and the `Priority` / `Effort` issue fields, and then verifies each one. `--milestone current` is the open milestone with the lowest number. When a write fails it prints which steps were done and which are missing; finish the issue with `update <n>`. `--dry-run` runs only the read-only checks and prints the writes.
+The script validates every value against `CONTRIBUTING.md` → Crear un issue before the first write, sets the labels, assignee, milestone, issue type, parent epic, *blocked by*, the issues it blocks and the `Priority` / `Effort` issue fields, and then verifies each one. `--blocks N` leaves issue N blocked by this one and `--remove-blocks N` drops that link: every issue of a milestone with a release issue (`chore: release vX.Y.Z`) blocks it, and moving the issue moves the link. `--milestone current` is the open milestone with the lowest number. When a write fails it prints which steps were done and which are missing; finish the issue with `update <n>`. `--dry-run` runs only the read-only checks and prints the writes.
 
 Comments, closing and one-off labels go through `gh` directly (see below); checklist fields go through `update`.
 
 ## Auditing the backlog
 
-The `audit-backlog` skill (`.claude/skills/audit-backlog/SKILL.md`) reviews the form of every open issue and offers fixes, which it applies only after approval and only through `create-issue.sh update`. Its helper `.claude/skills/audit-backlog/audit-backlog.sh` has `gather` (a snapshot of the open backlog in a few paginated GraphQL queries) and `analyze` (offline findings, reusing `create-issue.sh check --input`). `tests/run.sh` in the same folder runs the analysis against offline fixtures.
+The `audit-backlog` skill (`.claude/skills/audit-backlog/SKILL.md`) reviews the form of every open issue and offers fixes, which it applies only after approval and only through `create-issue.sh update`. Its helper `.claude/skills/audit-backlog/audit-backlog.sh` has `gather` (a snapshot of the open backlog in a few paginated GraphQL queries) and `analyze` (offline findings, reusing `create-issue.sh check --input`, including the issues that do not block the release issue of their milestone and the open milestones with no release issue). `tests/run.sh` in the same folder runs the analysis against offline fixtures.
 
 ## Finding gaps
 
 The `find-gaps` skill (`.claude/skills/find-gaps/SKILL.md`) finds work the system lacks that no issue covers, and creates the gaps the user approves only through the `create-issue` skill; `--report-only` creates nothing. Its helper `.claude/skills/find-gaps/find-gaps.sh` has `gather` (every milestone and every open and closed issue in a few paginated GraphQL queries, plus the components, workflows, tests and docs found in the repo) and `analyze` (offline components and the `local`, `ci` and `tests` cells). `tests/run.sh` in the same folder runs both against offline fixtures and a fake `gh`.
+
+## Planning a delivery
+
+The `plan-milestone` skill (`.claude/skills/plan-milestone/SKILL.md`) plans the next delivery, or the one it is given, from the `find-gaps --report-only` findings, the inbox, the open triage issues and the open issues of the current delivery. It proposes the scope before writing, settles the issues in one grilling and, after approval, leaves the milestone, the epic, the `✅ ready` issues and the release issue in the tracker through `create-issue.sh`, then runs `audit-backlog` on the delivery. It has no script of its own.
 
 ## Conventions
 

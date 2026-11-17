@@ -42,6 +42,9 @@ Fields:
   --epic N               the parent epic (an open issue labelled 🗺️ epic)
   --blocked-by N[,N]     issues that must close first (repeatable)
   --remove-blocked-by N  update only: drop a blocked-by link (repeatable)
+  --blocks N[,N]         issues that end blocked by this one, such as the release
+                         issue of its milestone (repeatable)
+  --remove-blocks N      update only: N stops being blocked by this one (repeatable)
 
 States:
   ready   needs title, body with "## Description", "## Acceptance criteria" and,
@@ -55,12 +58,14 @@ Every issue has at most one area label. The issue type comes from the title pref
 feat → Feature, fix → Bug, rest → Task.
 
 --batch FILE is a JSON array of objects with the field names above (state, title,
-area, priority, effort, assignee, milestone, epic, blocked_by) plus "body" (markdown)
-or "body_file" (relative to FILE). "@k" as epic or in blocked_by points to the k-th
+area, priority, effort, assignee, milestone, epic, blocked_by, blocks) plus "body"
+(markdown) or "body_file" (relative to FILE). "@k" as epic, in blocked_by or in blocks
+points to the k-th
 item of the same batch, which must come earlier (and be an epic, for epic). Every item
 is validated before any is created.
 
-update changes the given fields of an open issue and keeps the rest. An empty value
+update changes the given fields of an open issue and keeps the rest. --blocks and
+--remove-blocks only add or drop the links they name. An empty value
 removes a field (--milestone "" sends an idea back to the inbox). The issue keeps its
 state unless --state is given, and is validated against the state it ends in. Epics
 stay epics. promote N is update N --state ready.
@@ -77,7 +82,7 @@ audit-backlog.sh gather and makes no GitHub calls.
 Output: "error: #N: message" per error, then "#N ok" per issue without errors (only the
 errors with --input). --json prints [{number, state, errors: [{field, message}]}], with
 state ready|triage|epic|none and field one of title, type, template, state, body, area,
-priority, effort, assignee, milestone, epic, blocked_by.
+priority, effort, assignee, milestone, epic, blocked_by, blocks.
 Exit 0 when no issue has errors, 1 when one has, 2 on usage or network errors.
 
 --dry-run runs the read-only validation against GitHub and prints the writes it would
@@ -104,11 +109,11 @@ parse_flags() {
       --dry-run) DRY_RUN=1; shift ;;
       -h | --help) usage; exit 0 ;;
       --batch | --title | --state | --area | --priority | --effort | --assignee | --milestone | --epic | \
-        --body-file | --blocked-by | --remove-blocked-by | --due-on | --description)
+        --body-file | --blocked-by | --remove-blocked-by | --blocks | --remove-blocks | --due-on | --description)
         (($# >= 2)) || die "$1 needs a value"
         case $1 in
           --batch) BATCH=$2 ;;
-          --blocked-by | --remove-blocked-by)
+          --blocked-by | --remove-blocked-by | --blocks | --remove-blocks)
             local key=${1#--}
             spec=$(jq --arg k "${key//-/_}" --arg v "$2" '.[$k] += ($v | split(",") | map(select(. != "")))' <<<"$spec") ;;
           *)
@@ -142,6 +147,8 @@ normalize() {
     | fix("area"; . // "") | fix("assignee"; . // "")
     | fix("blocked_by"; map(num) | unique)
     | fix("remove_blocked_by"; map(num) | unique)
+    | fix("blocks"; map(num) | unique)
+    | fix("remove_blocks"; map(num) | unique)
   ' <<<"$s"
 }
 
@@ -240,6 +247,7 @@ Q_ISSUE='query($owner: String!, $name: String!, $n: Int!) { repository(owner: $o
   parent { number }
   issueFieldValues(first: 10) { nodes { ... on IssueFieldSingleSelectValue { name field { ... on IssueFieldCommon { name } } } } }
   blockedBy(first: 50) { nodes { number } }
+  blocking(first: 50) { nodes { number } }
 } } }'
 
 fetch_issue() {
@@ -290,6 +298,8 @@ validate() {
   body=$(get body "$s")
   labels=$(jq -r '(.labels // [])[]' <<<"$s")
   blockers=$(jq -r '(.blocked_by // [])[]' <<<"$s")
+  local blocked
+  blocked=$(jq -r '(.blocks // [])[]' <<<"$s")
 
   [[ $state == ready || $state == triage || $state == epic ]] || err state "state must be ready, triage or epic"
   if [[ ! $title =~ ^($PREFIXES):\ [^[:space:]] || $title == *. ]]; then
@@ -379,6 +389,22 @@ validate() {
       err blocked_by "blocked by #$b is not an existing issue"
     fi
   done <<<"$blockers"
+
+  while read -r b; do
+    [[ -n $b ]] || continue
+    if [[ $b == @* ]]; then
+      local k=${b#@}
+      if ((pos == 0)); then
+        err blocks "blocks $b only works inside a batch"
+      elif ! [[ $k =~ ^[0-9]+$ ]] || ((k < 1 || k >= pos)); then
+        err blocks "blocks $b must point to an earlier item of the batch"
+      fi
+    elif ! [[ $b =~ ^[0-9]+$ ]] || ! issue_info "$b" || [[ $(jq -r .pr <<<"${ISSUE[$b]}") == true ]]; then
+      err blocks "blocks #$b, which is not an existing issue"
+    elif [[ $(jq -r .state <<<"${ISSUE[$b]}") != open ]]; then
+      err blocks "blocks #$b, which is closed"
+    fi
+  done <<<"$blocked"
 }
 
 fail_validation() {
@@ -397,6 +423,8 @@ describe() {
       + (if $area != "" then " · \($area)" else "" end),
     "    assignee: \(v("assignee")) · milestone: \(v("milestone")) · epic: \(if (.epic // "") != "" then (.epic | ref) else "—" end)",
     "    priority: \(v("priority")) · effort: \(v("effort")) · blocked by: \(if (.blocked_by | length) > 0 then (.blocked_by | map(ref) | join(", ")) else "—" end)"
+      + (if ((.blocks // []) | length) > 0 then " · blocks: \(.blocks | map(ref) | join(", "))" else "" end)
+      + (if ((.remove_blocks // []) | length) > 0 then " · stops blocking: \(.remove_blocks | map(ref) | join(", "))" else "" end)
   ' <<<"$s"
 }
 
@@ -483,6 +511,11 @@ verify() {
         {c: "effort", ok: (($f.Effort // "") == ($e.effort // ""))},
         {c: "blocked by", ok: (($e.blocked_by | map(tonumber) | sort) == ([$a.blockedBy.nodes[].number] | sort))}
       ]
+      + (if (($e.blocks // []) + ($e.remove_blocks // []) | length) > 0
+         then [([$a.blocking.nodes[].number]) as $bl
+               | {c: "blocks", ok: (all(($e.blocks // [])[] | tonumber; . as $x | $bl | index($x) != null)
+                                    and all(($e.remove_blocks // [])[] | tonumber; . as $x | $bl | index($x) == null))}]
+         else [] end)
     | map("\(if .ok then "✓" else "✗" end) \(.c)") | join("  ")
   ')
   echo "  verify #$n: $report"
@@ -502,6 +535,7 @@ expected() { # $1 spec, $2 JSON array of created numbers
     .type = $type | .area_label = $area
     | .epic = ((.epic // "") | res)
     | .blocked_by = ((.blocked_by // []) | map(res))
+    | .blocks = ((.blocks // []) | map(res))
   ' <<<"$1"
 }
 
@@ -520,12 +554,14 @@ create_one() { # $1 spec (expected), sets CREATED_N
   title=$(get title "$s") state=$(get state "$s") area=$(get area_label "$s")
   assignee=$(get assignee "$s") milestone=$(get milestone "$s") epic=$(get epic "$s")
   priority=$(get priority "$s") effort=$(get effort "$s")
-  local blockers
+  local blockers blocked
   mapfile -t blockers < <(jq -r '.blocked_by[]' <<<"$s")
+  mapfile -t blocked < <(jq -r '.blocks[]' <<<"$s")
 
   PLANNED=("create the issue with labels, assignee, milestone and type") STEP_I=0
   [[ -z $epic ]] || PLANNED+=("make it a sub-issue of $(ref "$epic")")
   for b in "${blockers[@]}"; do PLANNED+=("mark it blocked by $(ref "$b")"); done
+  for b in "${blocked[@]}"; do PLANNED+=("make it block $(ref "$b")"); done
   [[ -z $priority && -z $effort ]] || PLANNED+=("$(fields_desc "$priority" "$effort")")
 
   local args=(issue create --title "$title" --body-file "$TMP/body" --type "$(get type "$s")")
@@ -552,6 +588,9 @@ create_one() { # $1 spec (expected), sets CREATED_N
   for b in "${blockers[@]}"; do
     step "${PLANNED[STEP_I]}" gh issue edit "$n" --add-blocked-by "$b" || { partial_report "#$n"; return 1; }
   done
+  for b in "${blocked[@]}"; do
+    step "${PLANNED[STEP_I]}" gh issue edit "$b" --add-blocked-by "$n" || { partial_report "#$n"; return 1; }
+  done
   if [[ -n $priority || -n $effort ]]; then
     step "${PLANNED[STEP_I]}" set_fields "$n" "$priority" "$effort" || { partial_report "#$n"; return 1; }
   fi
@@ -570,12 +609,13 @@ cmd_create() {
     specs=$(jq -c . <<<"$SPEC")
   fi
   jq -s -e 'all(has("remove_blocked_by") | not)' <<<"$specs" >/dev/null || die "--remove-blocked-by only works with update"
+  jq -s -e 'all(has("remove_blocks") | not)' <<<"$specs" >/dev/null || die "--remove-blocks only works with update"
 
   load_repo_data
   local -a items=()
   local line pos
   while IFS= read -r line; do
-    items+=("$(normalize "$(jq -c '.blocked_by //= []' <<<"$line")" "$dir")")
+    items+=("$(normalize "$(jq -c '.blocked_by //= [] | .blocks //= []' <<<"$line")" "$dir")")
     BATCH_STATES+=("$(get state "${items[-1]}")")
   done <<<"$specs"
   for ((pos = 1; pos <= ${#items[@]}; pos++)); do
@@ -649,6 +689,16 @@ cmd_update() { # $1 forced state ("" for none), $2 issue number, rest flags
     [[ -z $b ]] || jq -e --arg b "$b" '[.blockedBy.nodes[].number | tostring] | index($b)' <<<"$cur" >/dev/null ||
       err blocked_by "#$n is not blocked by #$b"
   done < <(jq -r '(.remove_blocked_by // [])[]' <<<"$flags")
+  while read -r b; do
+    [[ -z $b ]] || jq -e --arg b "$b" '[.blocking.nodes[].number | tostring] | index($b)' <<<"$cur" >/dev/null ||
+      err blocks "#$n does not block #$b"
+  done < <(jq -r '(.remove_blocks // [])[]' <<<"$flags")
+  while read -r b; do
+    [[ -z $b ]] || err blocks "#$n cannot block itself"
+  done < <(jq -r --arg n "$n" '(.blocks // [])[] | select(. == $n)' <<<"$flags")
+  while read -r b; do
+    [[ -z $b ]] || err blocks "--blocks and --remove-blocks both name #$b"
+  done < <(jq -r '((.blocks // []) - ((.blocks // []) - (.remove_blocks // [])))[]' <<<"$flags")
   ((${#ERRORS[@]} == 0)) || fail_validation changed
   s=$(expected "$s" '[]')
 
@@ -689,7 +739,7 @@ cmd_update() { # $1 forced state ("" for none), $2 issue number, rest flags
     else edit+=(--remove-milestone); edit_desc+=("no milestone"); fi
   fi
 
-  local type cur_type epic cur_epic priority effort cur_p cur_e p_act="" e_act="" add_blockers=() del_blockers=()
+  local type cur_type epic cur_epic priority effort cur_p cur_e p_act="" e_act="" add_blockers=() del_blockers=() add_blocks=() del_blocks=()
   type=$(get type "$s") cur_type=$(jq -r '.issueType.name // ""' <<<"$cur")
   epic=$(get epic "$s") cur_epic=$(jq -r '(.parent.number // "") | tostring' <<<"$cur")
   priority=$(get priority "$s") effort=$(get effort "$s")
@@ -699,6 +749,8 @@ cmd_update() { # $1 forced state ("" for none), $2 issue number, rest flags
   [[ $effort == "$cur_e" ]] || e_act=${effort:--}
   mapfile -t add_blockers < <(jq -r --argjson c "$cur" '.blocked_by - [$c.blockedBy.nodes[].number | tostring] | .[]' <<<"$s")
   mapfile -t del_blockers < <(jq -r --argjson s "$s" '[.blockedBy.nodes[].number | tostring] - $s.blocked_by | .[]' <<<"$cur")
+  mapfile -t add_blocks < <(jq -r --argjson c "$cur" '.blocks - [$c.blocking.nodes[].number | tostring] | .[]' <<<"$s")
+  mapfile -t del_blocks < <(jq -r '(.remove_blocks // [])[]' <<<"$s")
 
   PLANNED=() STEP_I=0
   ((${#edit[@]} == 0)) || PLANNED+=("edit $(printf '%s, ' "${edit_desc[@]}" | sed 's/, $//')")
@@ -708,6 +760,8 @@ cmd_update() { # $1 forced state ("" for none), $2 issue number, rest flags
   fi
   for b in "${add_blockers[@]}"; do PLANNED+=("mark it blocked by #$b"); done
   for b in "${del_blockers[@]}"; do PLANNED+=("drop blocked by #$b"); done
+  for b in "${add_blocks[@]}"; do PLANNED+=("make it block #$b"); done
+  for b in "${del_blocks[@]}"; do PLANNED+=("stop blocking #$b"); done
   [[ -z $p_act && -z $e_act ]] || PLANNED+=("$(fields_desc "$p_act" "$e_act")")
 
   if ((${#PLANNED[@]} == 0)); then
@@ -724,6 +778,12 @@ cmd_update() { # $1 forced state ("" for none), $2 issue number, rest flags
     done
     for b in "${del_blockers[@]}"; do
       step "${PLANNED[STEP_I]}" gh issue edit "$n" --remove-blocked-by "$b" || { partial_report "#$n"; exit 1; }
+    done
+    for b in "${add_blocks[@]}"; do
+      step "${PLANNED[STEP_I]}" gh issue edit "$b" --add-blocked-by "$n" || { partial_report "#$n"; exit 1; }
+    done
+    for b in "${del_blocks[@]}"; do
+      step "${PLANNED[STEP_I]}" gh issue edit "$b" --remove-blocked-by "$n" || { partial_report "#$n"; exit 1; }
     done
     if [[ -n $p_act || -n $e_act ]]; then
       step "${PLANNED[STEP_I]}" set_fields "$n" "$p_act" "$e_act" || { partial_report "#$n"; exit 1; }

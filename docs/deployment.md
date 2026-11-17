@@ -20,6 +20,14 @@ gh release create v0.1.0 --target main --title "v0.1.0 - Entrega 1" --generate-n
 
 El comando crea la etiqueta sobre `main` y genera las notas a partir de los PR fusionados.
 
+Cada entrega tiene un issue de release (`chore: release vX.Y.Z`) bloqueado por todos los issues de la entrega, así que solo se puede empezar cuando están cerrados. Tras publicar la release, el Maintainer cierra el issue de release, el epic de la entrega y su milestone:
+
+```bash
+gh issue close <release> --comment "Publicada v0.1.0"
+gh issue close <epic> --comment "Entrega publicada en v0.1.0"
+gh api --method PATCH repos/{owner}/{repo}/milestones/<n> -f state=closed
+```
+
 ## Construir el backend
 
 ```bash

@@ -28,5 +28,8 @@
     "issue": 55,
     "severity": "yellow",
     "field": "milestone"
-  }
+  },
+  {"check": "d", "issue": null, "severity": "yellow", "field": null},
+  {"check": "d", "issue": null, "severity": "yellow", "field": null},
+  {"check": "d", "issue": null, "severity": "yellow", "field": null}
 ]

@@ -5,5 +5,6 @@
   {"check": "a", "issue": 33, "severity": "red", "field": "state"},
   {"check": "e", "issue": 33, "severity": "red", "field": "state"},
   {"check": "a", "issue": 34, "severity": "yellow", "field": "state"},
-  {"check": "a", "issue": 35, "severity": "red", "field": "state"}
+  {"check": "a", "issue": 35, "severity": "red", "field": "state"},
+  {"check": "d", "issue": null, "severity": "yellow", "field": null}
 ]
