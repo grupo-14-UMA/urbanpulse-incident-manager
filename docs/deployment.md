@@ -12,13 +12,20 @@ Por ahora UrbanPulse solo se despliega en local con Docker Compose. Esta guía s
 
 Cada entrega se publica con una etiqueta y una release de GitHub siguiendo [SemVer](https://semver.org/lang/es/): `v0.1.0` para la Entrega 1, `v0.2.0` para la siguiente, etc.
 
-La release la crea el Maintainer cuando todos los PR de la entrega están fusionados en `main`:
+Antes de crear la release, el Maintainer prepara y fusiona un PR que iguala las versiones declaradas en el código al número de la entrega, sin el prefijo `v`. Debe actualizar estos cuatro ficheros:
+
+- `src/frontend/package.json`
+- `src/frontend/app.json`
+- `src/management-panel/package.json`
+- `src/backend/pom.xml`
+
+El PR de versión se prepara como parte del issue de release (`chore: release vX.Y.Z`). La release se crea después de que todos los PR de la entrega, incluido el de versión, estén fusionados en `main`:
 
 ```bash
-gh release create v0.1.0 --target main --title "v0.1.0 - Entrega 1" --generate-notes
+gh release create vX.Y.Z --target main --title "vX.Y.Z - Entrega N" --generate-notes
 ```
 
-El comando crea la etiqueta sobre `main` y genera las notas a partir de los PR fusionados.
+El comando crea la etiqueta sobre `main` y genera las notas a partir de los PR fusionados. Las etiquetas de releases anteriores no se mueven.
 
 Cada entrega tiene un issue de release (`chore: release vX.Y.Z`) bloqueado por todos los issues de la entrega, así que solo se puede empezar cuando están cerrados. Tras publicar la release, el Maintainer cierra el issue de release, el epic de la entrega y su milestone:
 
