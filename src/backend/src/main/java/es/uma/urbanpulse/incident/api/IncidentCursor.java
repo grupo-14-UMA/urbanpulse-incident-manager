@@ -37,7 +37,7 @@ public record IncidentCursor(
 			Instant createdAt = Instant.parse(fields[2]);
 			int id = Integer.parseInt(fields[3]);
 			int priorityRank = Integer.parseInt(fields[4]);
-			if (id <= 0 || priorityRank < 0 || priorityRank > 4) {
+			if (id <= 0 || priorityRank < 0 || priorityRank > 5) {
 				throw new IllegalArgumentException("Invalid incident cursor.");
 			}
 			return new IncidentCursor(fields[0], fields[1], createdAt, id, priorityRank);

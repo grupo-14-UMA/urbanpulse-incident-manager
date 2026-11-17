@@ -151,7 +151,7 @@ public class IncidentService {
 	public IncidentPageResponse findPage(IncidentQueryParameters query, TokenSubject caller) {
 		long queryStartedAt = System.nanoTime();
 		List<Incident> fetched = incidentRepository.findNextPage(
-				IncidentListSpecification.forQuery(query, caller), query.cursorPosition(),
+				query, caller, query.cursorPosition(),
 				query.getSortBy(), query.getSortDirection(), query.getSize() + 1);
 		boolean hasMore = fetched.size() > query.getSize();
 		List<Incident> page = fetched.stream().limit(query.getSize()).toList();
@@ -168,8 +168,10 @@ public class IncidentService {
 	}
 
 	private static String cursorFor(Incident incident, String sortBy, String sortDirection) {
+		int priorityRank = sortDirection.equals("asc")
+				? incident.getPriorityRank() : incident.getPriorityRankDesc();
 		return new IncidentCursor(sortBy, sortDirection, incident.getCreatedAt(), incident.getId(),
-				incident.getPriorityRank() == null ? 0 : incident.getPriorityRank()).encode();
+				priorityRank).encode();
 	}
 
 	private static Integer statusId(IncidentQueryFilters query) {

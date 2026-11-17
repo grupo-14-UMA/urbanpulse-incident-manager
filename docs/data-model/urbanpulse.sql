@@ -59,6 +59,15 @@ CREATE TABLE "Incident" (
       WHEN 'MEDIUM' THEN 2
       WHEN 'HIGH' THEN 3
       WHEN 'URGENT' THEN 4
+      ELSE 5
+    END
+  ) STORED,
+  "priority_rank_desc" integer GENERATED ALWAYS AS (
+    CASE "priority"
+      WHEN 'LOW' THEN 1
+      WHEN 'MEDIUM' THEN 2
+      WHEN 'HIGH' THEN 3
+      WHEN 'URGENT' THEN 4
       ELSE 0
     END
   ) STORED,
@@ -220,7 +229,10 @@ CREATE INDEX "idx_incident_assignee_created_at_id"
   ON "Incident" ("assignee_id", "created_at" DESC, "id" DESC);
 
 CREATE INDEX "idx_incident_priority_rank_created_at_id"
-  ON "Incident" ("priority_rank" DESC, "created_at" DESC, "id" DESC);
+  ON "Incident" ("priority_rank_desc" DESC, "created_at" DESC, "id" DESC);
+
+CREATE INDEX "idx_incident_priority_rank_asc_created_at_id"
+  ON "Incident" ("priority_rank" ASC, "created_at" ASC, "id" ASC);
 
 CREATE INDEX "idx_incident_priority_created_at_id"
   ON "Incident" ("priority", "created_at" DESC, "id" DESC);

@@ -2,6 +2,9 @@ package es.uma.urbanpulse.incident.api;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Set;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.CacheControl;
@@ -43,6 +46,8 @@ import jakarta.validation.constraints.Min;
 @Tag(name = "Incidencias", description = "Registro y consulta de incidencias urbanas.")
 public class IncidentController {
 
+	private static final Set<String> MAP_BOUNDS_PARAMETERS = Set.of("west", "south", "east", "north");
+
 	private static final String INVALID_DATA = "La solicitud contiene datos no válidos.";
 	private static final String NOT_ALLOWED = "No tienes permiso para hacer esto.";
 	private static final String NOT_FOUND = "La incidencia no existe.";
@@ -81,21 +86,26 @@ public class IncidentController {
 	@GetMapping
 	@Operation(summary = "Listar incidencias con filtros y cursor",
 			description = "Devuelve hasta 100 incidencias. Operadores ven todas; ciudadanos solo las propias; técnicos solo las asignadas. "
-					+ "Usa nextCursor para avanzar sin degradación en páginas profundas.")
+					+ "Usa nextCursor para avanzar sin degradación en páginas profundas. Los límites west, south, east y north se envían a /api/incidents/map.")
 	@ApiResponses({
 			@ApiResponse(
 					responseCode = "200",
 					description = "Página de incidencias con cursor de continuación."),
 			@ApiResponse(
 					responseCode = "400",
-					description = "Los filtros, el cursor o el orden no son válidos.",
+					description = "Los filtros o el cursor no son válidos, o se enviaron límites del mapa a la ruta de lista.",
 					content = @Content(
 							mediaType = "application/json",
 							schema = @Schema(implementation = ApiErrorResponse.class)))
 	})
 	public IncidentPageResponse list(
 			@Valid @ParameterObject @ModelAttribute IncidentQueryParameters query,
+			HttpServletRequest request,
 			@AuthenticationPrincipal Jwt jwt) {
+		if (request.getParameterMap().keySet().stream().anyMatch(MAP_BOUNDS_PARAMETERS::contains)) {
+			throw new InvalidIncidentRequestException("mapBounds",
+					"Los límites west, south, east y north solo se admiten en /api/incidents/map.");
+		}
 		return incidentService.findPage(query, AuthTokens.subjectOf(jwt));
 	}
 

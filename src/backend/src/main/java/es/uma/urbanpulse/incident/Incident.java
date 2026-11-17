@@ -63,9 +63,13 @@ public class Incident {
 	@Column(name = "priority", length = 10)
 	private IncidentPriority priority;
 
-	/** Database-generated, stored sort key kept in sync with the priority enum. */
+	/** Ascending database-generated sort key; missing priorities sort last. */
 	@Column(name = "priority_rank", insertable = false, updatable = false)
-	private Integer priorityRank;
+	private int priorityRank;
+
+	/** Descending database-generated sort key; missing priorities sort last. */
+	@Column(name = "priority_rank_desc", insertable = false, updatable = false)
+	private int priorityRankDesc;
 
 	@Column(name = "priority_justification", length = 1000)
 	private String priorityJustification;
@@ -157,8 +161,12 @@ public class Incident {
 		return priority;
 	}
 
-	public Integer getPriorityRank() {
+	public int getPriorityRank() {
 		return priorityRank;
+	}
+
+	public int getPriorityRankDesc() {
+		return priorityRankDesc;
 	}
 
 	public String getPriorityJustification() {

@@ -2,14 +2,15 @@ package es.uma.urbanpulse.incident;
 
 import java.util.List;
 
-import org.springframework.data.jpa.domain.Specification;
-
+import es.uma.urbanpulse.auth.TokenSubject;
 import es.uma.urbanpulse.incident.api.IncidentCursor;
+import es.uma.urbanpulse.incident.api.IncidentQueryFilters;
 
 public interface IncidentCursorRepository {
 
 	List<Incident> findNextPage(
-			Specification<Incident> specification,
+			IncidentQueryFilters filters,
+			TokenSubject caller,
 			IncidentCursor cursor,
 			String sortBy,
 			String sortDirection,

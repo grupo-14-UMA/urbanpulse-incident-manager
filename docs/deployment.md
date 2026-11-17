@@ -39,6 +39,8 @@ docker compose ps
 
 Compose construye la imagen del backend y la del panel, y arranca PostgreSQL con PostGIS (`postgis/postgis`). El backend espera a que la base de datos esté lista antes de arrancar. El panel se compila en una etapa Node y se sirve con Nginx; el navegador lo abre en `http://localhost:8081`. Nginx sirve las rutas de React y reenvía `/api/` al backend dentro de la red de Compose.
 
+Las migraciones V7 y V8 del listado de incidencias requieren una ventana de mantenimiento en bases de datos con información. V7 añade columnas generadas almacenadas y PostgreSQL puede reescribir toda la tabla `Incident`; V8 crea los índices de paginación. Detén las instancias del backend que aceptan escrituras mientras se aplican ambas migraciones y vuelve a iniciarlas cuando Flyway termine. La duración depende del tamaño de la tabla y del almacenamiento.
+
 El panel también puede ejecutarse en modo desarrollo con Vite en `http://localhost:5173`. Para ese modo, establece `MANAGEMENT_PANEL_ORIGIN=http://localhost:5173` en `.env` y recrea el backend; el valor predeterminado autoriza el origen del panel servido por Compose (`http://localhost:8081`).
 
 Para detenerlo:

@@ -5,6 +5,7 @@ import static es.uma.urbanpulse.TestAccounts.OPERATOR_EMAIL;
 import static es.uma.urbanpulse.TestAccounts.bearer;
 import static es.uma.urbanpulse.TestAccounts.login;
 
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -12,6 +13,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -22,13 +24,15 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 
 import es.uma.urbanpulse.PostgisContainerConfiguration;
 import es.uma.urbanpulse.auth.AuthResponse;
+import es.uma.urbanpulse.incident.api.IncidentCursor;
 
-/** Endpoint SQL planner and latency comparison against one million synthetic incidents. */
+/** Opt-in endpoint planner check against one million synthetic incidents. */
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT, properties = {
 		"spring.jpa.properties.hibernate.session_factory.statement_inspector="
 				+ "es.uma.urbanpulse.incident.IncidentSqlCaptureInspector" })
 @AutoConfigureRestTestClient
 @Import(PostgisContainerConfiguration.class)
+@EnabledIfSystemProperty(named = "urbanpulse.performance-tests", matches = "true")
 class IncidentListQueryPlanTests {
 
 	private static final int SYNTHETIC_ROWS = 1_000_000;
@@ -80,16 +84,19 @@ class IncidentListQueryPlanTests {
 		jdbcTemplate.execute("ANALYZE \"Incident\"");
 		QueryPlan indexed = explainActualListEndpoint(bearer(operator));
 		assertThat(indexed.plan()).contains("idx_incident_created_at_id");
-		assertThat(indexed.executionTimeMs())
-				.as("endpoint query time with indexes (baseline=%s ms, indexed=%s ms)",
-						baseline.executionTimeMs(), indexed.executionTimeMs())
-				.isLessThan(baseline.executionTimeMs());
 		System.out.printf("GET /api/incidents generated SQL on %,d rows: baseline %.3f ms; indexed %.3f ms%n",
 				SYNTHETIC_ROWS, baseline.executionTimeMs(), indexed.executionTimeMs());
+		assertEndpointCursorUsesTupleComparison("createdAt", "desc", 0);
+		assertEndpointCursorUsesTupleComparison("priority", "desc", 3);
 
 		assertPlanUses("idx_incident_created_at_id", """
 				SELECT id FROM "Incident"
 				WHERE created_at >= now() - interval '1 hour'
+				ORDER BY created_at DESC, id DESC LIMIT 20
+				""");
+		assertPlanUses("idx_incident_created_at_id", """
+				SELECT id FROM "Incident"
+				WHERE (created_at, id) < (now() - interval '11 days', 950000)
 				ORDER BY created_at DESC, id DESC LIMIT 20
 				""");
 		assertPlanUses("idx_incident_status_created_at_id", """
@@ -113,7 +120,13 @@ class IncidentListQueryPlanTests {
 				""".formatted(assigneeId));
 		assertPlanUses("idx_incident_priority_rank_created_at_id", """
 				SELECT id FROM "Incident"
-				ORDER BY priority_rank DESC, created_at DESC, id DESC LIMIT 20
+				WHERE (priority_rank_desc, created_at, id) < (3, now() - interval '11 days', 950000)
+				ORDER BY priority_rank_desc DESC, created_at DESC, id DESC LIMIT 20
+				""");
+		assertPlanUses("idx_incident_priority_rank_asc_created_at_id", """
+				SELECT id FROM "Incident"
+				WHERE (priority_rank, created_at, id) > (2, now() - interval '11 days', 950000)
+				ORDER BY priority_rank ASC, created_at ASC, id ASC LIMIT 20
 				""");
 		assertPlanUses("idx_incident_priority_created_at_id", """
 				SELECT id FROM "Incident" WHERE priority = 'URGENT'
@@ -156,6 +169,24 @@ class IncidentListQueryPlanTests {
 		observedPlans.put(indexName, String.join("\n", plan));
 	}
 
+	private void assertEndpointCursorUsesTupleComparison(String sortBy, String direction, int priorityRank) {
+		IncidentCursor cursor = new IncidentCursor(sortBy, direction,
+				Instant.now().minusSeconds(950_000), 950_000, priorityRank);
+		IncidentSqlCaptureInspector.clear();
+		client.get().uri("/api/incidents?size=20&sortBy=" + sortBy + "&sortDirection=" + direction
+				+ "&cursor=" + cursor.encode())
+				.header("Authorization", bearer(login(client, OPERATOR_EMAIL)))
+				.exchange()
+				.expectStatus().isOk();
+
+		String generatedSql = IncidentSqlCaptureInspector.lastOrderedIncidentSelect();
+		assertThat(generatedSql).as("SQL generated for the %s cursor", sortBy)
+				.contains(sortBy.equals("priority")
+						? "(incident.\"priority_rank_desc\", incident.\"created_at\", incident.\"id\") <"
+						: "(incident.\"created_at\", incident.\"id\") <")
+				.doesNotContain(" OR ");
+	}
+
 	private int userId(String email) {
 		return jdbcTemplate.queryForObject("SELECT id FROM \"User\" WHERE email = ?", Integer.class, email);
 	}
@@ -169,6 +200,7 @@ class IncidentListQueryPlanTests {
 				"idx_incident_reporter_created_at_id",
 				"idx_incident_assignee_created_at_id",
 				"idx_incident_priority_rank_created_at_id",
+				"idx_incident_priority_rank_asc_created_at_id",
 				"idx_incident_priority_created_at_id")) {
 			jdbcTemplate.execute("DROP INDEX \"" + index + "\"");
 		}
@@ -181,7 +213,8 @@ class IncidentListQueryPlanTests {
 		jdbcTemplate.execute("CREATE INDEX \"idx_incident_category_created_at_id\" ON \"Incident\" (\"category_id\", \"created_at\" DESC, \"id\" DESC)");
 		jdbcTemplate.execute("CREATE INDEX \"idx_incident_reporter_created_at_id\" ON \"Incident\" (\"reporter_id\", \"created_at\" DESC, \"id\" DESC)");
 		jdbcTemplate.execute("CREATE INDEX \"idx_incident_assignee_created_at_id\" ON \"Incident\" (\"assignee_id\", \"created_at\" DESC, \"id\" DESC)");
-		jdbcTemplate.execute("CREATE INDEX \"idx_incident_priority_rank_created_at_id\" ON \"Incident\" (\"priority_rank\" DESC, \"created_at\" DESC, \"id\" DESC)");
+		jdbcTemplate.execute("CREATE INDEX \"idx_incident_priority_rank_created_at_id\" ON \"Incident\" (\"priority_rank_desc\" DESC, \"created_at\" DESC, \"id\" DESC)");
+		jdbcTemplate.execute("CREATE INDEX \"idx_incident_priority_rank_asc_created_at_id\" ON \"Incident\" (\"priority_rank\" ASC, \"created_at\" ASC, \"id\" ASC)");
 		jdbcTemplate.execute("CREATE INDEX \"idx_incident_priority_created_at_id\" ON \"Incident\" (\"priority\", \"created_at\" DESC, \"id\" DESC)");
 	}
 

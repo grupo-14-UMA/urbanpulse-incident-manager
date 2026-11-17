@@ -118,6 +118,14 @@ class IncidentListApiTests {
 				+ first.nextCursor());
 		assertThat(second.incidents()).extracting(IncidentResponse::title).containsExactly("sin prioridad");
 		assertThat(second.hasMore()).isFalse();
+
+		IncidentPageResponse ascendingFirst = loadPage("?size=2&sortBy=priority&sortDirection=asc");
+		assertThat(ascendingFirst.incidents()).extracting(IncidentResponse::title)
+				.containsExactly("baja", "urgente");
+		assertThat(ascendingFirst.hasMore()).isTrue();
+		IncidentPageResponse ascendingSecond = loadPage("?size=2&sortBy=priority&sortDirection=asc&cursor="
+				+ ascendingFirst.nextCursor());
+		assertThat(ascendingSecond.incidents()).extracting(IncidentResponse::title).containsExactly("sin prioridad");
 	}
 
 	@Test
@@ -148,6 +156,8 @@ class IncidentListApiTests {
 	void validatesIncompleteMapBoundsAndConflictingCategoryFilters() {
 		client.get().uri("/api/incidents/map?west=-4.45").header("Authorization", operatorAuthorization)
 			.exchange().expectStatus().isBadRequest();
+		client.get().uri("/api/incidents?west=-4.45&south=36.68&east=-4.38&north=36.77")
+			.header("Authorization", operatorAuthorization).exchange().expectStatus().isBadRequest();
 		client.get().uri("/api/incidents?categoryId=" + firstCategoryId + "&uncategorized=true")
 			.header("Authorization", operatorAuthorization).exchange().expectStatus().isBadRequest();
 	}

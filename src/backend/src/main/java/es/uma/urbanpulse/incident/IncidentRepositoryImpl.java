@@ -1,22 +1,18 @@
 package es.uma.urbanpulse.incident;
 
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.time.Instant;
+import java.util.Map;
 
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Repository;
 
+import es.uma.urbanpulse.auth.TokenSubject;
 import es.uma.urbanpulse.incident.api.IncidentCursor;
+import es.uma.urbanpulse.incident.api.IncidentQueryFilters;
+import es.uma.urbanpulse.user.Role;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.JoinType;
-import jakarta.persistence.criteria.Order;
-import jakarta.persistence.criteria.Path;
-import jakarta.persistence.criteria.Predicate;
-import jakarta.persistence.criteria.Root;
+import jakarta.persistence.Query;
 
 @Repository
 public class IncidentRepositoryImpl implements IncidentCursorRepository {
@@ -25,65 +21,100 @@ public class IncidentRepositoryImpl implements IncidentCursorRepository {
 	private EntityManager entityManager;
 
 	@Override
-	public List<Incident> findNextPage(Specification<Incident> specification, IncidentCursor cursor,
+	public List<Incident> findNextPage(IncidentQueryFilters filters, TokenSubject caller, IncidentCursor cursor,
 			String sortBy, String sortDirection, int limit) {
-		CriteriaBuilder builder = entityManager.getCriteriaBuilder();
-		CriteriaQuery<Incident> query = builder.createQuery(Incident.class);
-		Root<Incident> root = query.from(Incident.class);
-		root.fetch("category", JoinType.LEFT);
-		root.fetch("assignee", JoinType.LEFT);
-
-		List<Predicate> predicates = new ArrayList<>();
-		Predicate filters = specification.toPredicate(root, query, builder);
-		if (filters != null) {
-			predicates.add(filters);
-		}
-		if (cursor != null) {
-			predicates.add(after(root, builder, cursor, sortBy));
-		}
-		query.where(builder.and(predicates.toArray(Predicate[]::new)));
-		query.orderBy(orderBy(root, builder, sortBy, sortDirection));
-		return entityManager.createQuery(query).setMaxResults(limit).getResultList();
-	}
-
-	private static Predicate after(Root<Incident> root, CriteriaBuilder builder,
-			IncidentCursor cursor, String sortBy) {
-		boolean ascending = cursor.sortDirection().equals("asc");
-		Predicate tieBreak = integerAfter(builder, root.<Integer>get("id"), cursor.id(), ascending);
-		Predicate sameCreatedAt = builder.equal(root.get("createdAt"), cursor.createdAt());
-		Predicate createdAtAfter = instantAfter(builder, root.<Instant>get("createdAt"),
-				cursor.createdAt(), ascending);
-		Predicate afterCreatedAtOrId = builder.or(createdAtAfter,
-				builder.and(sameCreatedAt, tieBreak));
-		if (!sortBy.equals("priority")) {
-			return afterCreatedAtOrId;
-		}
-
-		Predicate afterPriority = integerAfter(builder, root.<Integer>get("priorityRank"),
-				cursor.priorityRank(), ascending);
-		Predicate samePriority = builder.equal(root.get("priorityRank"), cursor.priorityRank());
-		return builder.or(afterPriority, builder.and(samePriority, afterCreatedAtOrId));
-	}
-
-	private static Predicate instantAfter(CriteriaBuilder builder, Path<Instant> path,
-			Instant value, boolean ascending) {
-		return ascending ? builder.greaterThan(path, value) : builder.lessThan(path, value);
-	}
-
-	private static Predicate integerAfter(CriteriaBuilder builder, Path<Integer> path,
-			Integer value, boolean ascending) {
-		return ascending ? builder.greaterThan(path, value) : builder.lessThan(path, value);
-	}
-
-	private static List<Order> orderBy(Root<Incident> root, CriteriaBuilder builder,
-			String sortBy, String sortDirection) {
 		boolean ascending = sortDirection.equals("asc");
-		List<Order> orders = new ArrayList<>();
-		if (sortBy.equals("priority")) {
-			orders.add(ascending ? builder.asc(root.get("priorityRank")) : builder.desc(root.get("priorityRank")));
+		String direction = ascending ? "ASC" : "DESC";
+		String rankColumn = ascending ? "priority_rank" : "priority_rank_desc";
+		StringBuilder sql = new StringBuilder("SELECT incident.* FROM \"Incident\" incident WHERE TRUE");
+		Map<String, Object> parameters = new HashMap<>();
+
+		if (caller.role() == Role.CITIZEN) {
+			appendEquals(sql, parameters, "reporter_id", "callerId", caller.userId());
 		}
-		orders.add(ascending ? builder.asc(root.get("createdAt")) : builder.desc(root.get("createdAt")));
-		orders.add(ascending ? builder.asc(root.get("id")) : builder.desc(root.get("id")));
-		return orders;
+		else if (caller.role() == Role.TECHNICIAN) {
+			appendEquals(sql, parameters, "assignee_id", "callerId", caller.userId());
+		}
+		if (filters.getStatus() != null) {
+			appendEquals(sql, parameters, "status_id", "statusId", filters.getStatus().getId());
+		}
+		if (filters.getCategoryId() != null) {
+			appendEquals(sql, parameters, "category_id", "categoryId", filters.getCategoryId());
+		}
+		else if (filters.isUncategorized()) {
+			sql.append(" AND incident.\"category_id\" IS NULL");
+		}
+		if (filters.getPriority() != null) {
+			appendEquals(sql, parameters, "priority", "priority", filters.getPriority().name());
+		}
+		if (filters.getCreatedAfter() != null) {
+			appendComparison(sql, parameters, "created_at", "createdAfter", ">=", filters.getCreatedAfter());
+		}
+		if (filters.getCreatedBefore() != null) {
+			appendComparison(sql, parameters, "created_at", "createdBefore", "<", filters.getCreatedBefore());
+		}
+
+		if (cursor != null) {
+			String comparison = ascending ? ">" : "<";
+			if (sortBy.equals("priority")) {
+				sql.append(" AND (incident.\"").append(rankColumn)
+						.append("\", incident.\"created_at\", incident.\"id\") ")
+						.append(comparison).append(" (:cursorPriorityRank, :cursorCreatedAt, :cursorId)");
+				parameters.put("cursorPriorityRank", cursor.priorityRank());
+				parameters.put("cursorCreatedAt", cursor.createdAt());
+				parameters.put("cursorId", cursor.id());
+			}
+			else {
+				sql.append(" AND (incident.\"created_at\", incident.\"id\") ")
+						.append(comparison).append(" (:cursorCreatedAt, :cursorId)");
+				parameters.put("cursorCreatedAt", cursor.createdAt());
+				parameters.put("cursorId", cursor.id());
+			}
+		}
+
+		sql.append(" ORDER BY ");
+		if (sortBy.equals("priority")) {
+			sql.append("incident.\"").append(rankColumn).append("\" ").append(direction).append(", ");
+		}
+		sql.append("incident.\"created_at\" ").append(direction)
+				.append(", incident.\"id\" ").append(direction);
+
+		Query query = entityManager.createNativeQuery(sql.toString(), Incident.class);
+		parameters.forEach(query::setParameter);
+		@SuppressWarnings("unchecked")
+		List<Incident> incidents = query.setMaxResults(limit).getResultList();
+		return fetchRelationsInQueryOrder(incidents);
+	}
+
+	private static void appendEquals(StringBuilder sql, Map<String, Object> parameters,
+			String column, String parameter, Object value) {
+		appendComparison(sql, parameters, column, parameter, "=", value);
+	}
+
+	private static void appendComparison(StringBuilder sql, Map<String, Object> parameters,
+			String column, String parameter, String comparison, Object value) {
+		sql.append(" AND incident.\"").append(column).append("\" ").append(comparison)
+				.append(" :").append(parameter);
+		parameters.put(parameter, value);
+	}
+
+	private List<Incident> fetchRelationsInQueryOrder(List<Incident> incidents) {
+		if (incidents.isEmpty()) {
+			return incidents;
+		}
+		List<Integer> ids = incidents.stream().map(Incident::getId).toList();
+		Map<Integer, Incident> originallySelected = new HashMap<>();
+		incidents.forEach(incident -> originallySelected.put(incident.getId(), incident));
+		List<Incident> hydrated = entityManager.createQuery("""
+				SELECT incident FROM Incident incident
+				LEFT JOIN FETCH incident.category
+				LEFT JOIN FETCH incident.assignee
+				WHERE incident.id IN :ids
+				""", Incident.class)
+				.setParameter("ids", ids)
+				.getResultList();
+		Map<Integer, Incident> byId = new HashMap<>();
+		hydrated.forEach(incident -> byId.put(incident.getId(), incident));
+		return ids.stream().map(id -> byId.getOrDefault(id, originallySelected.get(id))).toList();
 	}
 }

@@ -57,7 +57,8 @@ Table Incident {
   category_id integer
   location geometry(Point, 4326) [not null]
   priority varchar(10) [note: 'LOW, MEDIUM, HIGH or URGENT. Null means no priority.']
-  priority_rank integer [note: 'Generated and stored ordering key: 0 for no priority, 1–4 for LOW–URGENT.']
+  priority_rank integer [note: 'Generated and stored ascending ordering key: 1–4 for LOW–URGENT, 5 for no priority.']
+  priority_rank_desc integer [note: 'Generated and stored descending ordering key: 1–4 for LOW–URGENT, 0 for no priority.']
   priority_justification varchar(1000)
   status_id integer [not null, note: 'References Status.']
   assignee_id integer [note: 'Technician in charge. Null until assigned.']
@@ -73,7 +74,8 @@ Table Incident {
     (category_id, created_at, id) [name: 'idx_incident_category_created_at_id']
     (reporter_id, created_at, id) [name: 'idx_incident_reporter_created_at_id']
     (assignee_id, created_at, id) [name: 'idx_incident_assignee_created_at_id']
-    (priority_rank, created_at, id) [name: 'idx_incident_priority_rank_created_at_id']
+    (priority_rank_desc, created_at, id) [name: 'idx_incident_priority_rank_created_at_id']
+    (priority_rank, created_at, id) [name: 'idx_incident_priority_rank_asc_created_at_id']
     (priority, created_at, id) [name: 'idx_incident_priority_created_at_id']
     (assignee_id, created_at, id) [name: 'idx_incident_active_assignee_created_at', note: 'Partial index for open technician work; status_id IN (1, 2, 4, 5).']
   }
