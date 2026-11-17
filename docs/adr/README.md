@@ -32,3 +32,4 @@ Cada ADR recoge una decisión relevante: su contexto, las opciones consideradas,
 | [0017](0017-instantes-en-utc-con-zona-explicita.md) | Instantes en UTC con zona explícita | accepted |
 | [0018](0018-almacenamiento-de-fotos-en-volumen-detras-de-interfaz.md) | Almacenamiento de fotografías en un volumen detrás de una interfaz | accepted |
 | [0019](0019-ciclo-de-vida-de-la-incidencia.md) | Ciclo de vida de la incidencia | accepted |
+| [0021](0021-carga-sintetica-por-lotes-con-postgresql.md) | Generar datos sintéticos con SQL por lotes | proposed |

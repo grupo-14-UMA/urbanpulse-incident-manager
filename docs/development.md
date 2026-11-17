@@ -66,6 +66,19 @@ Flyway aplica al arrancar el backend las migraciones de `src/backend/src/main/re
 
 La API REST permite registrarse e iniciar sesión, crear y consultar incidencias, listar los trabajos abiertos asignados al técnico autenticado, validarlas, rechazarlas, asignarlas, priorizarlas, empezarlas y resolverlas, leer su historial de estados, adjuntar y descargar fotografías de una incidencia (`POST /api/incidents/{id}/photos` y `GET /api/incidents/{id}/photos/{photoId}`), cargar las incidencias del área visible del mapa, listar categorías y listar técnicos. Las rutas, quién puede usar cada una y el formato de la respuesta de autenticación están en la [arquitectura](architecture.md#api). La consulta del mapa requiere `west`, `south`, `east` y `north` en WGS 84; devuelve como máximo 500 incidencias abiertas (`REPORTED`, `VALIDATED`, `ASSIGNED` o `IN_PROGRESS`) y `truncated: true` cuando hay más. Para un ciudadano, mapa, detalle y fotografías se limitan a las incidencias registradas por su cuenta; operadores y técnicos pueden consultar todas. Cada incidencia admite hasta 3 fotografías en formato JPEG, PNG o WebP de hasta 5 MB cada una. Los datos inválidos producen HTTP 400 con un mensaje en español; una incidencia inexistente produce HTTP 404; una acción de otro rol o sobre una incidencia ajena, HTTP 403; una acción que el estado no admite o un cambio simultáneo, HTTP 409. Cada cambio de estado y de prioridad se registra en el log con la incidencia, la transición y el rol y el identificador de quien la hizo. Las operaciones se documentan en Swagger UI.
 
+### Cargar incidencias sintéticas
+
+Para explorar las consultas del backend y el panel con muchos datos, primero arranca Docker Compose para que PostgreSQL tenga aplicadas las migraciones y las cuentas locales de desarrollo:
+
+```bash
+docker compose up -d db backend
+node scripts/generate-synthetic-incidents.mjs 1000000
+```
+
+El número se puede cambiar entre 1 y 5.000.000 por ejecución. El comando muestra cuánto tardó la carga. Inserta incidencias en barrios de Málaga, categorías opcionales, fechas, prioridades, cuentas ciudadanas sintéticas, técnicos asignados y el historial coherente de transiciones. No genera fotografías. Puedes iniciar sesión como el primer ciudadano sintético con `ciudadano.sintetico.000001@urbanpulse.test` y la contraseña `urbanpulse-dev` para consultar sus incidencias desde la aplicación móvil. Las cuentas sintéticas usan el mismo hash de contraseña que las cuentas locales de desarrollo.
+
+La operación es explícita y acumulativa: no se ejecuta al arrancar la aplicación ni borra datos existentes; repetirla añade otro lote. La generación corre en PostgreSQL con SQL por lotes para evitar crear entidades JPA una por una ([ADR-0021](adr/0021-carga-sintetica-por-lotes-con-postgresql.md)).
+
 ### Autenticación y cuentas de desarrollo
 
 Todas las rutas de `/api/**` salvo el registro y el inicio de sesión necesitan el token en la cabecera `Authorization: Bearer <token>`. Sin token válido responden 401; si el rol no tiene permiso, 403. Un ciudadano crea su cuenta con `POST /api/auth/register`. En Swagger UI, inicia sesión con `POST /api/auth/login`, copia `token` y pégalo en «Authorize».
