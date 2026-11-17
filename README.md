@@ -43,7 +43,7 @@ El panel web queda disponible en `http://localhost:8081`. Para desarrollarlo con
 src/backend/    Backend Spring Boot (sus pruebas están en src/backend/src/test/)
 src/frontend/   Aplicación móvil React Native (Expo)
 src/management-panel/ Panel web React (Vite + Leaflet)
-docs/           Documentación: arquitectura, desarrollo, despliegue, ADRs, requisitos
+docs/           Documentación: arquitectura, desarrollo, despliegue, ADRs, documentos de diseño, requisitos y material de la asignatura
 ```
 
 ## Documentación
@@ -53,7 +53,9 @@ docs/           Documentación: arquitectura, desarrollo, despliegue, ADRs, requ
 - [Gestión de errores](docs/error-handling.md)
 - [Guía de despliegue](docs/deployment.md)
 - [Decisiones de arquitectura (ADRs)](docs/adr/)
+- [Documentos de diseño](docs/design-docs/)
 - [Requisitos](docs/requirements.md)
+- [Material de la asignatura](docs/course/)
 - [Glosario](GLOSSARY.md)
 - [Cómo contribuir](CONTRIBUTING.md)
 

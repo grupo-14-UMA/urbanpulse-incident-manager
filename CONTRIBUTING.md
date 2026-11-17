@@ -106,7 +106,7 @@ Un issue dice *qué* hay que hacer y *cómo se comprueba*. No obliga a una forma
 - **Atributos de calidad** que apliquen (consulta acotada, índice, logs, métricas), como pide `AGENTS.md` → Quality attributes. Si no aplica ninguno, la sección lo dice con `None apply: <motivo>`.
 - **Fuera de alcance**, cuando ayude.
 - **Propuesta**, opcional: una primera idea de cómo podría hacerse. No es vinculante: quien lo implementa puede descartarla.
-- **Restricciones técnicas**, solo si ya están decididas (un ADR, una convención existente). El resto de decisiones de diseño son de quien lo implementa, que tiene que poder adaptarse cuando surjan problemas.
+- **Restricciones técnicas**, solo si ya están decididas (un ADR, un documento de diseño aceptado, una convención existente). Un issue que implementa una solución que necesita [documento de diseño](#documentos-de-diseño) solo pasa a ready cuando el documento está aceptado, y lo enlaza. El resto de decisiones de diseño son de quien lo implementa, que tiene que poder adaptarse cuando surjan problemas.
 
 ### Lista de un issue ready
 
@@ -196,6 +196,12 @@ Los campos `Start date` y `Target date` no se usan: las fechas las marcan los mi
 ## Decisiones de arquitectura
 
 Las decisiones relevantes se recogen como ADR en [docs/adr/](docs/adr/). Ver el [índice y la plantilla](docs/adr/README.md).
+
+## Documentos de diseño
+
+Cada funcionalidad de la segunda fase ([requisitos](docs/requirements.md#funcionalidades-de-la-segunda-fase)) y cada cambio arquitectónico significativo se diseña primero en un documento de diseño en [docs/design-docs/](docs/design-docs/README.md). El equipo discute las alternativas y decide, y el profesor valida el documento. Hasta que está `Aceptado` no se programa nada de esa solución: el único issue es el de redactar el documento, y los issues de implementación salen de su plan. Un agente puede investigar y proponer alternativas, pero la decisión es del equipo.
+
+El material que el profesor entrega para el proyecto está resumido en [docs/course/](docs/course/README.md).
 
 ## Glosario
 

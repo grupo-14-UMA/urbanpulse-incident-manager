@@ -8,6 +8,8 @@ Requisitos iniciales de UrbanPulse tomados del [enunciado del proyecto](enunciad
 - Los datos externos enriquecen; nunca bloquean la creación del reporte si una fuente no está disponible.
 - Los atributos de calidad (rendimiento, escalabilidad, fiabilidad, disponibilidad y observabilidad) guían el diseño. Cada funcionalidad debe seguir siendo fluida y útil con millones de incidencias: muestra lo relevante para el contexto (zona, filtros, página) y no todo el conjunto.
 - Se adopta la solución más sencilla que cumpla esos atributos. Cada mejora (índices, caché, colas, eventos, separación en servicios) se justifica con una medición frente a una línea base, obtenida con datos sintéticos, pruebas de carga y observabilidad.
+- La línea base se obtiene antes de transformar la arquitectura: primero se mide el sistema actual (SLIs) y se fijan los SLOs ([SLIs, SLOs y SLAs](course/slis-slos-slas.md)); después se separan servicios y se añaden las funcionalidades de la segunda fase, comparándolas con esas mediciones. Es una indicación del profesor.
+- Cada funcionalidad de la segunda fase se diseña en un [documento de diseño](design-docs/README.md) que el equipo decide y el profesor valida antes de implementarla.
 - El ciudadano y el técnico usan la aplicación móvil; el operador, el administrador y el analista usan el panel de gestión web ([ADR-0014](adr/0014-aplicacion-movil-y-panel-de-gestion-web.md)). Esta separación es una indicación del profesor y no aparece en el enunciado.
 - Cada cambio relevante actualiza el modelo C4, un ADR y las pruebas asociadas.
 
@@ -20,6 +22,7 @@ Requisitos iniciales de UrbanPulse tomados del [enunciado del proyecto](enunciad
 | Técnico | Acepta trabajos, actualiza el progreso y documenta la resolución. | Cola de trabajo y seguimiento del progreso. | Aplicación móvil |
 | Administrador | Gestiona usuarios, roles, categorías, departamentos y fuentes. | Configuración segura, auditoría y control de acceso. | Panel de gestión |
 | Analista (opcional) | Explora indicadores, patrones espaciales y resultados de modelos. | Datos consistentes, exportación, métricas y explicabilidad. | Panel de gestión |
+| Auditor | Analiza el registro de auditoría: estados de cada incidencia, cambios y quién los hizo ([RF31](#funcionalidades-de-la-segunda-fase)). | Registro completo e inalterable, filtros y análisis. | Panel de gestión |
 | Sistema externo | Proporciona datos urbanos, meteorológicos, territoriales o documentales. | | |
 
 El enunciado marca como opcionales el actor Analista, sus casos de uso de entrenamiento de modelos y de consulta mediante RAG, y la entidad `KnowledgeDocument`.
@@ -54,6 +57,30 @@ El enunciado marca como opcionales el actor Analista, sus casos de uso de entren
 | RF24 | Vista contextual | El operador podrá visualizar el contexto urbano asociado. |
 | RF25 | Correlación histórica | El sistema podrá correlacionar incidencias con variables urbanas históricas. |
 | RF26 | Degradación controlada | La falta de disponibilidad de una fuente externa no impedirá crear la incidencia. |
+
+## Funcionalidades de la segunda fase
+
+El profesor añadió estos requisitos de finalización después de la Entrega 1; no están en el enunciado. Cada funcionalidad se plasma primero en un [documento de diseño](design-docs/README.md), que el profesor (el cliente) tiene que validar, y no se implementa hasta entonces.
+
+| ID | Funcionalidad | Definición | Relación |
+| --- | --- | --- | --- |
+| RF27 | Dashboard operativo | Los operadores municipales y los técnicos disponen de un dashboard con, al menos, un mapa de las incidencias, indicadores generales con datos y filtros de incidencias. | RF07, RF08, RF15 |
+| RF28 | Imágenes en un servicio externo | Las imágenes de las incidencias se suben a un servicio externo; el profesor pone Cloudinary como ejemplo. | RF05, [ADR-0018](adr/0018-almacenamiento-de-fotos-en-volumen-detras-de-interfaz.md) |
+| RF29 | Incidencia normalizada | Los reportes de una misma incidencia enviados por distintos ciudadanos se unifican en una única incidencia normalizada, con trazabilidad entre cada reporte y su incidencia. | RF16 |
+| RF30 | Microservicio de contexto | Un microservicio con base de datos propia extrae, normaliza y gestiona datos externos que dan contexto a las incidencias: los conjuntos de datos abiertos que se seleccionen y la información meteorológica. La extracción se actualiza periódicamente. El profesor nombró AEMET como fuente meteorológica y aceptó mantener OpenWeatherMap ([ADR-0009](adr/0009-openweathermap-para-meteorologia.md)), que da datos para la coordenada exacta de la incidencia. | RF21-RF25, [ADR-0008](adr/0008-datos-abiertos-del-ayuntamiento-de-malaga.md), [ADR-0009](adr/0009-openweathermap-para-meteorologia.md) |
+| RF31 | Microservicio de auditoría | Un microservicio con base de datos propia registra todos los estados por los que pasa una incidencia, los cambios realizados y qué usuario los hizo, e incluye un dashboard para analizar esa información. Crea el rol Auditor, que tiene acceso a ella junto con el Administrador. | RF12, RF18 |
+
+Requisitos adicionales, que el profesor irá completando a lo largo de la asignatura:
+
+| ID | Requisito | Definición |
+| --- | --- | --- |
+| RA01 | Paginación | Todos los servicios REST de lectura masiva tienen paginación. |
+| RA02 | UUID de la incidencia | La incidencia tiene un UUID que permite seguirla entre los distintos microservicios. |
+| RA03 | Fiabilidad y resiliencia | Se diseñan estrategias para cuando un componente (servicio externo, microservicio…) no está disponible durante la ejecución. |
+| RA04 | Observabilidad | Un entorno de observabilidad que combina k6, Micrometer, logs estructurados, Prometheus, Grafana, etc. permite evaluar los atributos de calidad. Los experimentos que pide la práctica están en [Práctica de k6 y observabilidad](course/practica-k6-observabilidad.md). |
+| RA05 | Documento de diseño | Las propuestas de diseño de estas soluciones se plasman en un documento de diseño validado por el cliente. |
+
+El [ADR-0006](adr/0006-arquitectura-monolitica-inicial.md) (monolito) choca con RF30 y RF31: el documento de diseño que los aborde tiene que revisarlo.
 
 ## Historias de usuario
 

@@ -8,6 +8,7 @@ Cada ADR recoge una decisión relevante: su contexto, las opciones consideradas,
 2. Rellena las secciones y deja `status: proposed`.
 3. Ábrelo en un PR. Cuando el equipo lo acepte, cambia a `status: accepted`.
 4. Si una decisión sustituye a otra, marca la antigua como `status: superseded` y enlaza la nueva.
+5. Si la decisión sale de un [documento de diseño](../design-docs/README.md), enlázalo en el ADR, y el documento enlaza el ADR en su sección de decisiones.
 
 ## Índice
 
