@@ -67,7 +67,7 @@ El profesor añadió estos requisitos de finalización después de la Entrega 1;
 | RF27 | Dashboard operativo | Los operadores municipales y los técnicos disponen de un dashboard con, al menos, un mapa de las incidencias, indicadores generales con datos y filtros de incidencias. | RF07, RF08, RF15 |
 | RF28 | Imágenes en un servicio externo | Las imágenes de las incidencias se suben a un servicio externo; el profesor pone Cloudinary como ejemplo. | RF05, [ADR-0018](adr/0018-almacenamiento-de-fotos-en-volumen-detras-de-interfaz.md) |
 | RF29 | Incidencia normalizada | Los reportes de una misma incidencia enviados por distintos ciudadanos se unifican en una única incidencia normalizada, con trazabilidad entre cada reporte y su incidencia. | RF16 |
-| RF30 | Microservicio de contexto | Un microservicio con base de datos propia extrae, normaliza y gestiona datos externos que dan contexto a las incidencias: los conjuntos de datos abiertos que se seleccionen y la información meteorológica de AEMET, que el profesor nombra expresamente. La extracción se actualiza periódicamente. | RF21-RF25, [ADR-0008](adr/0008-datos-abiertos-del-ayuntamiento-de-malaga.md), [ADR-0009](adr/0009-openweathermap-para-meteorologia.md) |
+| RF30 | Microservicio de contexto | Un microservicio con base de datos propia extrae, normaliza y gestiona datos externos que dan contexto a las incidencias: los conjuntos de datos abiertos que se seleccionen y la información meteorológica. La extracción se actualiza periódicamente. El profesor nombró AEMET como fuente meteorológica y aceptó mantener OpenWeatherMap ([ADR-0009](adr/0009-openweathermap-para-meteorologia.md)), que da datos para la coordenada exacta de la incidencia. | RF21-RF25, [ADR-0008](adr/0008-datos-abiertos-del-ayuntamiento-de-malaga.md), [ADR-0009](adr/0009-openweathermap-para-meteorologia.md) |
 | RF31 | Microservicio de auditoría | Un microservicio con base de datos propia registra todos los estados por los que pasa una incidencia, los cambios realizados y qué usuario los hizo, e incluye un dashboard para analizar esa información. Crea el rol Auditor, que tiene acceso a ella junto con el Administrador. | RF12, RF18 |
 
 Requisitos adicionales, que el profesor irá completando a lo largo de la asignatura:
@@ -80,7 +80,7 @@ Requisitos adicionales, que el profesor irá completando a lo largo de la asigna
 | RA04 | Observabilidad | Un entorno de observabilidad que combina k6, Micrometer, logs estructurados, Prometheus, Grafana, etc. permite evaluar los atributos de calidad. Los experimentos que pide la práctica están en [Práctica de k6 y observabilidad](course/practica-k6-observabilidad.md). |
 | RA05 | Documento de diseño | Las propuestas de diseño de estas soluciones se plasman en un documento de diseño validado por el cliente. |
 
-Dos decisiones registradas chocan con estos requisitos y los documentos de diseño correspondientes tienen que revisarlas: el [ADR-0006](adr/0006-arquitectura-monolitica-inicial.md) (monolito) frente a RF30 y RF31, y el [ADR-0009](adr/0009-openweathermap-para-meteorologia.md) (OpenWeatherMap) frente a AEMET en RF30.
+El [ADR-0006](adr/0006-arquitectura-monolitica-inicial.md) (monolito) choca con RF30 y RF31: el documento de diseño que los aborde tiene que revisarlo.
 
 ## Historias de usuario
 
