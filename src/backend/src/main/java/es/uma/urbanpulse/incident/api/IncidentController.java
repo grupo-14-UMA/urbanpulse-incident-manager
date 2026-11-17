@@ -296,7 +296,8 @@ public class IncidentController {
 
 	@GetMapping("/{id}/history")
 	@Operation(summary = "Leer el historial de estados de una incidencia",
-			description = "Devuelve como máximo los 5 cambios más recientes, del más antiguo al más reciente. "
+			description = "Devuelve el historial completo de cambios de estado, del más antiguo al más reciente, sin paginar: "
+					+ "el ciclo de vida de la incidencia lo acota. "
 					+ "Lo leen los operadores, el técnico asignado y el ciudadano que la registró. "
 					+ "Indica el rol de quien hizo cada cambio, nunca su nombre ni su identificador.")
 	@ApiResponses({
