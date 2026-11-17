@@ -2,6 +2,9 @@ package es.uma.urbanpulse.incident.api;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Set;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.CacheControl;
@@ -29,7 +32,6 @@ import es.uma.urbanpulse.incident.IncidentService;
 import es.uma.urbanpulse.incident.StoredPhotoContent;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -43,6 +45,8 @@ import jakarta.validation.constraints.Min;
 @RequestMapping("/api/incidents")
 @Tag(name = "Incidencias", description = "Registro y consulta de incidencias urbanas.")
 public class IncidentController {
+
+	private static final Set<String> MAP_BOUNDS_PARAMETERS = Set.of("west", "south", "east", "north");
 
 	private static final String INVALID_DATA = "La solicitud contiene datos no válidos.";
 	private static final String NOT_ALLOWED = "No tienes permiso para hacer esto.";
@@ -80,30 +84,45 @@ public class IncidentController {
 	}
 
 	@GetMapping
-	@Operation(
-			summary = "Listar incidencias del área visible del mapa",
-			description = "Devuelve hasta 500 incidencias abiertas (REPORTED, VALIDATED, ASSIGNED o IN_PROGRESS) dentro del rectángulo WGS 84 indicado. "
-					+ "Si truncated es true, acerca el mapa para ver más incidencias. "
-					+ "Cada incidencia incluye su prioridad; assignee y priorityJustification son siempre nulos aquí."
-	)
+	@Operation(summary = "Listar incidencias con filtros y cursor",
+			description = "Devuelve hasta 100 incidencias. Operadores ven todas; ciudadanos solo las propias; técnicos solo las asignadas. "
+					+ "Usa nextCursor para avanzar sin degradación en páginas profundas. Los límites west, south, east y north se envían a /api/incidents/map.")
 	@ApiResponses({
 			@ApiResponse(
 					responseCode = "200",
-					description = "Incidencias encontradas en el área, con máximo de 500.",
-					content = @Content(
-							mediaType = "application/json",
-							examples = @ExampleObject(value = "{\"incidents\": [], \"truncated\": false}"))),
+					description = "Página de incidencias con cursor de continuación."),
 			@ApiResponse(
 					responseCode = "400",
-					description = "Los límites del área no son válidos.",
+					description = "Los filtros o el cursor no son válidos, o se enviaron límites del mapa a la ruta de lista.",
 					content = @Content(
 							mediaType = "application/json",
 							schema = @Schema(implementation = ApiErrorResponse.class)))
 	})
-	public IncidentMapResponse findWithinBounds(
-			@Valid @ParameterObject @ModelAttribute IncidentBounds bounds,
+	public IncidentPageResponse list(
+			@Valid @ParameterObject @ModelAttribute IncidentQueryParameters query,
+			HttpServletRequest request,
 			@AuthenticationPrincipal Jwt jwt) {
-		return incidentService.findWithinBounds(bounds, AuthTokens.subjectOf(jwt));
+		if (request.getParameterMap().keySet().stream().anyMatch(MAP_BOUNDS_PARAMETERS::contains)) {
+			throw new InvalidIncidentRequestException("mapBounds",
+					"Los límites west, south, east y north solo se admiten en /api/incidents/map.");
+		}
+		return incidentService.findPage(query, AuthTokens.subjectOf(jwt));
+	}
+
+	@GetMapping("/map")
+	@Operation(summary = "Consultar las incidencias del área visible del mapa",
+			description = "Devuelve hasta 500 incidencias activas dentro del rectángulo WGS 84. "
+					+ "Admite filtros de estado, categoría, prioridad y fecha; truncated indica si hay más resultados.")
+	@ApiResponses({
+			@ApiResponse(responseCode = "200", description = "Incidencias encontradas en el área del mapa."),
+			@ApiResponse(responseCode = "400", description = "Los límites del área no son válidos.",
+					content = @Content(mediaType = "application/json",
+							schema = @Schema(implementation = ApiErrorResponse.class)))
+	})
+	public IncidentMapResponse map(
+			@Valid @ParameterObject @ModelAttribute IncidentMapQueryParameters query,
+			@AuthenticationPrincipal Jwt jwt) {
+		return incidentService.findWithinBounds(query, AuthTokens.subjectOf(jwt));
 	}
 
 	@GetMapping("/{id}")

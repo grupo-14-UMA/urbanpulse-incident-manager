@@ -27,7 +27,7 @@ public enum IncidentStatus {
 		this.label = label;
 	}
 
-	int getId() {
+	public int getId() {
 		return id;
 	}
 

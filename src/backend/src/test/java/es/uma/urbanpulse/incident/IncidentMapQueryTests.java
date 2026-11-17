@@ -1,6 +1,7 @@
 package es.uma.urbanpulse.incident;
 
 import static es.uma.urbanpulse.TestAccounts.OPERATOR_EMAIL;
+import static es.uma.urbanpulse.TestAccounts.TECHNICIAN_EMAIL;
 import static es.uma.urbanpulse.TestAccounts.bearer;
 import static es.uma.urbanpulse.TestAccounts.login;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -28,7 +29,7 @@ import es.uma.urbanpulse.incident.api.IncidentResponse;
 class IncidentMapQueryTests {
 
 	private static final String MAP_BOUNDS =
-			"/api/incidents?west=-4.45&south=36.68&east=-4.38&north=36.77";
+			"/api/incidents/map?west=-4.45&south=36.68&east=-4.38&north=36.77";
 	private static final int REPORTED_STATUS_ID = 1;
 	private static final int VALIDATED_STATUS_ID = 2;
 	private static final int REJECTED_STATUS_ID = 3;
@@ -65,9 +66,9 @@ class IncidentMapQueryTests {
 	}
 
 	@Test
-	void requiresBoundsInsteadOfReturningAnUnboundedList() {
+	void requiresBoundsOnTheDedicatedMapEndpoint() {
 		client.get()
-				.uri("/api/incidents")
+				.uri("/api/incidents/map")
 				.header("Authorization", this.authorization)
 				.exchange()
 				.expectStatus()
@@ -77,11 +78,11 @@ class IncidentMapQueryTests {
 	@Test
 	void rejectsInvertedOutOfRangeAndMalformedBounds() {
 		for (String invalidQuery : List.of(
-				"/api/incidents?west=-4.38&south=36.68&east=-4.45&north=36.77",
-				"/api/incidents?west=-4.45&south=36.77&east=-4.38&north=36.68",
-				"/api/incidents?west=-181&south=36.68&east=-4.38&north=36.77",
-				"/api/incidents?west=-4.45&south=36.68&east=-4.38&north=95",
-				"/api/incidents?west=invalid&south=36.68&east=-4.38&north=36.77")) {
+				"/api/incidents/map?west=-4.38&south=36.68&east=-4.45&north=36.77",
+				"/api/incidents/map?west=-4.45&south=36.77&east=-4.38&north=36.68",
+				"/api/incidents/map?west=-181&south=36.68&east=-4.38&north=36.77",
+				"/api/incidents/map?west=-4.45&south=36.68&east=-4.38&north=95",
+				"/api/incidents/map?west=invalid&south=36.68&east=-4.38&north=36.77")) {
 			String body = client.get()
 					.uri(invalidQuery)
 					.header("Authorization", this.authorization)
@@ -117,6 +118,46 @@ class IncidentMapQueryTests {
 	}
 
 	@Test
+	void filtersMapResultsByCategoryAndIncludesUncategorizedWhenRequested() {
+		Integer categoryId = jdbcTemplate.queryForObject(
+				"SELECT id FROM \"Category\" ORDER BY id LIMIT 1", Integer.class);
+		jdbcTemplate.update(
+				"INSERT INTO \"Incident\" (title, location, status_id, category_id) "
+						+ "VALUES ('categorized', ST_SetSRID(ST_MakePoint(-4.42, 36.72), 4326), 1, ?), "
+						+ "('uncategorized', ST_SetSRID(ST_MakePoint(-4.42, 36.72), 4326), 1, NULL)",
+				categoryId);
+
+		assertThat(loadMapResponse("&categoryId=" + categoryId).incidents())
+				.extracting(IncidentResponse::title).containsExactly("categorized");
+		assertThat(loadMapResponse("&uncategorized=true").incidents())
+				.extracting(IncidentResponse::title).containsExactly("uncategorized");
+	}
+
+	@Test
+	void technicianMapOnlyReturnsOpenIncidentsAssignedToThatTechnician() {
+		Integer technicianId = userId(TECHNICIAN_EMAIL);
+		Integer otherTechnicianId = userId("tecnico2@urbanpulse.test");
+		jdbcTemplate.update(
+				"INSERT INTO \"Incident\" (title, location, status_id, assignee_id) "
+						+ "VALUES ('asignada', ST_SetSRID(ST_MakePoint(-4.42, 36.72), 4326), 4, ?), "
+						+ "('asignada a otro', ST_SetSRID(ST_MakePoint(-4.42, 36.72), 4326), 4, ?), "
+						+ "('sin asignar', ST_SetSRID(ST_MakePoint(-4.42, 36.72), 4326), 1, NULL)",
+				technicianId, otherTechnicianId);
+
+		IncidentMapResponse response = client.get()
+				.uri(MAP_BOUNDS)
+				.header("Authorization", bearer(login(client, TECHNICIAN_EMAIL)))
+				.exchange()
+				.expectStatus()
+				.isOk()
+				.expectBody(IncidentMapResponse.class)
+				.returnResult()
+				.getResponseBody();
+
+		assertThat(response.incidents()).extracting(IncidentResponse::title).containsExactly("asignada");
+	}
+
+	@Test
 	void explainUsesTheGiSTIndexForASelectiveMapArea() {
 		insertSpatialGrid(20_000);
 		jdbcTemplate.execute("ANALYZE \"Incident\"");
@@ -133,8 +174,12 @@ class IncidentMapQueryTests {
 	}
 
 	private IncidentMapResponse loadMapResponse() {
+		return loadMapResponse("");
+	}
+
+	private IncidentMapResponse loadMapResponse(String extraQuery) {
 		return client.get()
-				.uri(MAP_BOUNDS)
+				.uri(MAP_BOUNDS + extraQuery)
 				.header("Authorization", this.authorization)
 				.exchange()
 				.expectStatus()
@@ -149,6 +194,10 @@ class IncidentMapQueryTests {
 				"INSERT INTO \"Incident\" (title, location, status_id) "
 						+ "VALUES (?, ST_SetSRID(ST_MakePoint(?, ?), 4326), ?)",
 				title, longitude, latitude, statusId);
+	}
+
+	private Integer userId(String email) {
+		return jdbcTemplate.queryForObject("SELECT id FROM \"User\" WHERE email = ?", Integer.class, email);
 	}
 
 	private void insertReportedIncidents(int count) {

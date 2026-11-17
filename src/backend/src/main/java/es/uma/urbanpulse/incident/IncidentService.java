@@ -32,10 +32,15 @@ import es.uma.urbanpulse.incident.api.ChangePriorityRequest;
 import es.uma.urbanpulse.incident.api.CreateIncidentRequest;
 import es.uma.urbanpulse.incident.api.IncidentAccessDeniedException;
 import es.uma.urbanpulse.incident.api.IncidentBounds;
+import es.uma.urbanpulse.incident.api.IncidentCursor;
 import es.uma.urbanpulse.incident.api.IncidentMapResponse;
+import es.uma.urbanpulse.incident.api.IncidentMapQueryParameters;
 import es.uma.urbanpulse.incident.api.IncidentNotFoundException;
+import es.uma.urbanpulse.incident.api.IncidentPageResponse;
 import es.uma.urbanpulse.incident.api.IncidentPhotoNotFoundException;
 import es.uma.urbanpulse.incident.api.IncidentPhotoResponse;
+import es.uma.urbanpulse.incident.api.IncidentQueryParameters;
+import es.uma.urbanpulse.incident.api.IncidentQueryFilters;
 import es.uma.urbanpulse.incident.api.IncidentResponse;
 import es.uma.urbanpulse.incident.api.InvalidCategoryException;
 import es.uma.urbanpulse.incident.api.InvalidIncidentPhotoException;
@@ -106,15 +111,30 @@ public class IncidentService {
 	}
 
 	@Transactional(readOnly = true)
-	public IncidentMapResponse findWithinBounds(IncidentBounds bounds, TokenSubject caller) {
+	public IncidentMapResponse findWithinBounds(IncidentMapQueryParameters query, TokenSubject caller) {
+		IncidentBounds bounds = query.toBounds();
 		long queryStartedAt = System.nanoTime();
-		List<IncidentMapProjection> candidates = caller.role() == Role.CITIZEN
-				? incidentRepository.findWithinBoundsForReporter(
+		List<IncidentMapProjection> candidates;
+		if (caller.role() == Role.CITIZEN) {
+			candidates = incidentRepository.findWithinBoundsForReporter(
 						bounds.west(), bounds.south(), bounds.east(), bounds.north(),
-						IncidentStatus.activeIds(), caller.userId(), MAP_RESULT_LIMIT + 1)
-				: incidentRepository.findWithinBounds(
+						IncidentStatus.activeIds(), caller.userId(), statusId(query), query.getCategoryId(),
+						query.isUncategorized(), priorityName(query), query.getCreatedAfter(), query.getCreatedBefore(),
+						MAP_RESULT_LIMIT + 1);
+		}
+		else if (caller.role() == Role.TECHNICIAN) {
+			candidates = incidentRepository.findWithinBoundsForAssignee(
 						bounds.west(), bounds.south(), bounds.east(), bounds.north(),
-						IncidentStatus.activeIds(), MAP_RESULT_LIMIT + 1);
+						IncidentStatus.activeIds(), caller.userId(), statusId(query), query.getCategoryId(),
+						query.isUncategorized(), priorityName(query), query.getCreatedAfter(), query.getCreatedBefore(),
+						MAP_RESULT_LIMIT + 1);
+		}
+		else {
+			candidates = incidentRepository.findWithinBounds(
+						bounds.west(), bounds.south(), bounds.east(), bounds.north(),
+						IncidentStatus.activeIds(), statusId(query), query.getCategoryId(), query.isUncategorized(),
+						priorityName(query), query.getCreatedAfter(), query.getCreatedBefore(), MAP_RESULT_LIMIT + 1);
+		}
 		long queryDurationMs = (System.nanoTime() - queryStartedAt) / 1_000_000;
 		boolean truncated = candidates.size() > MAP_RESULT_LIMIT;
 		List<IncidentResponse> incidents = candidates.stream()
@@ -124,6 +144,42 @@ public class IncidentService {
 		LOGGER.info("Loaded {} map incidents for role {} (truncated={}) in {} ms",
 				incidents.size(), caller.role(), truncated, queryDurationMs);
 		return new IncidentMapResponse(incidents, truncated);
+	}
+
+	/** Returns one bounded page, scoped to the caller's role before optional filters are applied. */
+	@Transactional(readOnly = true)
+	public IncidentPageResponse findPage(IncidentQueryParameters query, TokenSubject caller) {
+		long queryStartedAt = System.nanoTime();
+		List<Incident> fetched = incidentRepository.findNextPage(
+				query, caller, query.cursorPosition(),
+				query.getSortBy(), query.getSortDirection(), query.getSize() + 1);
+		boolean hasMore = fetched.size() > query.getSize();
+		List<Incident> page = fetched.stream().limit(query.getSize()).toList();
+		List<IncidentResponse> incidents = page.stream()
+				.map(incident -> toResponse(incident, caller))
+				.toList();
+		String nextCursor = hasMore
+				? cursorFor(page.get(page.size() - 1), query.getSortBy(), query.getSortDirection())
+				: null;
+		long queryDurationMs = (System.nanoTime() - queryStartedAt) / 1_000_000;
+		LOGGER.info("Loaded incident page for role {} user {} (size={}, results={}, hasMore={}) in {} ms",
+				caller.role(), caller.userId(), query.getSize(), incidents.size(), hasMore, queryDurationMs);
+		return new IncidentPageResponse(incidents, query.getSize(), hasMore, nextCursor);
+	}
+
+	private static String cursorFor(Incident incident, String sortBy, String sortDirection) {
+		int priorityRank = sortDirection.equals("asc")
+				? incident.getPriorityRank() : incident.getPriorityRankDesc();
+		return new IncidentCursor(sortBy, sortDirection, incident.getCreatedAt(), incident.getId(),
+				priorityRank).encode();
+	}
+
+	private static Integer statusId(IncidentQueryFilters query) {
+		return query.getStatus() == null ? null : query.getStatus().getId();
+	}
+
+	private static String priorityName(IncidentQueryFilters query) {
+		return query.getPriority() == null ? null : query.getPriority().name();
 	}
 
 	@Transactional(readOnly = true)

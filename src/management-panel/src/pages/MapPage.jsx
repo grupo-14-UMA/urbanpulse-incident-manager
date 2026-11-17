@@ -4,7 +4,7 @@ import L from 'leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
 
-import { getIncidentsWithinBounds } from '../api.js';
+import { getCategories, getIncidentsWithinBounds } from '../api.js';
 
 import 'leaflet/dist/leaflet.css';
 import 'react-leaflet-cluster/dist/assets/MarkerCluster.css';
@@ -103,7 +103,22 @@ export default function MapPage() {
   const [loading, setLoading] = useState(false);
   const [mapTruncated, setMapTruncated] = useState(false);
   const [loadError, setLoadError] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [categoryError, setCategoryError] = useState('');
   const requestControllerRef = useRef(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    getCategories({ signal: controller.signal })
+      .then(setCategories)
+      .catch((error) => {
+        if (!controller.signal.aborted) {
+          setCategoryError(error?.message || 'No se pudieron cargar las categorías.');
+        }
+      });
+    return () => controller.abort();
+  }, []);
 
   const loadVisibleIncidents = useCallback(async (bounds) => {
     requestControllerRef.current?.abort();
@@ -117,6 +132,9 @@ export default function MapPage() {
     try {
       const result = await getIncidentsWithinBounds(bounds, {
         signal: controller.signal,
+        filters: categoryFilter === 'uncategorized'
+          ? { uncategorized: true }
+          : categoryFilter ? { categoryId: categoryFilter } : {},
       });
 
       if (!controller.signal.aborted) {
@@ -132,7 +150,7 @@ export default function MapPage() {
         setLoading(false);
       }
     }
-  }, []);
+  }, [categoryFilter]);
 
   useEffect(() => () => requestControllerRef.current?.abort(), []);
 
@@ -156,6 +174,26 @@ export default function MapPage() {
             <span aria-hidden="true">⌖</span> Málaga, España
           </span>
         </div>
+      </div>
+
+      <div className="map-filters" aria-label="Filtros del mapa">
+        <label>
+          Categoría
+          <select
+            aria-label="Filtrar mapa por categoría"
+            onChange={(event) => setCategoryFilter(event.target.value)}
+            value={categoryFilter}
+          >
+            <option value="">Todas</option>
+            <option value="uncategorized">Sin categoría</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {CATEGORY_LABELS[category.name.toLowerCase()] || category.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        {categoryError && <span role="alert">{categoryError}</span>}
       </div>
 
       <div className="map-frame">
