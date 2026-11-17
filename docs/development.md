@@ -66,6 +66,21 @@ Flyway aplica al arrancar el backend las migraciones de `src/backend/src/main/re
 
 La API REST permite registrarse e iniciar sesión, crear y consultar incidencias, listar los trabajos abiertos asignados al técnico autenticado, validarlas, rechazarlas, asignarlas, priorizarlas, empezarlas y resolverlas, leer su historial de estados, adjuntar y descargar fotografías de una incidencia (`POST /api/incidents/{id}/photos` y `GET /api/incidents/{id}/photos/{photoId}`), consultar el mapa del área visible (`GET /api/incidents/map`), listar categorías y listar técnicos. Las rutas, quién puede usar cada una y el formato de la respuesta de autenticación están en la [arquitectura](architecture.md#api). `GET /api/incidents` devuelve páginas de hasta 100 incidencias (20 por defecto), filtradas y ordenadas en el servidor, con `hasMore` y `nextCursor` para continuar mediante comparaciones por tuplas, sin `OFFSET`. Admite filtros de estado, categoría (también `uncategorized=true`), prioridad y rango de fechas, y orden por fecha o prioridad; las incidencias sin prioridad aparecen al final en ambos sentidos. Las fechas son instantes ISO-8601; `createdAfter` incluye el límite y `createdBefore` lo excluye. Los parámetros `west`, `south`, `east` y `north` solo son válidos en `/api/incidents/map`; enviados a la lista producen HTTP 400. El mapa requiere los cuatro límites WGS 84; devuelve como máximo 500 incidencias abiertas (`REPORTED`, `VALIDATED`, `ASSIGNED` o `IN_PROGRESS`) y marca `truncated: true` cuando hay más. Ambos endpoints limitan los resultados por rol: operadores ven todas las incidencias, los ciudadanos solo las propias (incluidas las rechazadas en el listado) y los técnicos solo las asignadas. El endpoint de mapa conserva `ST_Intersects` y el índice GiST. Cada incidencia admite hasta 3 fotografías en formato JPEG, PNG o WebP de hasta 5 MB cada una. Los datos inválidos producen HTTP 400 con un mensaje en español; una incidencia inexistente produce HTTP 404; una acción de otro rol o sobre una incidencia ajena, HTTP 403; una acción que el estado no admite o un cambio simultáneo, HTTP 409. Cada cambio de estado y de prioridad se registra en el log con la incidencia, la transición y el rol y el identificador de quien la hizo. Las operaciones se documentan en Swagger UI.
 
+### Cargar incidencias sintéticas
+
+Para explorar las consultas del backend y el panel con muchos datos, primero arranca Docker Compose para que PostgreSQL tenga aplicadas las migraciones y las cuentas locales de desarrollo:
+
+```bash
+docker compose up -d db backend
+node scripts/generate-synthetic-incidents.mjs 1000000
+```
+
+El número se puede cambiar entre 1 y 5.000.000 por ejecución. El comando informa el tiempo total de la carga en segundos. Inserta incidencias en barrios de Málaga, categorías opcionales, fechas, prioridades, cuentas ciudadanas sintéticas, técnicos asignados y el historial coherente de transiciones. No genera fotografías. Puedes iniciar sesión como el primer ciudadano sintético con `ciudadano.sintetico.000001@urbanpulse.test` y la contraseña `urbanpulse-dev` para consultar sus incidencias desde la aplicación móvil. Las cuentas sintéticas usan el mismo hash de contraseña que las cuentas locales de desarrollo.
+
+Para comprobar los clientes con el conjunto cargado, abre el panel en `http://localhost:8081`, inicia sesión como `operador@urbanpulse.test` / `urbanpulse-dev` y revisa el mapa y la lista de incidencias, incluida la navegación a la página siguiente. En la aplicación móvil, inicia sesión con el ciudadano sintético indicado arriba y comprueba el mapa, una incidencia propia y su detalle. La carga es acumulativa; ambos clientes consultan las mismas incidencias mediante los endpoints acotados de mapa y listado.
+
+La operación es explícita y acumulativa: no se ejecuta al arrancar la aplicación ni borra datos existentes; repetirla añade otro lote. La generación corre en PostgreSQL con SQL por lotes para evitar crear entidades JPA una por una ([ADR-0021](adr/0021-carga-sintetica-por-lotes-con-postgresql.md)). La [línea base de un millón de filas](benchmarks/synthetic-incident-load.md) registra una medición reproducible del tiempo de carga y el entorno utilizado.
+
 ### Autenticación y cuentas de desarrollo
 
 Todas las rutas de `/api/**` salvo el registro y el inicio de sesión necesitan el token en la cabecera `Authorization: Bearer <token>`. Sin token válido responden 401; si el rol no tiene permiso, 403. Un ciudadano crea su cuenta con `POST /api/auth/register`. En Swagger UI, inicia sesión con `POST /api/auth/login`, copia `token` y pégalo en «Authorize».
@@ -150,7 +165,7 @@ En Docker Compose, el navegador llama a `/api` en el mismo origen y Nginx reenv�
 
 ```bash
 cd src/frontend
-npx expo lint
+npm run lint
 ```
 
 ### Pruebas de la aplicación móvil
